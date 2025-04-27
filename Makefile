@@ -100,7 +100,7 @@ docker-run: docker-build
 		$(DOCKER_IMAGE) || echo -e "$(RED)Failed to run the application in Docker.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# Stop the Docker container and remove the network, volumes, and image
+# Stop the Docker container and remove the network and image
 docker-stop:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(YELLOW)Stopping the Docker container...$(RESET)"
@@ -110,7 +110,7 @@ docker-stop:
 	@docker network rm $(DOCKER_NETWORK) || echo -e "$(RED)No network to remove.$(RESET)"
 	@echo -e "$(YELLOW)Removing Docker image...$(RESET)"
 	@docker rmi $(DOCKER_IMAGE) || echo -e "$(RED)No image to remove.$(RESET)"
-	@echo -e "$(GREEN)Docker container, network, volumes, and image cleaned up.$(RESET)"
+	@echo -e "$(GREEN)Docker container, network and image cleaned up.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
 # 使用 HOST_PORT=8090 CONTAINER_PORT=8090 WORKDIR=/myapp make docker-run 指定端口和工作目录, 默认端口为 8080， 如果不传入端口，则使用默认端口
