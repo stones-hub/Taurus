@@ -29,3 +29,4 @@ logs/
 .git/
 .DS_Store
 .wire_gen.go
+build/
