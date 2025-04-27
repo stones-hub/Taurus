@@ -1,19 +1,23 @@
-# Go parameters
-APP_NAME := Taurus
+# 从 .releaserc 文件中获取版本号，如果获取不到则使用默认版本号 v1.0.0
+VERSION := $(shell grep -Eo 'version:[^ ]+' .releaserc | sed -E 's/version:(.*)/\1/' || echo "v1.0.0")
+# 动态获取当前目录名作为 APP_NAME 
+APP_NAME := $(shell basename $(shell pwd) | tr '[:upper:]' '[:lower:]')
+
+# 构建目录, 适用于本地化部署，不适用与docker部署
 BUILD_DIR := build
 
 # Docker parameters
-DOCKER_IMAGE := taurus:v1.0.0
-DOCKER_CONTAINER := taurus-container
-DOCKER_NETWORK := taurus-network
-DOCKER_VOLUME := taurus-config
-DOCKER_LOG_VOLUME := taurus-logs
 # host port
 HOST_PORT ?= 8080
 # application in container port
 CONTAINER_PORT ?= 8080
 # Docker workdir
 WORKDIR ?= /app
+DOCKER_IMAGE := $(APP_NAME):$(VERSION)
+DOCKER_CONTAINER := $(APP_NAME)-container
+DOCKER_NETWORK := $(APP_NAME)-network
+DOCKER_VOLUME := $(APP_NAME)-config
+DOCKER_LOG_VOLUME := $(APP_NAME)-logs
 
 .PHONY: all build clean docker-build docker-run docker-stop local-run local-stop
 
