@@ -1,5 +1,5 @@
 # 系统版本
 authorization: "Bearer 123456" # 授权码
-db_enable: false # 是否启用数据库
+db_enable: true # 是否启用数据库
 redis_enable: true # 是否启用redis
 print_config: true # 是否打印配置

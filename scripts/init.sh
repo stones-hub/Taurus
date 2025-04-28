@@ -357,6 +357,7 @@ update_framework() {
   rsync -aq update_temp/LICENSE "$project_path/LICENSE"
   rsync -aq update_temp/Makefile "$project_path/Makefile"
   rsync -aq update_temp/README.md "$project_path/README.md"
+  rsync -aq update_temp/docker-compose.yml "$project_path/docker-compose.yml"
   
   # 清理临时文件
   echo -e "$SEPARATOR"
