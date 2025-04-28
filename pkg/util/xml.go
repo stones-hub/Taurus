@@ -12,11 +12,10 @@ XML文件读取, filePath 文件地址, v 需要映射的结构体指针
 func ReadFromXml(filePath string, v interface{}) error {
 
 	fd, err := os.Open(filePath)
-	defer fd.Close()
 	if err != nil {
 		return err
 	}
-
+	defer fd.Close()
 	decodeXML := xml.NewDecoder(fd)
 
 	if err := decodeXML.Decode(v); err != nil {
@@ -30,9 +29,9 @@ func ReadFromXml(filePath string, v interface{}) error {
 
 func WriteToXml(v interface{}, filePath string) error {
 	fd, err := os.Open(filePath)
-	defer fd.Close()
 	if err != nil {
 		return err
 	}
+	defer fd.Close()
 	return xml.NewEncoder(fd).Encode(v)
 }

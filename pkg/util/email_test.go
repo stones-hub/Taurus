@@ -6,21 +6,23 @@ import (
 )
 
 var (
-	content = &EmailContent{
-		Body:    "hello world",
-		From:    "61647649@qq.com",
-		Subject: "hello world",
-	}
+	/*
+		content = &EmailContent{
+			Body:    "hello world",
+			From:    "61647649@qq.com",
+			Subject: "hello world",
+		}
 
-	info = EmailInfo{
-		ConnectTimeout: 10 * time.Second,
-		Host:           "smtp.qq.com",
-		KeepAlive:      true,
-		Password:       "xgrwilsumdpvcabb",
-		Port:           587,
-		SendTimeout:    10 * time.Second,
-		Username:       "61647649@qq.com",
-	}
+		info = EmailInfo{
+			ConnectTimeout: 10 * time.Second,
+			Host:           "smtp.qq.com",
+			KeepAlive:      true,
+			Password:       "xgrwilsumdpvcabb",
+			Port:           587,
+			SendTimeout:    10 * time.Second,
+			Username:       "61647649@qq.com",
+		}
+	*/
 
 	SSLInfo = EmailInfo{
 		ConnectTimeout: 10 * time.Second,

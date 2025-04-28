@@ -10,7 +10,7 @@ import (
 var (
 	filePath  = "/test/files/8956df30-757d-49b7-8ec1-f14421d0ba12.png"
 	videoPath = "/test/files/df5fc7a6d596dcab2ab4ed613bbe613c.mov"
-	voicePath = "/test/files/d86c35d42b48501fefb53a63d79c99d8.mp3"
+	// voicePath = "/test/files/d86c35d42b48501fefb53a63d79c99d8.mp3"
 )
 
 func getFilePath(file string) string {
