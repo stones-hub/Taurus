@@ -284,15 +284,17 @@ update_framework() {
   tar -xzf "update.tar.gz" -C "update_temp" --strip-components=1 || { echo -e "${RED}解压失败，程序退出。${RESET}"; exit 1; }
   rm "update.tar.gz"
 
-  # 强制更新 pkg 、 script、internal/app、internal/middleware 目录
+  # 强制更新 pkg、script、internal/app、internal/middleware 目录
   echo -e "$SEPARATOR"
-  echo -e "${BLUE}更新 pkg 、 script、internal/app、internal/middleware 目录...${RESET}"
-  rsync -aq update_temp/pkg "$project_path/pkg"
-  rsync -aq update_temp/scripts "$project_path/scripts"
-  rsync -aq update_temp/internal/app "$project_path/internal/app"
-  rsync -aq update_temp/internal/middleware "$project_path/internal/middleware"
+  echo -e "${BLUE}更新 pkg、script、internal/app、internal/middleware 目录...${RESET}"
 
-  # 强制更新 internal 目录下的 injector.go 和 wire.go 文件
+  # 使用 --delete 选项同步内容而不是复制整个目录
+  rsync -aq --delete update_temp/pkg/ "$project_path/pkg/"
+  rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
+  rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
+  rsync -aq --delete update_temp/internal/middleware/ "$project_path/internal/middleware/"
+
+  # 更新 internal 目录下的 injector.go 和 wire.go 文件
   echo -e "$SEPARATOR"
   echo -e "${BLUE}更新 internal 目录下的 injector.go 和 wire.go 文件...${RESET}"
 
@@ -314,34 +316,33 @@ update_framework() {
     echo -e "${YELLOW}wire.go 文件更新已取消。${RESET}"
   fi
 
-  # 更新 config 目录下的 config.go 文件
   echo -e "$SEPARATOR"
   echo -e "${BLUE}更新 config 目录下的 config.go 文件...${RESET}"
 
   # 提示用户是否更新
-  read -p "是否更新 config 目录？(y/n): " update_choice
+  read -p "是否更新 config.go 文件？(y/n): " update_choice
 
   if [ "$update_choice" = "y" ]; then
     # 获取当前版本号
     VERSION=$(grep -Eo 'version:[^ ]+' .releaserc | sed -E 's/version:(.*)/\1/' || echo "v1.0.0")
 
-    # 遍历 config 目录中的文件
-    for file in update_temp/config/*; do
-      filename=$(basename "$file")
-      target_file="$project_path/config/$filename"
+    # 处理 config.go 文件
+    file="update_temp/config/config.go"
+    filename=$(basename "$file")
+    target_file="$project_path/config/$filename"
 
-      # 如果目标文件存在，重命名新文件
-      if [ -f "$target_file" ]; then
-        new_filename="${filename%.*}_$VERSION.${filename##*.}"
-        echo -e "${YELLOW}文件 $filename 已存在，重命名为 $new_filename${RESET}"
-        rsync -aq "$file" "$project_path/config/$new_filename"
-      else
-        rsync -aq "$file" "$target_file"
-      fi
-    done
-    echo -e "${GREEN}更新完成。${RESET}"
+    # 如果目标文件存在，重命名新文件
+    if [ -f "$target_file" ]; then
+      new_filename="config_$VERSION.go"
+      echo -e "${YELLOW}文件 $filename 已存在，重命名为 $new_filename${RESET}"
+      rsync -aq "$file" "$project_path/config/$new_filename"
+    else
+      rsync -aq "$file" "$target_file"
+    fi
+
+    echo -e "${GREEN}config.go 文件更新完成。${RESET}"
   else
-    echo -e "${YELLOW}更新已取消。${RESET}"
+    echo -e "${YELLOW}config.go 文件更新已取消。${RESET}"
   fi
 
   # 更新根目录下的文件
