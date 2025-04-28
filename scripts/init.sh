@@ -295,13 +295,54 @@ update_framework() {
   # 强制更新 internal 目录下的 injector.go 和 wire.go 文件
   echo -e "$SEPARATOR"
   echo -e "${BLUE}更新 internal 目录下的 injector.go 和 wire.go 文件...${RESET}"
-  rsync -aq update_temp/internal/injector.go "$project_path/internal/injector.go"
-  rsync -aq update_temp/internal/wire.go "$project_path/internal/wire.go"
 
-  # 强制更新 config 目录下的 config.go 文件
+  # 提示用户是否更新 injector.go
+  read -p "是否更新 injector.go 文件？(y/n): " update_injector
+  if [ "$update_injector" = "y" ]; then
+    rsync -aq update_temp/internal/injector.go "$project_path/internal/injector.go"
+    echo -e "${GREEN}injector.go 文件已更新。${RESET}"
+  else
+    echo -e "${YELLOW}injector.go 文件更新已取消。${RESET}"
+  fi
+
+  # 提示用户是否更新 wire.go
+  read -p "是否更新 wire.go 文件？(y/n): " update_wire
+  if [ "$update_wire" = "y" ]; then
+    rsync -aq update_temp/internal/wire.go "$project_path/internal/wire.go"
+    echo -e "${GREEN}wire.go 文件已更新。${RESET}"
+  else
+    echo -e "${YELLOW}wire.go 文件更新已取消。${RESET}"
+  fi
+
+  # 更新 config 目录下的 config.go 文件
   echo -e "$SEPARATOR"
   echo -e "${BLUE}更新 config 目录下的 config.go 文件...${RESET}"
-  rsync -aq update_temp/config/config.go "$project_path/config/config.go"
+
+  # 提示用户是否更新
+  read -p "是否更新 config 目录？(y/n): " update_choice
+
+  if [ "$update_choice" = "y" ]; then
+    # 获取当前版本号
+    VERSION=$(grep -Eo 'version:[^ ]+' .releaserc | sed -E 's/version:(.*)/\1/' || echo "v1.0.0")
+
+    # 遍历 config 目录中的文件
+    for file in update_temp/config/*; do
+      filename=$(basename "$file")
+      target_file="$project_path/config/$filename"
+
+      # 如果目标文件存在，重命名新文件
+      if [ -f "$target_file" ]; then
+        new_filename="${filename%.*}_$VERSION.${filename##*.}"
+        echo -e "${YELLOW}文件 $filename 已存在，重命名为 $new_filename${RESET}"
+        rsync -aq "$file" "$project_path/config/$new_filename"
+      else
+        rsync -aq "$file" "$target_file"
+      fi
+    done
+    echo -e "${GREEN}更新完成。${RESET}"
+  else
+    echo -e "${YELLOW}更新已取消。${RESET}"
+  fi
 
   # 更新根目录下的文件
   echo -e "$SEPARATOR"

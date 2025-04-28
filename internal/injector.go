@@ -1,16 +1,16 @@
 package internal
 
 import (
-	"Taurus/internal/ctrl"
-	"Taurus/internal/ctrl/ws"
+	"Taurus/internal/controller"
+	"Taurus/internal/controller/ws"
 
 	"github.com/google/wire"
 )
 
 type Injector struct {
-	DemoCtrl *ctrl.DemoCtrl
+	DemoCtrl *controller.DemoCtrl
 	DemoWs   *ws.DemoWs
 }
 
 // Injector is the injector for the internal package
-var InjectorSet = wire.NewSet(wire.Struct(new(Injector), "*"), ctrl.DemoCtrlSet, ws.DemoWsSet)
+var InjectorSet = wire.NewSet(wire.Struct(new(Injector), "*"), controller.DemoCtrlSet, ws.DemoWsSet)
