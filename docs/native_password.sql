@@ -6,4 +6,4 @@ GRANT ALL PRIVILEGES ON kf_ai.* TO 'apps'@'%' IDENTIFIED BY 'apps';
 -- 刷新权限
 FLUSH PRIVILEGES;
 
--- 创建questions表
+-- 创建questi
