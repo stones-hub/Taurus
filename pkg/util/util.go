@@ -11,6 +11,14 @@ import (
 	"golang.org/x/text/language"
 )
 
+// ReplacePlaceholders 按顺序替换字符串中的?为提供的替换值
+func ReplacePlaceholders(query string, replacements []string) string {
+	for _, replacement := range replacements {
+		query = strings.Replace(query, "?", replacement, 1)
+	}
+	return query
+}
+
 // underscoreToCamelCase 将下划线格式的字符串转换为驼峰格式
 func underscoreToCamelCase(s string) string {
 	parts := strings.Split(s, "_")

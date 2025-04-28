@@ -8,8 +8,7 @@ import (
 	"strconv"
 )
 
-// 将结构体转换为map
-// obj 结构体或结构体指针
+// 将结构体转换为map,  obj 结构体或结构体指针
 func StructToMap(obj interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	objValue := reflect.ValueOf(obj)
