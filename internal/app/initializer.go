@@ -72,7 +72,7 @@ func Initialize(configPath string) {
 			customLogger := db.NewDBCustomLogger(loggerConfig)
 
 			// 初始化数据库
-			db.InitDB(dbConfig.Name, dbConfig.Type, dsn, customLogger)
+			db.InitDB(dbConfig.Name, dbConfig.Type, dsn, customLogger, dbConfig.MaxRetries, dbConfig.Delay)
 			log.Printf("Database '%s' initialized successfully", dbConfig.Name)
 		}
 	}

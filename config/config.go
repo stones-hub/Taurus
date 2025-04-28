@@ -19,15 +19,17 @@ type Config struct {
 
 	// 支持多个数据库配置
 	Databases []struct {
-		Name     string `json:"name" yaml:"name" toml:"name"`             // 数据库名称
-		Type     string `json:"type" yaml:"type" toml:"type"`             // 数据库类型 (postgres, mysql, sqlite)
-		Host     string `json:"host" yaml:"host" toml:"host"`             // 数据库主机
-		Port     int    `json:"port" yaml:"port" toml:"port"`             // 数据库端口
-		User     string `json:"user" yaml:"user" toml:"user"`             // 数据库用户名
-		Password string `json:"password" yaml:"password" toml:"password"` // 数据库密码
-		DBName   string `json:"dbname" yaml:"dbname" toml:"dbname"`       // 数据库名称
-		SSLMode  string `json:"sslmode" yaml:"sslmode" toml:"sslmode"`    // SSL 模式 (仅适用于 PostgreSQL)
-		DSN      string `json:"dsn" yaml:"dsn" toml:"dsn"`                // 可选，直接提供完整的 DSN 字符串
+		Name       string `json:"name" yaml:"name" toml:"name"`                      // 数据库名称
+		Type       string `json:"type" yaml:"type" toml:"type"`                      // 数据库类型 (postgres, mysql, sqlite)
+		Host       string `json:"host" yaml:"host" toml:"host"`                      // 数据库主机
+		Port       int    `json:"port" yaml:"port" toml:"port"`                      // 数据库端口
+		User       string `json:"user" yaml:"user" toml:"user"`                      // 数据库用户名
+		Password   string `json:"password" yaml:"password" toml:"password"`          // 数据库密码
+		DBName     string `json:"dbname" yaml:"dbname" toml:"dbname"`                // 数据库名称
+		SSLMode    string `json:"sslmode" yaml:"sslmode" toml:"sslmode"`             // SSL 模式 (仅适用于 PostgreSQL)
+		DSN        string `json:"dsn" yaml:"dsn" toml:"dsn"`                         // 可选，直接提供完整的 DSN 字符串
+		MaxRetries int    `json:"max_retries" yaml:"max_retries" toml:"max_retries"` // 最大重试次数
+		Delay      int    `json:"delay" yaml:"delay" toml:"delay"`                   // 重试延迟时间 秒
 
 		// 日志配置
 		Logger struct {

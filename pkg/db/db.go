@@ -18,29 +18,38 @@ import (
 var dbConnections = make(map[string]*gorm.DB)
 
 // InitDB initializes a database connection and stores it in DBConnections
-func InitDB(dbName, dbType, dsn string, customLogger logger.Interface) {
+func InitDB(dbName, dbType, dsn string, customLogger logger.Interface, maxRetries int, delay int) {
 	var err error
-
 	var db *gorm.DB
-	switch dbType {
-	case "postgres":
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-			Logger: customLogger,
-		})
-	case "mysql":
-		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
-			Logger: customLogger,
-		})
-	case "sqlite":
-		db, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
-			Logger: customLogger,
-		})
-	default:
-		log.Fatalf("Unsupported database type: %s", dbType)
+
+	for i := 0; i < maxRetries; i++ {
+		switch dbType {
+		case "postgres":
+			db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+				Logger: customLogger,
+			})
+		case "mysql":
+			db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+				Logger: customLogger,
+			})
+		case "sqlite":
+			db, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
+				Logger: customLogger,
+			})
+		default:
+			log.Fatalf("Unsupported database type: %s", dbType)
+		}
+
+		if err == nil {
+			break
+		}
+
+		log.Printf("Failed to connect to database: %v. Retrying in %d seconds...", err, delay)
+		time.Sleep(time.Duration(delay) * time.Second)
 	}
 
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect to database after %d attempts: %v", maxRetries, err)
 	}
 
 	// Set connection pool settings
