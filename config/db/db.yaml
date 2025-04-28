@@ -1,15 +1,15 @@
 databases:
-  - name: "db1"               # 数据库名称
+  - name: "kf_ai"               # 数据库名称
     type: "mysql"          # 数据库类型 (postgres, mysql, sqlite)
-    host: "127.0.0.1"         # 数据库主机
+    host: "db"         # 数据库主机
     port: 3306                # 数据库端口
-    user: "root"          # 数据库用户名
-    password: "root"      # 数据库密码
+    user: "apps"          # 数据库用户名
+    password: "apps"      # 数据库密码
     dbname: "kf_ai"     # 数据库名称
     sslmode: "disable"        # SSL 模式 (仅适用于 PostgreSQL)
     dsn: ""                   # 可选，直接提供完整的 DSN 字符串（优先级高于其他字段）
     logger:                   # 日志配置
-      log_file_path: "logs/db/db1.log" # 日志文件路径（为空时输出到控制台）
+      log_file_path: "logs/db/kf_ai.log" # 日志文件路径（为空时输出到控制台）
       max_size: 10            # 单个日志文件的最大大小（单位：MB） , 当日志文件路径不为空时生效
       max_backups: 5          # 保留的旧日志文件的最大数量 , 当日志文件路径不为空时生效
       max_age: 30             # 日志文件的最大保存天数 , 当日志文件路径不为空时生效
@@ -17,16 +17,16 @@ databases:
       log_level: "info"       # 日志等级 (silent（静默）、error（错误）、warn（警告）、info（信息）) 
       slow_threshold: 200     # 慢查询阈值（单位：毫秒）
 
-  - name: "db2"
+  - name: "kf_ai_test"
     type: "mysql"
-    host: "127.0.0.1"
+    host: "db"
     port: 3306
-    user: "root"
-    password: "root"
+    user: "apps"
+    password: "apps"
     dbname: "kf_ai"
     dsn: ""
     logger:
-      log_file_path: ""       # 输出到控制台
+      log_file_path: "logs/db/kf_ai_test.log"       # 输出到控制台
       max_size: 20
       max_backups: 3
       max_age: 15

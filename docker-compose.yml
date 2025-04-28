@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        WORKDIR: /app # 设置工作目录 Dockerfile文件中需要设置
+    image: ${APP_NAME:-taurus}:v1.0.2 # 设置镜像名称
+    container_name: ${APP_NAME:-taurus}-container # 设置容器名称
+    ports:
+      - "${HOST_PORT:-8080}:${CONTAINER_PORT:-8080}" # 设置端口映射
+    environment:
+      - DATABASE_URL=mysql://apps:apps@db:3306/kf_ai # 设置数据库连接
+      - REDIS_URL=redis://redis:6379 # 设置redis连接
+    depends_on:
+      - db # 设置依赖关系
+      - redis # 设置依赖关系
+    networks:
+      - taurus-network # 设置网络
+    volumes:
+      - config_data:/app/config # 设置卷
+      - log_data:/app/logs # 设置卷
+
+  db:
+    image: mysql:8 # 设置镜像
+    environment:
+      MYSQL_ROOT_PASSWORD: root # 设置数据库密码
+      MYSQL_DATABASE: kf_ai # 设置数据库名称
+      MYSQL_USER: apps # 设置数据库用户
+      MYSQL_PASSWORD: apps # 设置数据库密码
+    volumes:
+      - db_data:/var/lib/mysql # 设置卷
+      - ./docs:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件
+    networks:
+      - taurus-network # 设置网络
+
+  redis:
+    image: redis:6 # 设置镜像
+    networks:
+      - taurus-network # 设置网络
+    volumes:
+      - redis_data:/data # 设置卷
+
+volumes:
+  db_data:
+  redis_data:
+  config_data:
+  log_data:
+
+networks:
+  taurus-network:
+    driver: bridge  # 使用 bridge 网络，单机版必须使用 bridge 网络，集群版必须使用 overlay 网络

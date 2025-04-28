@@ -86,3 +86,36 @@ func ParseText(r *http.Request) (string, error) {
 
 	return string(body), nil
 }
+
+// ParseJsonArray 获取提交的 JSON 数组数据
+func ParseJsonArray(r *http.Request) ([]interface{}, error) {
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "application/json") {
+		return nil, fmt.Errorf("content type is not application/json")
+	}
+
+	defer r.Body.Close()
+	var jsonArray []interface{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&jsonArray); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON array body: %w", err)
+	}
+
+	return jsonArray, nil
+}
+
+// ParseJsonFlexible 根据传入的目标类型解析 JSON 数据
+func ParseJsonFlexible(r *http.Request, target interface{}) error {
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "application/json") {
+		return fmt.Errorf("content type is not application/json")
+	}
+
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(target); err != nil {
+		return fmt.Errorf("failed to parse JSON body: %w", err)
+	}
+
+	return nil
+}

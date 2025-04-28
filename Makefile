@@ -13,11 +13,17 @@ HOST_PORT ?= 8080
 CONTAINER_PORT ?= 8080
 # Docker workdir
 WORKDIR ?= /app
+
+# Docker image name
 DOCKER_IMAGE := $(APP_NAME):$(VERSION)
+# Docker container name
 DOCKER_CONTAINER := $(APP_NAME)-container
+# Docker network name
 DOCKER_NETWORK := $(APP_NAME)-network
-DOCKER_VOLUME := $(APP_NAME)-config
-DOCKER_LOG_VOLUME := $(APP_NAME)-logs
+# Docker volume name
+DOCKER_CONFIG_VOLUME := $(APP_NAME)_config_data
+# Docker log volume name
+DOCKER_LOG_VOLUME := $(APP_NAME)_log_data
 
 # 定义颜色
 RED := \033[31m
@@ -83,11 +89,11 @@ docker-run: docker-build
 	@echo -e "$(BLUE)Creating Docker network if it does not exist...$(RESET)"
 	@docker network inspect $(DOCKER_NETWORK) >/dev/null 2>&1 || docker network create $(DOCKER_NETWORK)
 	@echo -e "$(BLUE)Checking if Docker volumes exist...$(RESET)"
-	@if ! docker volume inspect $(DOCKER_VOLUME) >/dev/null 2>&1; then \
+	@if ! docker volume inspect $(DOCKER_CONFIG_VOLUME) >/dev/null 2>&1; then \
 		echo -e "$(YELLOW)Creating Docker volume for config...$(RESET)"; \
-		docker volume create $(DOCKER_VOLUME); \
+		docker volume create $(DOCKER_CONFIG_VOLUME); \
 		echo -e "$(BLUE)Copying config files to Docker volume...$(RESET)"; \
-		docker run --rm -v $(PWD)/config:/config -v $(DOCKER_VOLUME):$(WORKDIR)/config alpine sh -c "cp -r /config/* $(WORKDIR)/config/"; \
+		docker run --rm -v $(PWD)/config:/config -v $(DOCKER_CONFIG_VOLUME):$(WORKDIR)/config alpine sh -c "cp -r /config/* $(WORKDIR)/config/"; \
 	fi
 	@if ! docker volume inspect $(DOCKER_LOG_VOLUME) >/dev/null 2>&1; then \
 		echo -e "$(YELLOW)Creating Docker volume for logs...$(RESET)"; \
@@ -95,7 +101,7 @@ docker-run: docker-build
 	fi
 	@echo -e "$(BLUE)Running the application in Docker...$(RESET)"
 	@docker run -d --name $(DOCKER_CONTAINER) --network $(DOCKER_NETWORK) -p ${HOST_PORT}:${CONTAINER_PORT} \
-		--mount source=$(DOCKER_VOLUME),target=$(WORKDIR)/config \
+		--mount source=$(DOCKER_CONFIG_VOLUME),target=$(WORKDIR)/config \
 		--mount source=$(DOCKER_LOG_VOLUME),target=$(WORKDIR)/logs \
 		$(DOCKER_IMAGE) || echo -e "$(RED)Failed to run the application in Docker.$(RESET)"
 	@echo -e "$(SEPARATOR)"
@@ -115,5 +121,5 @@ docker-stop:
 
 # 使用 HOST_PORT=8090 CONTAINER_PORT=8090 WORKDIR=/myapp make docker-run 指定端口和工作目录, 默认端口为 8080， 如果不传入端口，则使用默认端口
 # @echo "Removing Docker volumes..."
-# @docker volume rm $(DOCKER_VOLUME) || echo "No config volume to remove."
+# @docker volume rm $(DOCKER_CONFIG_VOLUME) || echo "No config volume to remove."
 # @docker volume rm $(DOCKER_LOG_VOLUME) || echo "No log volume to remove."
