@@ -30,4 +30,3 @@ logs/
 .DS_Store
 .wire_gen.go
 build/
-docs/kf_ai.sql
