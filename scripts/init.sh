@@ -100,6 +100,33 @@ update_config_items() {
   done
 }
 
+# 函数：更新 config 目录下的文件
+update_config_files() {
+  local config_path="$project_path/$project_name/config"
+  local version_suffix="_$version"
+
+  # 遍历 update_temp/config 目录中的所有文件和子目录
+  find "update_temp/config" -type f | while read -r temp_file; do
+    # 获取相对路径
+    local relative_path="${temp_file#update_temp/config/}"
+    local target_file="$config_path/$relative_path"
+    local target_dir="$(dirname "$target_file")"
+    local new_filename="${target_dir}/$(basename "${relative_path%.*}$version_suffix.${relative_path##*.}")"
+
+    # 创建目标目录（如果不存在）
+    mkdir -p "$target_dir"
+
+    # 如果目标目录中存在同名文件，则重命名临时文件
+    if [ -f "$target_file" ]; then
+      echo -e "${YELLOW}发现相同文件 $relative_path，重命名为 $(basename "$new_filename")${RESET}"
+      cp "$temp_file" "$new_filename"
+    else
+      # 如果没有同名文件，直接复制
+      cp "$temp_file" "$target_file"
+    fi
+  done
+}
+
 # 函数：安装框架
 install_framework() {
   # 定义颜色
@@ -317,25 +344,45 @@ update_framework() {
     echo -e "${YELLOW}wire.go 文件更新已取消。${RESET}"
   fi
 
-
+  # 提示用户是否更新配置文件
+  echo -e "${CYAN}是否更新 config 目录下的文件？(y/n):${RESET}"
+  read -p "" update_config
+  if [ "$update_config" == "y" ]; then
+    update_config_files "$version"
+  else
+    echo -e "${YELLOW}配置文件更新已取消。${RESET}"
+  fi
 
   # 更新根目录下的文件
   echo -e "$SEPARATOR"
   echo -e "${BLUE}更新根目录下的文件... ${RESET}"
-  rsync -aq update_temp/.dockerignore "$project_path/.dockerignore"
-  rsync -aq update_temp/.env "$project_path/.env"
-  rsync -aq update_temp/.env.docker-compose "$project_path/.env.docker-compose"
-  rsync -aq update_temp/.env.local "$project_path/.env.local"
-  rsync -aq update_temp/.gitignore "$project_path/.gitignore"
-  rsync -aq update_temp/.releaserc "$project_path/.releaserc"
-  rsync -aq update_temp/docker-compose.yml "$project_path/docker-compose.yml"
-  rsync -aq update_temp/Dockerfile "$project_path/Dockerfile"
-  rsync -aq update_temp/go.mod "$project_path/go.mod"
-  rsync -aq update_temp/go.sum "$project_path/go.sum"
-  rsync -aq update_temp/LICENSE "$project_path/LICENSE"
-  rsync -aq update_temp/Makefile "$project_path/Makefile"
-  rsync -aq update_temp/README.md "$project_path/README.md"
-  
+
+  # 定义要更新的文件列表
+  files_to_update=(
+    ".dockerignore"
+    ".env"
+    ".env.docker-compose"
+    ".env.local"
+    ".gitignore"
+    ".releaserc"
+    "docker-compose.yml"
+    "Dockerfile"
+    "go.mod"
+    "go.sum"
+    "LICENSE"
+    "Makefile"
+    "README.md"
+  )
+
+  # 遍历文件列表并检查文件是否存在
+  for file in "${files_to_update[@]}"; do
+    if [ -f "update_temp/$file" ]; then
+      rsync -aq "update_temp/$file" "$project_path/$file"
+    else
+      echo -e "${YELLOW}文件 $file 不存在，跳过更新。${RESET}"
+    fi
+  done
+
   # 清理临时文件
   echo -e "$SEPARATOR"
   rm -rf "update_temp"
