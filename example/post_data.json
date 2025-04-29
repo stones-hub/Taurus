@@ -1,0 +1,10 @@
+{
+    "role_id" : "12010649008982",
+    "sdk_uid" : "78335970",
+    "props" : "钻石",
+    "start_date" : "2025-04-20",
+    "end_date" : "2025-04-27",
+    "offset" : "0",
+    "limit" : "10",
+    "_comment" : "ab -n 100 -c 10 -p post_data.json -T application/json -H \"Authorization:Bearer 123456\" http://192.168.40.30:9080/v1/api/giantwar/props"
+}
