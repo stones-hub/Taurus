@@ -1,6 +1,9 @@
 # 使用官方的 Go 语言镜像作为基础镜像
 FROM golang:1.24-alpine AS builder
 
+# 设置Goproxy防止有些机器没办法访问外网
+ENV GOPROXY=https://goproxy.cn,direct
+
 # 设置工作目录, 容器启动后会进入该目录
 ARG WORKDIR
 WORKDIR ${WORKDIR}
