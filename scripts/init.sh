@@ -320,7 +320,8 @@ update_framework() {
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
   rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
   rsync -aq --delete update_temp/internal/middleware/ "$project_path/internal/middleware/"
-  rsync -aq --delete update_temp/docs/ "$project_path/docs/"
+  # docs 是跟项目的目录，不可以覆盖
+  # rsync -aq --delete update_temp/docs/ "$project_path/docs/"
   rsync -aq --delete update_temp/example/ "$project_path/example/"
 
   # 更新 internal 目录下的 injector.go 和 wire.go 文件
