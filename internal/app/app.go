@@ -1,6 +1,7 @@
 package app
 
 import (
+	"Taurus/config"
 	"Taurus/pkg/router" // 替换为实际的包路径
 	"context"
 	"flag"
@@ -13,15 +14,25 @@ import (
 	"time"
 )
 
+// ANSI 转义序列定义颜色
+const (
+	Reset  = "\033[0m"
+	Red    = "\033[31m"
+	Green  = "\033[32m"
+	Yellow = "\033[33m"
+	Blue   = "\033[34m"
+	Cyan   = "\033[36m"
+)
+
 // DefaultHost and DefaultPort are the default server address and port
 var (
-	host = "0.0.0.0"
-	port = 8080
+	env        = ".env.local"
+	configPath = "./config"
 )
 
 // Default initializes and starts the HTTP server with default settings
 func Default() {
-	Start(host, port)
+	Start(config.AppConfig.AppHost, config.AppConfig.AppPort)
 }
 
 // Start initializes and starts the HTTP server with graceful shutdown
@@ -41,13 +52,11 @@ func Start(host string, port int) {
 
 	// Run server in a goroutine
 	go func() {
-		log.Printf("Server is running on %s", addr)
+		log.Printf("%sServer is running on %s %s \n", Green, addr, Reset)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Could not listen on %s: %v\n", addr, err)
+			log.Fatalf("%sCould not listen on %s: %v %s\n", Red, addr, err, Reset)
 		}
 	}()
-
-	log.Printf("Server is ready to handle requests at %s\n", addr)
 
 	// Block until a signal is received
 	<-stop
@@ -57,13 +66,14 @@ func Start(host string, port int) {
 	defer cancel()
 
 	// Attempt graceful shutdown
-	log.Println("Shutting down server...")
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Fatalf("%sServer forced to shutdown: %v %s\n", Red, err, Reset)
 	}
 
-	log.Println("Server stopped successfully.")
-
+	// 等待2秒，确保所有请求都处理完毕
+	log.Printf("%sWaiting for all requests to be processed... %s\n", Yellow, Reset)
+	time.Sleep(2 * time.Second)
+	log.Printf("%sServer stopped successfully. %s\n", Green, Reset)
 }
 
 /*
@@ -78,12 +88,25 @@ init 函数的执行顺序是按照包的依赖关系，从被依赖的包到依
 
 // init is automatically called before the main function
 func init() {
-	// Parse command-line arguments
-	configPath := flag.String("config", "config", "Path to the configuration file or directory")
-	flag.StringVar(&host, "host", "0.0.0.0", "Host to listen on")
-	flag.IntVar(&port, "port", 8080, "Port to listen on")
+	// 自定义帮助信息
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "\n%s\n", Cyan+"==================== Usage ===================="+Reset)
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s-e, --env <file>%s      Specify the environment file (default \".env.local\")\n", Green, Reset)
+		fmt.Fprintf(os.Stderr, "  %s-c, --config <path>%s   Specify the configuration file or directory (default \"config\")\n", Green, Reset)
+		fmt.Fprintf(os.Stderr, "  %s-h, --help%s            Show this help message\n", Green, Reset)
+		fmt.Fprintf(os.Stderr, "%s\n", Cyan+"==============================================="+Reset)
+	}
+
+	// 设置命令行参数及其别名
+	flag.StringVar(&env, "env", ".env.local", "Environment file")
+	flag.StringVar(&env, "e", ".env.local", "Environment file (alias)")
+	flag.StringVar(&configPath, "config", "config", "Path to the configuration file or directory")
+	flag.StringVar(&configPath, "c", "config", "Path to the configuration file or directory (alias)")
+
+	// 解析命令行参数
 	flag.Parse()
 
-	// Initialize all modules
-	Initialize(*configPath)
+	// Initialize all modules, 其实env传不传无所谓，因为makefile中已经将环境变量写入了， 但是为了严谨还是将envifle传入
+	Initialize(configPath, env)
 }

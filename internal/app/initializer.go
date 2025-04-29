@@ -12,17 +12,20 @@ import (
 	"log"
 	"time"
 
+	"github.com/joho/godotenv"
 	"gorm.io/gorm/logger"
 )
 
 var GlobalInjector *internal.Injector
 
 // Initialize calls the initialization functions of all modules
-func Initialize(configPath string) {
-
-	log.Println("Initializing modules...", configPath)
-
-	// load config
+func Initialize(configPath string, env string) {
+	// 1. 加载环境变量文件, 如果为空，则不加载
+	err := godotenv.Load(env)
+	if err != nil {
+		log.Printf("Error loading .env file: %v\n", err.Error())
+	}
+	// 2. 加载应用配置文件
 	config.LoadConfig(configPath)
 
 	if config.AppConfig.PrintConfig {

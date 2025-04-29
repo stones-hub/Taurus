@@ -1,18 +1,36 @@
-# 从 .releaserc 文件中获取版本号，如果获取不到则使用默认版本号 v1.0.0
-VERSION := $(shell grep -Eo 'version:[^ ]+' .releaserc | sed -E 's/version:(.*)/\1/' || echo "v1.0.0")
-# 动态获取当前目录名作为 APP_NAME 
-APP_NAME := $(shell basename $(shell pwd) | tr '[:upper:]' '[:lower:]')
+# 默认环境变量文件
+ENV_FILE=.env.local
 
+# 检查环境变量文件是否存在
+ifeq ($(wildcard $(ENV_FILE)),)
+$(error Environment file '$(ENV_FILE)' not found. Please create it or specify a different file.)
+endif
+
+# ---------- 注意事项 ----------
+# 1. 凡是通过make命令运行的程序，都会加载ENV_FILE中的环境变量，所以程序启动的时候，环境变量已经有了
+# 2. make local-run 还是传递了-env参数，只不过是为了兼容应用程序而已，其实可以不传
+# 3. make docker-run 传递了 --env-file $(ENV_FILE) 是因为docker容器中的环境变量跟宿主机不互通，所以需要传，但是我在Dockerfile中并没有让容器运行的时候传递-env参数， 是因为--env-file $(ENV_FILE) 会自动将ENV_FILE中的环境变量写入到容器中
+# 4. 用法 # make run-local  ENV_FILE=.env.local,  make docker-run ENV_FILE=.env.local 指定环境变量文件  
+#
+# -----------------------------
+# 加载环境变量
+include $(ENV_FILE)
+export $(shell sed 's/=.*//' $(ENV_FILE))
+
+
+# --------------------------- 从环境变量中获取应用配置 ---------------------------------
+VERSION := $(or $(VERSION), v1.0.0)
+APP_NAME := $(or $(APP_NAME), $(shell basename $(shell pwd) | tr '[:upper:]' '[:lower:]'))
+APP_HOST := $(or $(APP_HOST), 0.0.0.0)
+APP_PORT := $(or $(APP_PORT), 8080)
+APP_CONFIG := $(or $(APP_CONFIG), ./config)
 # 构建目录, 适用于本地化部署，不适用与docker部署
 BUILD_DIR := build
 
-# Docker parameters
-# host port
-HOST_PORT ?= 8080
-# application in container port
-CONTAINER_PORT ?= 8080
-# Docker workdir
-WORKDIR ?= /app
+# ---------------------------- 从环境变量中获取docker配置 --------------------------------
+HOST_PORT := $(or $(HOST_PORT), 8080)
+CONTAINER_PORT := $(or $(CONTAINER_PORT), 8080)
+WORKDIR := $(or $(WORKDIR), /app)
 
 # Docker image name
 DOCKER_IMAGE := $(APP_NAME):$(VERSION)
@@ -20,8 +38,6 @@ DOCKER_IMAGE := $(APP_NAME):$(VERSION)
 DOCKER_CONTAINER := $(APP_NAME)-container
 # Docker network name
 DOCKER_NETWORK := $(APP_NAME)-network
-# Docker volume name
-DOCKER_CONFIG_VOLUME := $(APP_NAME)_config_data
 # Docker log volume name
 DOCKER_LOG_VOLUME := $(APP_NAME)_log_data
 
@@ -59,10 +75,10 @@ clean:
 	@echo -e "$(SEPARATOR)"
 
 # Run the application locally
-local-run: build
+local-run: clean build
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Running the application locally...$(RESET)"
-	@$(BUILD_DIR)/$(APP_NAME) -config=config/ || echo -e "$(RED)Failed to run the application locally.$(RESET)"
+	@$(BUILD_DIR)/$(APP_NAME) -config=$(APP_CONFIG) -env=$(ENV_FILE) || echo -e "$(RED)Failed to run the application locally.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
 # Stop the local application (if running in the background)
@@ -88,20 +104,15 @@ docker-run: docker-build
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Creating Docker network if it does not exist...$(RESET)"
 	@docker network inspect $(DOCKER_NETWORK) >/dev/null 2>&1 || docker network create $(DOCKER_NETWORK)
-	@echo -e "$(BLUE)Checking if Docker volumes exist...$(RESET)"
-	@if ! docker volume inspect $(DOCKER_CONFIG_VOLUME) >/dev/null 2>&1; then \
-		echo -e "$(YELLOW)Creating Docker volume for config...$(RESET)"; \
-		docker volume create $(DOCKER_CONFIG_VOLUME); \
-		echo -e "$(BLUE)Copying config files to Docker volume...$(RESET)"; \
-		docker run --rm -v $(PWD)/config:/config -v $(DOCKER_CONFIG_VOLUME):$(WORKDIR)/config alpine sh -c "cp -r /config/* $(WORKDIR)/config/"; \
-	fi
+	@echo -e "$(BLUE)Checking if Docker log volume exists...$(RESET)"
 	@if ! docker volume inspect $(DOCKER_LOG_VOLUME) >/dev/null 2>&1; then \
 		echo -e "$(YELLOW)Creating Docker volume for logs...$(RESET)"; \
 		docker volume create $(DOCKER_LOG_VOLUME); \
 	fi
 	@echo -e "$(BLUE)Running the application in Docker...$(RESET)"
 	@docker run -d --name $(DOCKER_CONTAINER) --network $(DOCKER_NETWORK) -p ${HOST_PORT}:${CONTAINER_PORT} \
-		--mount source=$(DOCKER_CONFIG_VOLUME),target=$(WORKDIR)/config \
+		--env-file $(ENV_FILE) \
+		--mount type=bind,source=$(shell realpath $(APP_CONFIG)),target=$(WORKDIR)/config \
 		--mount source=$(DOCKER_LOG_VOLUME),target=$(WORKDIR)/logs \
 		$(DOCKER_IMAGE) || echo -e "$(RED)Failed to run the application in Docker.$(RESET)"
 	@echo -e "$(SEPARATOR)"
@@ -119,7 +130,4 @@ docker-stop:
 	@echo -e "$(GREEN)Docker container, network and image cleaned up.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# 使用 HOST_PORT=8090 CONTAINER_PORT=8090 WORKDIR=/myapp make docker-run 指定端口和工作目录, 默认端口为 8080， 如果不传入端口，则使用默认端口
-# @echo "Removing Docker volumes..."
-# @docker volume rm $(DOCKER_CONFIG_VOLUME) || echo "No config volume to remove."
-# @docker volume rm $(DOCKER_LOG_VOLUME) || echo "No log volume to remove."
+

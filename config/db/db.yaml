@@ -1,13 +1,13 @@
 databases:
   - name: "kf_ai"      # 数据库名称
-    type: "mysql"      # 数据库类型 (postgres, mysql, sqlite)
-    host: "db"         # 数据库主机
-    port: 3306         # 数据库端口
-    user: "apps"       # 数据库用户名
-    password: "apps"   # 数据库密码
-    dbname: "kf_ai"    # 数据库名称
+    type: "mysql"             # 数据库类型 (postgres, mysql, sqlite)
+    host: "${DB_HOST:db}"     # 数据库主机 , 通过环境变量来控制，为了兼容docker-compose.yml和makefile2中运行方式
+    port: ${DB_PORT:3306}         # 数据库端口
+    user: "${DB_USER:apps}"       # 数据库用户名
+    password: "${DB_PASSWORD:apps}"   # 数据库密码
+    dbname: "${DB_NAME:kf_ai}"    # 数据库名称
     sslmode: "disable" # SSL 模式 (仅适用于 PostgreSQL)
-    dsn: "apps:apps@tcp(db:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local"  # 可选，直接提供完整的 DSN 字符串（优先级高于其他字段）
+    dsn: "${DB_DSN:apps:apps@tcp(db:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}"  # 可选，直接提供完整的 DSN 字符串（优先级高于其他字段）
     max_retries: 5            # 最大重试次数
     delay: 10                 # 重试延迟时间 秒
     logger:                   # 日志配置
@@ -21,12 +21,12 @@ databases:
 
   - name: "kf_ai_test"
     type: "mysql"
-    host: "db"  # 数据库主机， 这里设置的db是因为docker-compose.yml中设置的db服务名称, 都在同一个网络的情况下
+    host: "${DB_HOST:db}"  # 数据库主机， 这里设置的db是因为docker-compose.yml中设置的db服务名称, 都在同一个网络的情况下
     port: 3306
-    user: "apps"
-    password: "apps"
-    dbname: "kf_ai"
-    dsn: "apps:apps@tcp(db:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local"
+    user: "${DB_USER:apps}"
+    password: "${DB_PASSWORD:apps}"
+    dbname: "${DB_NAME:kf_ai}"
+    dsn: "${DB_DSN:apps:apps@tcp(db:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}"
     max_retries: 5            # 最大重试次数
     delay: 10                 # 重试延迟时间 秒
     logger:

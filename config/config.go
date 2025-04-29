@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v3"
@@ -12,6 +13,10 @@ import (
 
 // Config holds the application configuration
 type Config struct {
+	Version       string `json:"version" yaml:"version" toml:"version"`                   // 版本
+	AppName       string `json:"app_name" yaml:"app_name" toml:"app_name"`                // 应用名称
+	AppHost       string `json:"app_host" yaml:"app_host" toml:"app_host"`                // 应用主机
+	AppPort       int    `json:"app_port" yaml:"app_port" toml:"app_port"`                // 应用端口
 	Authorization string `json:"authorization" yaml:"authorization" toml:"authorization"` // app授权码
 	PrintConfig   bool   `json:"print_config" yaml:"print_config" toml:"print_config"`    // 是否打印配置
 	DBEnable      bool   `json:"db_enable" yaml:"db_enable" toml:"db_enable"`             // 是否启用数据库
@@ -90,13 +95,7 @@ func LoadConfig(path string) {
 				return nil
 			}
 
-			// Load only supported file types
-			ext := filepath.Ext(filePath)
-			if ext == ".json" || ext == ".yaml" || ext == ".yml" || ext == ".toml" {
-				loadConfigFile(filePath)
-			} else {
-				log.Printf("Skipping unsupported file: %s\n", filePath)
-			}
+			loadConfigFile(filePath)
 			return nil
 		})
 		if err != nil {
@@ -113,29 +112,48 @@ func LoadConfig(path string) {
 // loadConfigFile loads a single configuration file based on its extension
 func loadConfigFile(filePath string) {
 	ext := filepath.Ext(filePath)
-	file, err := os.Open(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Printf("Failed to open config file: %v\n", err)
 		return
 	}
-	defer file.Close()
+	// Replace placeholders with environment variables
+	content := replacePlaceholders(string(data))
 
 	switch ext {
 	case ".json":
-		decoder := json.NewDecoder(file)
-		if err := decoder.Decode(&AppConfig); err != nil {
-			log.Printf("Failed to parse JSON config file: %v\n", err)
+		err = json.Unmarshal([]byte(content), &AppConfig)
+		if err != nil {
+			log.Printf("Failed to parse JSON config file: %s; error: %v\n", filePath, err)
 		}
 	case ".yaml", ".yml":
-		decoder := yaml.NewDecoder(file)
-		if err := decoder.Decode(&AppConfig); err != nil {
-			log.Printf("Failed to parse YAML config file: %v\n", err)
+		err = yaml.Unmarshal([]byte(content), &AppConfig)
+		if err != nil {
+			log.Printf("Failed to parse YAML config file: %s; error: %v\n", filePath, err)
 		}
 	case ".toml":
-		if _, err := toml.NewDecoder(file).Decode(&AppConfig); err != nil {
-			log.Printf("Failed to parse TOML config file: %v\n", err)
+		_, err = toml.Decode(content, &AppConfig)
+		if err != nil {
+			log.Printf("Failed to parse TOML config file: %s; error: %v\n", filePath, err)
 		}
 	default:
-		log.Printf("Unsupported config file format: %s\n", ext)
+		log.Printf("Unsupported config file format: %s\n", filePath)
 	}
+}
+
+// replacePlaceholders replaces placeholders in the config content with environment variables
+func replacePlaceholders(content string) string {
+	re := regexp.MustCompile(`\$\{(\w+):([^}]+)\}`)
+	return re.ReplaceAllStringFunc(content, func(match string) string {
+		parts := re.FindStringSubmatch(match)
+		if len(parts) == 3 {
+			envVar := parts[1]
+			defaultValue := parts[2]
+			if value, exists := os.LookupEnv(envVar); exists {
+				return value
+			}
+			return defaultValue
+		}
+		return match
+	})
 }

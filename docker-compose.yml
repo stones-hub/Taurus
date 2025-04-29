@@ -4,37 +4,35 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        WORKDIR: /app # 设置工作目录 Dockerfile文件中需要设置
-    image: ${APP_NAME:-taurus}:${VERSION:-v1.0.2} # 设置镜像名称
+        WORKDIR: ${WORKDIR:-/app} # 设置工作目录 Dockerfile文件中需要
+    image: ${APP_NAME:-taurus-docker}:${VERSION:-v1.0.0} # 设置镜像名称
     container_name: app # 设置容器名称
     ports:
       - "${HOST_PORT:-8080}:${CONTAINER_PORT:-8080}" # 设置端口映射
-    environment:
-      - MYSQL_DSN=apps:apps@tcp(db:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local # 设置数据库连接 db 是容器名称
-      - REDIS_URL=redis://redis:6379 # 设置redis连接
-    depends_on: # 设置依赖服务，在启动服务的时候，会先启动依赖的服务，然后启动当前服务。 依赖的服务设置了健康检查，强依赖, 如果依赖的服务没有启动成功，当前服务不会启动
-      db:
+    environment: # 给容器设置环境变量
+      - MYSQL_DSN=${DB_DSN:-apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
+    env_file: # 设置环境变量文件
+      - .env # 设置环境变量文件
+    depends_on: # 设置依赖服务，在启动服务的时候，会先启动依赖的服务，然后启动当前服务。 依赖的服务设置了健康检查
+      mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes: 
-      - ./config:/app/config # 设置卷将本地config目录挂载到容器中
-      - log_data:/app/logs # 设置卷, 将容器生成的日志文件挂载到本地卷
+      - ${APP_CONFIG}:${WORKDIR:-/app}/config # 设置卷将本地config目录挂载到容器中
+      - log_data:${WORKDIR:-/app}/logs # 设置卷, 将容器生成的日志文件挂载到本地卷
     networks:
       - taurus-network
 
-# 注意:
-# 新建卷 config_data 和 log_data, 将 config 和 logs 目录挂载到卷中，但是这里有个问题，容器内是没有配置文件的，所以我们需要将配置文件复制到卷中
-# 一般处理配置信息有3个办法， 1. 利用环境变量， 2. 利用卷挂载，前提是你的Dockfile打包镜像的时候，里面就已经有了配置文件 3. 直接将主机的配置文件共享给容器(这里使用的方法)
-
-  db:
+  mysql:
     image: mysql:8
-    container_name: db # 设置容器名称
+    container_name: mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root # 设置数据库密码
-      MYSQL_DATABASE: kf_ai # 设置数据库名称
-      MYSQL_USER: apps # 设置数据库用户
-      MYSQL_PASSWORD: apps # 设置数据库密码
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-kf_ai} 
+      MYSQL_USER: ${DB_USER:-apps}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-apps}
     healthcheck: # 设置健康检查，配合depends_on使用，如果依赖的服务没有启动成功，当前服务不会启动
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -43,6 +41,8 @@ services:
       start_period: 10s
     #ports:
     #  - "3306:3306" # 设置端口映射
+    env_file:
+      - .env
     volumes:
       - db_data:/var/lib/mysql # 设置卷
       - ./docs:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件(凡是放在这个目录下的sql文件都会被执行)
@@ -50,8 +50,8 @@ services:
       - taurus-network
 
   redis:
-    image: redis:6 # 设置镜像
-    container_name: redis # 设置容器名称
+    image: redis:6 
+    container_name: redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -61,14 +61,15 @@ services:
     networks:
       - taurus-network
     volumes:
-      - redis_data:/data # 设置卷
+      - redis_data:/data 
 
+# 定义卷需要创建的所有卷
 volumes:
   db_data:
   redis_data:
   log_data:
 
+# 使用 bridge 网络，单机版必须使用 bridge 网络，集群版必须使用 overlay 网络
 networks:
   taurus-network:
     driver: bridge
-  # 使用 bridge 网络，单机版必须使用 bridge 网络，集群版必须使用 overlay 网络

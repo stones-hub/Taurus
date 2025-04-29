@@ -32,5 +32,5 @@ WORKDIR ${WORKDIR}
 # 这里，--from=builder 指定从构建阶段（builder）中复制文件，/app/main 是构建阶段中编译好的二进制文件路径。
 COPY --from=builder ${WORKDIR}/main .
 
-# 运行应用程序
-CMD ["./main"]
+# 运行应用程序, 为什么这里的配置文件路径是${WORKDIR}/config, 是因为我在Makefile中 docker run的时候bind的目录就是这个
+CMD ["sh", "-c", "./main -config=${WORKDIR}/config"]

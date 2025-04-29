@@ -293,6 +293,7 @@ update_framework() {
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
   rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
   rsync -aq --delete update_temp/internal/middleware/ "$project_path/internal/middleware/"
+  rsync -aq --delete update_temp/docs/ "$project_path/docs/"
 
   # 更新 internal 目录下的 injector.go 和 wire.go 文件
   echo -e "$SEPARATOR"
@@ -316,48 +317,24 @@ update_framework() {
     echo -e "${YELLOW}wire.go 文件更新已取消。${RESET}"
   fi
 
-  echo -e "$SEPARATOR"
-  echo -e "${BLUE}更新 config 目录下的 config.go 文件...${RESET}"
 
-  # 提示用户是否更新
-  read -p "是否更新 config.go 文件？(y/n): " update_choice
-
-  if [ "$update_choice" = "y" ]; then
-    # 获取当前版本号
-    VERSION=$(grep -Eo 'version:[^ ]+' .releaserc | sed -E 's/version:(.*)/\1/' || echo "v1.0.0")
-
-    # 处理 config.go 文件
-    file="update_temp/config/config.go"
-    filename=$(basename "$file")
-    target_file="$project_path/config/$filename"
-
-    # 如果目标文件存在，重命名新文件
-    if [ -f "$target_file" ]; then
-      new_filename="config_$VERSION.go"
-      echo -e "${YELLOW}文件 $filename 已存在，重命名为 $new_filename${RESET}"
-      rsync -aq "$file" "$project_path/config/$new_filename"
-    else
-      rsync -aq "$file" "$target_file"
-    fi
-
-    echo -e "${GREEN}config.go 文件更新完成。${RESET}"
-  else
-    echo -e "${YELLOW}config.go 文件更新已取消。${RESET}"
-  fi
 
   # 更新根目录下的文件
   echo -e "$SEPARATOR"
   echo -e "${BLUE}更新根目录下的文件... ${RESET}"
   rsync -aq update_temp/.dockerignore "$project_path/.dockerignore"
+  rsync -aq update_temp/.env "$project_path/.env"
+  rsync -aq update_temp/.env.docker-compose "$project_path/.env.docker-compose"
+  rsync -aq update_temp/.env.local "$project_path/.env.local"
   rsync -aq update_temp/.gitignore "$project_path/.gitignore"
   rsync -aq update_temp/.releaserc "$project_path/.releaserc"
+  rsync -aq update_temp/docker-compose.yml "$project_path/docker-compose.yml"
   rsync -aq update_temp/Dockerfile "$project_path/Dockerfile"
   rsync -aq update_temp/go.mod "$project_path/go.mod"
   rsync -aq update_temp/go.sum "$project_path/go.sum"
   rsync -aq update_temp/LICENSE "$project_path/LICENSE"
   rsync -aq update_temp/Makefile "$project_path/Makefile"
   rsync -aq update_temp/README.md "$project_path/README.md"
-  rsync -aq update_temp/docker-compose.yml "$project_path/docker-compose.yml"
   
   # 清理临时文件
   echo -e "$SEPARATOR"
