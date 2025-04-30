@@ -7,7 +7,7 @@ $(error $(RED)Environment file '$(ENV_FILE)' not found. Please create it or spec
 endif
 
 # ---------- 注意事项 ----------
-# 1. 凡是通过make命令运行的程序，都会加载ENV_FILE中的环境变量，所以程序启动的时候，环境变量已经有了
+# 1. 凡是通过make命令运行的程序，都会加载ENV_FILE中的环境变量，所以程序启动的时候，环境变量已经有了(包括docker-compose.yml类似的文件中需要的环境变量都已经加载进去了无需重复加载)
 # 2. make local-run 还是传递了-env参数，只不过是为了兼容应用程序而已，其实可以不传
 # 3. make docker-run 传递了 --env-file $(ENV_FILE) 是因为docker容器中的环境变量跟宿主机不互通，所以需要传，但是我在Dockerfile中并没有让容器运行的时候传递-env参数， 是因为--env-file $(ENV_FILE) 会自动将ENV_FILE中的环境变量写入到容器中
 # 4. 用法 # make run-local  ENV_FILE=.env.local,  make docker-run ENV_FILE=.env.local 指定环境变量文件  
@@ -160,6 +160,20 @@ docker-compose-down:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Stopping Docker Compose...$(RESET)"
 	@docker-compose -f docker-compose.yml down || echo -e "$(RED)Failed to stop Docker Compose.$(RESET)"
+	@echo -e "$(GREEN)Docker Compose stopped.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
+docker-compose-start:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Starting Docker Compose...$(RESET)"
+	@docker-compose -f docker-compose.yml start || echo -e "$(RED)Failed to start Docker Compose.$(RESET)"
+	@echo -e "$(GREEN)Docker Compose started.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
+docker-compose-stop:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Stopping Docker Compose...$(RESET)"
+	@docker-compose -f docker-compose.yml stop || echo -e "$(RED)Failed to stop Docker Compose.$(RESET)"
 	@echo -e "$(GREEN)Docker Compose stopped.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 

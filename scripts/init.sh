@@ -362,12 +362,12 @@ update_framework() {
   # 定义要更新的文件列表
   files_to_update=(
     ".dockerignore"
-    ".env"
     ".env.docker-compose"
     ".env.local"
     ".gitignore"
     ".releaserc"
     "docker-compose.yml"
+    "docker-compose-swarm.yml"
     "Dockerfile"
     "go.mod"
     "go.sum"

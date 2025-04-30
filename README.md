@@ -53,40 +53,74 @@ wire
 - **初次部署**：
 
   ```shell
-  
+  make  docker-compose-up ENV_FILE=.env.docker-compose 
   ```
 
 - **清空容器，镜像，重新打包**：
 
   ```shell
-  
+ make  docker-compose-down ENV_FILE=.env.docker-compose  
   ```
 
 - **启动项目**：
 
   ```shell
-  
+  make docker-compose-start ENV_FILE=.env.docker-compose  
   ```
 
 - **停止项目**：
 
   ```shell
-  
+   make docker-compose-stop ENV_FILE=.env.docker-compose  
   ```
 
 ---
 
-### 四、配置文件指南
+### 四、Docker Swarm 集群部署
+
+#### 使用指南：
+
+- **将要app镜像推送到仓库**
+  ```shell
+  make docker-image-push ENV_FILE=.env.docker-compose
+  ```
+
+- **同步调整docker-compose-swarm.yml文件中的 app 服务的 拉取镜像地址**
+
+- **启动集群**
+  ```shell
+  make docker-swarm-up ENV_FILE=.env.docker-compose
+  ```
+
+- **停止集群**
+  ```shell
+  make docker-swarm-down ENV_FILE=.env.docker-compose
+  ```
+
+- **更新集群**
+
+#### 注意事项：
+
+- 确保在每个命令中指定正确的`ENV_FILE`以加载相应的环境变量。
+- 在更新镜像时，确保新版本的镜像已经推送到注册表中。
+
+---
+
+### 配置文件指南
 
 - **config 目录**：用于存储应用内的各种组件的配置。添加新配置后，请在 `config/config.go` 中做好映射。
 
 - **.env.local**：用于本地部署的默认环境变量，解决 Docker 和非 Docker 环境下参数隔离的问题。
 
-- **.env.docker-compose**：Docker-Compose 部署所需的环境变量。使用时需复制为 `.env`。
+- **.env.docker-compose**：Docker-Compose 部署所需的环境变量。
+
+- **docker-compose.yml**: Docker-Compose 单机部署所需的配置文件。
+
+- **docker-compose-swarm.yml**: swan集群部署所需要的配置文件， 注意配置文件中的app镜像地址需要提前push到注册仓库，并且要找对镜像版本哟
 
 ---
 
-### 五、初始化和更新项目
+### 初始化和更新项目
 
 - **更新脚本**：项目更新使用的脚本是 `scripts/init.sh`。项目是否更新取决于 `.releaserc` 文件中的项目版本。
 
