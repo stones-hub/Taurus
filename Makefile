@@ -164,10 +164,15 @@ docker-compose-down:
 	@echo -e "$(SEPARATOR)"
 
 # docker-compose-swarm.yml
-docker-compose-swarm-up:
+docker-compose-swarm-up: docker-build
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Pushing Docker image to registry...$(RESET)"
+	echo docker tag $(DOCKER_IMAGE) $(REGISTRY_URL)/$(DOCKER_IMAGE)
+	echo docker push $(REGISTRY_URL)/$(DOCKER_IMAGE) || echo -e "$(RED)Failed to push Docker image.$(RESET)"
+	@echo -e "$(GREEN)Docker image pushed to registry.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Starting Docker Compose Swarm...$(RESET)"
-	@docker-compose -f docker-compose-swarm.yml up -d || echo -e "$(RED)Failed to start Docker Compose Swarm.$(RESET)"
+	echo docker-compose -f docker-compose-swarm.yml up -d || echo -e "$(RED)Failed to start Docker Compose Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Compose Swarm started.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 

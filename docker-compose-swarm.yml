@@ -15,19 +15,14 @@ services:
       replicas: 1  # 确保只有一个 Nginx 实例
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        WORKDIR: ${WORKDIR:-/app} # 设置工作目录 Dockerfile文件中需要
-    image: ${APP_NAME:-taurus-docker}:${VERSION:-v1.0.0} # 设置镜像名称
+    image: ${APP_NAME}:${VERSION} # 设置镜像名称
     environment: # 给容器设置环境变量
       - MYSQL_DSN=${DB_DSN:-apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
     env_file: # 设置环境变量文件
       - .env # 设置环境变量文件
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8080}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT}/health"]
       interval: 10s
       timeout: 5s
       retries: 5
