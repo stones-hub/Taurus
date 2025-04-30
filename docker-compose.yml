@@ -11,6 +11,8 @@ services:
       - nginx_logs:/var/log/nginx  # 使用命名卷持久化日志
     networks:
       - taurus-network
+    deploy:
+      replicas: 1  # 确保只有一个 Nginx 实例
 
   app:
     build:
@@ -25,7 +27,7 @@ services:
     env_file: # 设置环境变量文件
       - .env # 设置环境变量文件
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8080}"]
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8080}/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,7 +38,7 @@ services:
     networks:
       - taurus-network
     deploy:
-      replicas: 3  # 设置副本数量
+      replicas: 3  # 设置为 3 个应用实例
       update_config:
         parallelism: 2 # 设置并行更新数量
         delay: 60s # 设置更新延迟时间
@@ -63,6 +65,8 @@ services:
       - ./docs:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件(凡是放在这个目录下的sql文件都会被执行)
     networks:
       - taurus-network
+    deploy:
+      replicas: 1  # 确保只有一个 MySQL 实例
 
   redis:
     image: redis:6 
@@ -76,6 +80,8 @@ services:
       - taurus-network
     volumes:
       - redis_data:/data 
+    deploy:
+      replicas: 1  # 确保只有一个 Redis 实例
 
 # 定义卷需要创建的所有卷
 volumes:
@@ -84,7 +90,7 @@ volumes:
   log_data:
   nginx_logs:  # 定义 Nginx 日志卷
 
-# 使用 bridge 网络，单机版必须使用 bridge 网络，集群版必须使用 overlay 网络
+# 使用 overlay 网络，适用于 Swarm 集群
 networks:
   taurus-network:
     driver: overlay
