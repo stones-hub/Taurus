@@ -24,7 +24,7 @@ RUN go build -o main cmd/main.go
 FROM alpine:latest
 
 # 安装必要的依赖
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates curl
 
 # 设置工作目录
 ARG WORKDIR

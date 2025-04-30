@@ -10,6 +10,14 @@ import (
 
 func main() {
 	router.AddRouter(router.Router{
+		Path: "/health",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		}),
+	})
+
+	router.AddRouter(router.Router{
 		Path: "/ws",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			websocket.HandleWebSocket(w, r, app.GlobalInjector.DemoWs.HandleMessage)
