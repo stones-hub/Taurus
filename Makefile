@@ -167,10 +167,10 @@ docker-compose-down:
 docker-image-push: docker-build
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Tagging Docker image...$(RESET)"
-	echo @docker tag $(DOCKER_IMAGE) $(REGISTRY_URL)/$(DOCKER_IMAGE)
+	@docker tag $(DOCKER_IMAGE) $(REGISTRY_URL)/$(DOCKER_IMAGE)
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Pushing Docker image to registry...$(RESET)"
-	echo @docker push $(REGISTRY_URL)/$(DOCKER_IMAGE) || echo -e "$(RED)Failed to push Docker image.$(RESET)"
+	@docker push $(REGISTRY_URL)/$(DOCKER_IMAGE) || echo -e "$(RED)Failed to push Docker image.$(RESET)"
 	@echo -e "$(GREEN)Docker image pushed to registry.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
