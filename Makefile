@@ -163,22 +163,28 @@ docker-compose-down:
 	@echo -e "$(GREEN)Docker Compose stopped.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# docker-compose-swarm.yml
-docker-compose-swarm-up: docker-build
+# 推送Docker镜像到注册中心
+docker-image-push: docker-build
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Tagging Docker image...$(RESET)"
+	echo @docker tag $(DOCKER_IMAGE) $(REGISTRY_URL)/$(DOCKER_IMAGE)
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Pushing Docker image to registry...$(RESET)"
-	echo docker tag $(DOCKER_IMAGE) $(REGISTRY_URL)/$(DOCKER_IMAGE)
-	echo docker push $(REGISTRY_URL)/$(DOCKER_IMAGE) || echo -e "$(RED)Failed to push Docker image.$(RESET)"
+	echo @docker push $(REGISTRY_URL)/$(DOCKER_IMAGE) || echo -e "$(RED)Failed to push Docker image.$(RESET)"
 	@echo -e "$(GREEN)Docker image pushed to registry.$(RESET)"
 	@echo -e "$(SEPARATOR)"
-	@echo -e "$(BLUE)Starting Docker Compose Swarm...$(RESET)"
-	echo docker-compose -f docker-compose-swarm.yml up -d || echo -e "$(RED)Failed to start Docker Compose Swarm.$(RESET)"
-	@echo -e "$(GREEN)Docker Compose Swarm started.$(RESET)"
+
+# docker-swarm-up目标
+docker-swarm-up: 
+	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
+	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
+	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# docker-compose-swarm.yml
-docker-compose-swarm-down:
+# docker-swarm-down目标
+docker-swarm-down:
 	@echo -e "$(SEPARATOR)"
-	@echo -e "$(BLUE)Stopping Docker Compose Swarm...$(RESET)"
-	@docker-compose -f docker-compose-swarm.yml down || echo -e "$(RED)Failed to stop Docker Compose Swarm.$(RESET)"
-	@echo -e "$(GREEN)Docker Compose Swarm stopped.$(RESET)"
+	@echo -e "$(BLUE)Removing stack from Docker Swarm...$(RESET)"
+	@docker stack rm $(APP_NAME) || echo -e "$(RED)Failed to remove stack from Docker Swarm.$(RESET)"
+	@echo -e "$(GREEN)Stack removed from Docker Swarm.$(RESET)"
+	@echo -e "$(SEPARATOR)"

@@ -20,7 +20,7 @@ services:
       - MYSQL_DSN=${DB_DSN:-apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
     env_file: # 设置环境变量文件
-      - .env # 设置环境变量文件
+      - .env.docker-compose # 设置环境变量文件
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT}/health"]
       interval: 10s
@@ -54,7 +54,7 @@ services:
       retries: 5
       start_period: 10s
     env_file:
-      - .env
+      - .env.docker-compose
     volumes:
       - db_data:/var/lib/mysql # 设置卷
       - ./docs:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件(凡是放在这个目录下的sql文件都会被执行)
