@@ -53,25 +53,25 @@ wire
 - **初次部署**：
 
   ```shell
-  docker-compose up -d
+  
   ```
 
 - **清空容器，镜像，重新打包**：
 
   ```shell
-  docker-compose down
+  
   ```
 
 - **启动项目**：
 
   ```shell
-  docker-compose start
+  
   ```
 
 - **停止项目**：
 
   ```shell
-  docker-compose stop
+  
   ```
 
 ---

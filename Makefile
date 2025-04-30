@@ -3,7 +3,7 @@ ENV_FILE=.env.local
 
 # 检查环境变量文件是否存在
 ifeq ($(wildcard $(ENV_FILE)),)
-$(error Environment file '$(ENV_FILE)' not found. Please create it or specify a different file.)
+$(error $(RED)Environment file '$(ENV_FILE)' not found. Please create it or specify a different file.$(RESET))
 endif
 
 # ---------- 注意事项 ----------
@@ -13,33 +13,10 @@ endif
 # 4. 用法 # make run-local  ENV_FILE=.env.local,  make docker-run ENV_FILE=.env.local 指定环境变量文件  
 #
 # -----------------------------
-# 加载环境变量
+
+# ---------------------------- 加载环境变量 --------------------------------
 include $(ENV_FILE)
 export $(shell sed 's/=.*//' $(ENV_FILE))
-
-
-# --------------------------- 从环境变量中获取应用配置 ---------------------------------
-VERSION := $(or $(VERSION), v1.0.0)
-APP_NAME := $(or $(APP_NAME), $(shell basename $(shell pwd) | tr '[:upper:]' '[:lower:]'))
-APP_HOST := $(or $(APP_HOST), 0.0.0.0)
-APP_PORT := $(or $(APP_PORT), 8080)
-APP_CONFIG := $(or $(APP_CONFIG), ./config)
-# 构建目录, 适用于本地化部署，不适用与docker部署
-BUILD_DIR := build
-
-# ---------------------------- 从环境变量中获取docker配置 --------------------------------
-HOST_PORT := $(or $(HOST_PORT), 8080)
-CONTAINER_PORT := $(or $(CONTAINER_PORT), 8080)
-WORKDIR := $(or $(WORKDIR), /app)
-
-# Docker image name
-DOCKER_IMAGE := $(APP_NAME):$(VERSION)
-# Docker container name
-DOCKER_CONTAINER := $(APP_NAME)-container
-# Docker network name
-DOCKER_NETWORK := $(APP_NAME)-network
-# Docker log volume name
-DOCKER_LOG_VOLUME := $(APP_NAME)_log_data
 
 # 定义颜色
 RED := \033[31m
@@ -48,12 +25,52 @@ YELLOW := \033[33m
 BLUE := \033[34m
 CYAN := \033[36m
 RESET := \033[0m
-
 # 定义分割符
-SEPARATOR := $(CYAN)========================================$(RESET)
+SEPARATOR := $(CYAN)--------------------------------$(RESET)
 
+# ---------------------------- 从环境变量中获取配置 --------------------------------
+
+# 检查环境变量是否为空
+ifeq ($(strip $(VERSION)),)
+$(error $(RED)VERSION is not set in the environment variables$(RESET))
+endif
+
+ifeq ($(strip $(APP_NAME)),)
+$(error $(RED)APP_NAME is not set in the environment variables$(RESET))
+endif
+
+ifeq ($(strip $(APP_HOST)),)
+$(error $(RED)APP_HOST is not set in the environment variables$(RESET))
+endif
+
+ifeq ($(strip $(APP_PORT)),)
+$(error $(RED)APP_PORT is not set in the environment variables$(RESET))
+endif
+
+ifeq ($(strip $(APP_CONFIG)),)
+$(error $(RED)APP_CONFIG is not set in the environment variables$(RESET))
+endif
+
+ifeq ($(strip $(HOST_PORT)),)
+$(error $(RED)HOST_PORT is not set in the environment variables$(RESET))
+endif
+
+ifeq ($(strip $(CONTAINER_PORT)),)
+$(error $(RED)CONTAINER_PORT is not set in the environment variables$(RESET))
+endif
+
+ifeq ($(strip $(WORKDIR)),)
+$(error $(RED)WORKDIR is not set in the environment variables$(RESET))
+endif
+
+BUILD_DIR := build
+DOCKER_IMAGE := $(APP_NAME):$(VERSION)
+DOCKER_CONTAINER := $(APP_NAME)
+DOCKER_NETWORK := $(APP_NAME)-network
+DOCKER_LOG_VOLUME := $(APP_NAME)_log_data
+
+# ---------------------------- 构建目标 --------------------------------
 .PHONY: all build clean docker-build docker-run docker-stop local-run local-stop
-
 # Default target
 all: build
 
@@ -130,4 +147,33 @@ docker-stop:
 	@echo -e "$(GREEN)Docker container, network and image cleaned up.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
+# docker-compose.yml
+docker-compose-up:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Starting Docker Compose...$(RESET)"
+	@docker-compose -f docker-compose.yml up -d || echo -e "$(RED)Failed to start Docker Compose.$(RESET)"
+	@echo -e "$(GREEN)Docker Compose started.$(RESET)"
+	@echo -e "$(SEPARATOR)"
 
+# docker-compose.yml
+docker-compose-down:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Stopping Docker Compose...$(RESET)"
+	@docker-compose -f docker-compose.yml down || echo -e "$(RED)Failed to stop Docker Compose.$(RESET)"
+	@echo -e "$(GREEN)Docker Compose stopped.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
+# docker-compose-swarm.yml
+docker-compose-swarm-up:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Starting Docker Compose Swarm...$(RESET)"
+	@docker-compose -f docker-compose-swarm.yml up -d || echo -e "$(RED)Failed to start Docker Compose Swarm.$(RESET)"
+	@echo -e "$(GREEN)Docker Compose Swarm started.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
+# docker-compose-swarm.yml
+docker-compose-swarm-down:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Stopping Docker Compose Swarm...$(RESET)"
+	@docker-compose -f docker-compose-swarm.yml down || echo -e "$(RED)Failed to stop Docker Compose Swarm.$(RESET)"
+	@echo -e "$(GREEN)Docker Compose Swarm stopped.$(RESET)"

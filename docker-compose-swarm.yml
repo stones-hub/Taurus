@@ -1,4 +1,19 @@
+version: '3.7'
+
 services:
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "9527:80"
+    volumes:
+      - ./scripts/config/nginx.conf:/etc/nginx/nginx.conf
+      - nginx_logs:/var/log/nginx  # 使用命名卷持久化日志
+    networks:
+      - taurus-network
+    deploy:
+      replicas: 1  # 确保只有一个 Nginx 实例
+
   app:
     build:
       context: .
@@ -6,41 +21,43 @@ services:
       args:
         WORKDIR: ${WORKDIR:-/app} # 设置工作目录 Dockerfile文件中需要
     image: ${APP_NAME:-taurus-docker}:${VERSION:-v1.0.0} # 设置镜像名称
-    container_name: app # 设置容器名称
-    ports:
-      - "${HOST_PORT:-8080}:${CONTAINER_PORT:-8080}" # 设置端口映射
     environment: # 给容器设置环境变量
       - MYSQL_DSN=${DB_DSN:-apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
     env_file: # 设置环境变量文件
       - .env # 设置环境变量文件
-    depends_on: # 设置依赖服务，在启动服务的时候，会先启动依赖的服务，然后启动当前服务。 依赖的服务设置了健康检查
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8080}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # 延长启动等待时间，确保 mysql 和 redis 已准备好
     volumes: 
       - ${APP_CONFIG}:${WORKDIR:-/app}/config # 设置卷将本地config目录挂载到容器中
       - log_data:${WORKDIR:-/app}/logs # 设置卷, 将容器生成的日志文件挂载到本地卷
     networks:
       - taurus-network
+    deploy:
+      replicas: 3  # 设置为 3 个应用实例
+      update_config:
+        parallelism: 2 # 设置并行更新数量
+        delay: 60s # 设置更新延迟时间
+      restart_policy:
+        condition: on-failure # 设置重启策略,当容器因失败而退出时才会重启。
 
   mysql:
     image: mysql:8
-    container_name: mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: ${DB_NAME:-kf_ai} 
       MYSQL_USER: ${DB_USER:-apps}
       MYSQL_PASSWORD: ${DB_PASSWORD:-apps}
-    healthcheck: # 设置健康检查，配合depends_on使用，如果依赖的服务没有启动成功，当前服务不会启动
+    healthcheck: # 设置健康检查
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    #ports:
-    #  - "3306:3306" # 设置端口映射
     env_file:
       - .env
     volumes:
@@ -48,10 +65,11 @@ services:
       - ./docs:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件(凡是放在这个目录下的sql文件都会被执行)
     networks:
       - taurus-network
+    deploy:
+      replicas: 1  # 确保只有一个 MySQL 实例
 
   redis:
     image: redis:6 
-    container_name: redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -62,17 +80,20 @@ services:
       - taurus-network
     volumes:
       - redis_data:/data 
+    deploy:
+      replicas: 1  # 确保只有一个 Redis 实例
 
 # 定义卷需要创建的所有卷
 volumes:
   db_data:
   redis_data:
   log_data:
+  nginx_logs:  # 定义 Nginx 日志卷
 
-# 使用 bridge 网络，单机版必须使用 bridge 网络，集群版必须使用 overlay 网络
+# 使用 overlay 网络，适用于 Swarm 集群
 networks:
   taurus-network:
-    driver: bridge
+    driver: overlay
 
 
 # ------------------------------------------------------------
