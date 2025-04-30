@@ -14,6 +14,7 @@ services:
       - nginx_logs:/var/log/nginx  # 使用命名卷持久化日志
     networks:
       - taurus-network
+
   app:
     build:
       context: .
@@ -21,9 +22,6 @@ services:
       args:
         WORKDIR: ${WORKDIR:-/app} # 设置工作目录 Dockerfile文件中需要
     image: ${APP_NAME:-taurus-docker}:${VERSION:-v1.0.0} # 设置镜像名称
-    container_name: app # 设置容器名称
-   # ports:
-   #   - "${HOST_PORT:-8080}:${CONTAINER_PORT:-8080}" # 设置端口映射
     environment: # 给容器设置环境变量
       - MYSQL_DSN=${DB_DSN:-apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
@@ -52,9 +50,9 @@ services:
         delay: 60s # 设置更新延迟时间
       restart_policy:
         condition: on-failure # 设置重启策略,当容器因失败而退出时才会重启。
+
   mysql:
     image: mysql:8
-    container_name: mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: ${DB_NAME:-kf_ai} 
@@ -66,8 +64,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    #ports:
-    #  - "3306:3306" # 设置端口映射
     env_file:
       - .env
     volumes:
@@ -75,9 +71,9 @@ services:
       - ./docs:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件(凡是放在这个目录下的sql文件都会被执行)
     networks:
       - taurus-network
+
   redis:
     image: redis:6 
-    container_name: redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
