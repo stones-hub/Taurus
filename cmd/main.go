@@ -3,6 +3,7 @@ package main
 import (
 	"Taurus/internal/app"
 	"Taurus/internal/middleware"
+	"Taurus/pkg/loggerx"
 	"Taurus/pkg/router"
 	"Taurus/pkg/websocket"
 	"net/http"
@@ -13,7 +14,8 @@ func main() {
 		Path: "/health",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
+			loggerx.DefaultLogger.Info("OK-V1.1.2")
+			w.Write([]byte("OK-V1.1.2"))
 		}),
 	})
 
