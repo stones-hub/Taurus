@@ -2,8 +2,9 @@ package main
 
 import (
 	"Taurus/internal/app"
-	"Taurus/internal/middleware"
+
 	"Taurus/pkg/loggerx"
+	"Taurus/pkg/middleware"
 	"Taurus/pkg/router"
 	"Taurus/pkg/websocket"
 	"net/http"
