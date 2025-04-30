@@ -26,12 +26,12 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
     env_file: # 设置环境变量文件
       - .env # 设置环境变量文件
-    #healthcheck:
-    #  test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8080}/"]
-    #  interval: 10s
-    #  timeout: 5s
-    #  retries: 5
-    #  start_period: 10s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8080}/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # 延长启动等待时间，确保 mysql 和 redis 已准备好
     volumes: 
       - ${APP_CONFIG}:${WORKDIR:-/app}/config # 设置卷将本地config目录挂载到容器中
       - log_data:${WORKDIR:-/app}/logs # 设置卷, 将容器生成的日志文件挂载到本地卷
