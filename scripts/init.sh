@@ -311,16 +311,14 @@ update_framework() {
   tar -xzf "update.tar.gz" -C "update_temp" --strip-components=1 || { echo -e "${RED}解压失败，程序退出。${RESET}"; exit 1; }
   rm "update.tar.gz"
 
-  # 强制更新 pkg、script、internal/app、internal/middleware 目录
+  # 强制更新 pkg、script、example、internal/app 目录
   echo -e "$SEPARATOR"
-  echo -e "${BLUE}更新 pkg、script、internal/app 目录...${RESET}"
+  echo -e "${BLUE}更新 pkg、script、example、internal/app 目录...${RESET}"
 
   # 使用 --delete 选项同步内容而不是复制整个目录
   rsync -aq --delete update_temp/pkg/ "$project_path/pkg/"
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
   rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
-  # docs 是跟项目的目录，不可以覆盖
-  # rsync -aq --delete update_temp/docs/ "$project_path/docs/"
   rsync -aq --delete update_temp/example/ "$project_path/example/"
 
   # 更新 internal 目录下的 injector.go 和 wire.go 文件
