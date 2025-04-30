@@ -313,13 +313,12 @@ update_framework() {
 
   # 强制更新 pkg、script、internal/app、internal/middleware 目录
   echo -e "$SEPARATOR"
-  echo -e "${BLUE}更新 pkg、script、internal/app、internal/middleware 目录...${RESET}"
+  echo -e "${BLUE}更新 pkg、script、internal/app 目录...${RESET}"
 
   # 使用 --delete 选项同步内容而不是复制整个目录
   rsync -aq --delete update_temp/pkg/ "$project_path/pkg/"
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
   rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
-  rsync -aq --delete update_temp/internal/middleware/ "$project_path/internal/middleware/"
   # docs 是跟项目的目录，不可以覆盖
   # rsync -aq --delete update_temp/docs/ "$project_path/docs/"
   rsync -aq --delete update_temp/example/ "$project_path/example/"
