@@ -2,7 +2,10 @@ package util
 
 import (
 	"fmt"
+	"os"
 	"strings"
+
+	"github.com/olekukonko/tablewriter"
 )
 
 // TableData 定义表格数据
@@ -62,4 +65,36 @@ func sum(nums []int) int {
 		total += num
 	}
 	return total
+}
+
+// RenderTable 渲染表格，带颜色
+// headers 表头
+// lines 表格数据
+func RenderTable(headers []string, lines [][]interface{}) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader(headers)
+
+	// 动态设置颜色
+	headColors := make([]tablewriter.Colors, len(headers))
+	colColors := make([]tablewriter.Colors, len(headers))
+
+	for i := range headers {
+		headColors[i] = tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiCyanColor}
+		colColors[i] = tablewriter.Colors{tablewriter.FgHiGreenColor + i%5} // 使用不同的颜色
+	}
+
+	table.SetHeaderColor(headColors...)
+	table.SetColumnColor(colColors...)
+
+	// 填充表格数据
+	for _, line := range lines {
+		strLine := make([]string, len(line))
+		for i, item := range line {
+			strLine[i] = fmt.Sprintf("%v", item) // 将每个数据项转换为字符串
+		}
+		table.Append(strLine)
+	}
+
+	// 渲染表格
+	table.Render()
 }

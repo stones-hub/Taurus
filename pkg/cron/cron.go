@@ -2,6 +2,7 @@ package cron
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 // TaskInfo 结构体用于存储任务的基本信息
 type TaskInfo struct {
 	Name      string
+	Spec      string
 	StartTime time.Time
 }
 
@@ -21,12 +23,20 @@ type CronManager struct {
 	mu           sync.Mutex                 // 保护共享资源的互斥锁
 }
 
-// NewCronManager 创建一个新的 CronManager 实例
-func NewCronManager() *CronManager {
+var (
+	CronManagerInstance *CronManager
+)
+
+func init() {
+	CronManagerInstance = InitializeCronManager()
+}
+
+// InitializeCronManager 创建一个新的 CronManager 实例
+func InitializeCronManager() *CronManager {
 	return &CronManager{
 		cronInstance: cron.New(cron.WithChain(
 			cron.Recover(cron.DefaultLogger), // 使用默认日志记录器恢复任务
-		)),
+		), cron.WithSeconds()),
 		tasks: make(map[cron.EntryID]*TaskInfo),
 		mu:    sync.Mutex{},
 	}
@@ -55,6 +65,7 @@ func (cm *CronManager) AddTask(spec string, taskName string, cmd func()) (cron.E
 	// 创建任务信息
 	cm.tasks[id] = &TaskInfo{
 		Name:      taskName,
+		Spec:      spec,
 		StartTime: time.Now(),
 	}
 	return id, nil
@@ -69,16 +80,32 @@ func (cm *CronManager) RemoveTask(id cron.EntryID) {
 	delete(cm.tasks, id)
 }
 
+type TaskStatus struct {
+	ID        cron.EntryID // 任务ID
+	Name      string       // 任务名称
+	StartTime time.Time    // 任务开始时间
+	PrevRun   time.Time    // 上次运行时间
+	NextRun   time.Time    // 下次运行时间
+}
+
 // ListTasks 列出所有的定时任务
-func (cm *CronManager) ListTasks() {
+func (cm *CronManager) ListTasks() []*TaskStatus {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
+	taskStatuses := make([]*TaskStatus, 0)
 	for id, task := range cm.tasks {
 		entry := cm.cronInstance.Entry(id)
-		fmt.Printf("Task ID: %d, Name: %s, StartTime: %v, NextRunTime: %v, PrevRunTime: %v\n",
-			id, task.Name, task.StartTime, entry.Next, entry.Prev)
+		taskStatus := &TaskStatus{
+			ID:        id,
+			Name:      task.Name,
+			StartTime: task.StartTime,
+			NextRun:   entry.Next,
+			PrevRun:   entry.Prev,
+		}
+		taskStatuses = append(taskStatuses, taskStatus)
 	}
+	return taskStatuses
 }
 
 // ModifyTask 修改一个定时任务
@@ -96,9 +123,10 @@ func (cm *CronManager) ModifyTask(id cron.EntryID, newSpec string, newCmd func()
 	cm.cronInstance.Remove(id)
 	delete(cm.tasks, id)
 
-	_, err := cm.AddTask(newSpec, taskInfo.Name, newCmd)
-	if err != nil {
+	if id, err := cm.AddTask(newSpec, taskInfo.Name, newCmd); err != nil {
 		return err
+	} else {
+		log.Printf("Task %s modified successfully, New ID: %d", taskInfo.Name, id)
+		return nil
 	}
-	return nil
 }
