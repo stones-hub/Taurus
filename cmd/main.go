@@ -15,8 +15,8 @@ func main() {
 		Path: "/health",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			loggerx.DefaultLogger.Info("OK-V1.1.2")
-			w.Write([]byte("OK-V1.1.2"))
+			loggerx.DefaultLogger.Info("v1.1.0")
+			w.Write([]byte("v1.1.0"))
 		}),
 	})
 
