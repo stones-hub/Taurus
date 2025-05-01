@@ -59,7 +59,7 @@ wire
 - **清空容器，镜像，重新打包**：
 
   ```shell
- make  docker-compose-down ENV_FILE=.env.docker-compose  
+  make  docker-compose-down ENV_FILE=.env.docker-compose  
   ```
 
 - **启动项目**：
