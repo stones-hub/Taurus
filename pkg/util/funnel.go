@@ -23,18 +23,24 @@ type SpecialFunnel struct {
 	closed          atomic.Bool   // 标记漏斗是否关闭
 }
 
+type FunnelConfig struct {
+	Cap      int
+	Interval int
+	Handler  func(data interface{})
+}
+
 // 创建漏斗
-func NewSpecialFunnel(cap int, interval int, handler func(data interface{})) *SpecialFunnel {
+func NewSpecialFunnel(config *FunnelConfig) *SpecialFunnel {
 	f := &SpecialFunnel{
 		closeChan:       make(chan struct{}),
-		dataChan:        make(chan interface{}, cap),
+		dataChan:        make(chan interface{}, config.Cap),
 		wg:              &sync.WaitGroup{},
-		handler:         handler,
+		handler:         config.Handler,
 		tickerCloseChan: make(chan struct{}),
 		processedCount:  0,
 	}
 	f.startWorkers()
-	f.startTimer(interval)
+	f.startTimer(config.Interval)
 	return f
 }
 
