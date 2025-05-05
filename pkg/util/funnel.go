@@ -134,7 +134,7 @@ func (f *SpecialFunnel) Close() {
 	close(f.dataChan)           // 关闭数据通道阻止新数据
 	f.wg.Wait()                 // 等待所有协程完成, 阻塞
 	close(f.tickerCloseChan)    // 关闭定时器, 不阻塞
-	time.Sleep(time.Second * 2) // 等待2秒，确保所有协程都退出
+	time.Sleep(time.Second * 1) // 等待2秒，确保所有协程都退出
 	log.Printf("所有协程已退出。\n")
 }
 
