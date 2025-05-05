@@ -35,7 +35,7 @@ type FunnelConfig struct {
 }
 
 // 创建漏斗
-func NewSpecialFunnel(config *FunnelConfig) *SpecialFunnel {
+func NewSpecialFunnel(config *FunnelConfig) (*SpecialFunnel, func(), error) {
 	f := &SpecialFunnel{
 		// 生成唯一ID
 		id:              uuid.NewString(),
@@ -49,7 +49,7 @@ func NewSpecialFunnel(config *FunnelConfig) *SpecialFunnel {
 	}
 	f.startWorkers()
 	f.startTimer(config.Interval)
-	return f
+	return f, f.Close, nil
 }
 
 // 启动协程

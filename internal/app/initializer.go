@@ -16,7 +16,10 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var GlobalInjector *internal.Injector
+var (
+	GlobalInjector *internal.Injector
+	Cleanup        func()
+)
 
 // Initialize calls the initialization functions of all modules
 func Initialize(configPath string, env string) {
@@ -143,13 +146,13 @@ func parseCustomLoggerLevel(level string) loggerx.LogLevel {
 // initialize injector
 func initializeInjector() {
 	var (
-		cleanup func()
 		err     error
+		cleanup func()
 	)
 	// initialize injector
 	GlobalInjector, cleanup, err = internal.BuildInjector()
 	if err != nil {
 		log.Fatalf("Failed to build injector: %v", err)
 	}
-	defer cleanup()
+	Cleanup = cleanup
 }
