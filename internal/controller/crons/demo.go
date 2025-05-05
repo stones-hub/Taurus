@@ -1,10 +1,12 @@
 package crons
 
 import (
-	"fmt"
+	"Taurus/pkg/cron"
+	"Taurus/pkg/loggerx"
 )
 
 func init() {
-	fmt.Println("crons demo init().")
-
+	cron.CronManagerInstance.AddTask("*/2 * * * * *", "DemoCron", func() {
+		loggerx.DefaultLogger.Info("demo crond been executed")
+	})
 }
