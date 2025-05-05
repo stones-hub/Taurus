@@ -24,12 +24,14 @@ type SpecialFunnel struct {
 	tickerCloseChan chan struct{} // 定时器关闭通道
 	processedCount  int64         // 已处理的数据条数
 	closed          atomic.Bool   // 标记漏斗是否关闭
+	heartbeat       func()        // 心跳函数
 }
 
 type FunnelConfig struct {
-	Cap      int
-	Interval int
-	Handler  func(data interface{})
+	Cap       int
+	Interval  int
+	Handler   func(data interface{})
+	Heartbeat func()
 }
 
 // 创建漏斗
@@ -43,6 +45,7 @@ func NewSpecialFunnel(config *FunnelConfig) *SpecialFunnel {
 		handler:         config.Handler,
 		tickerCloseChan: make(chan struct{}),
 		processedCount:  0,
+		heartbeat:       config.Heartbeat,
 	}
 	f.startWorkers()
 	f.startTimer(config.Interval)
@@ -96,7 +99,7 @@ func (f *SpecialFunnel) do(data interface{}) {
 	atomic.AddInt64(&f.processedCount, 1)
 }
 
-// 启动定时器
+// 启动定时器, 定时器每隔interval秒检查一次已处理的数据条数， 按需启用即可
 func (f *SpecialFunnel) startTimer(interval int) {
 	go func() {
 		// 创建定时器，每10秒检查一次已处理的数据条数
@@ -105,7 +108,10 @@ func (f *SpecialFunnel) startTimer(interval int) {
 		for {
 			select {
 			case <-ticker.C:
-				log.Printf("SpecialFunnel[%s] 已处理的数据条数: %d\n", f.id, atomic.LoadInt64(&f.processedCount))
+				if f.heartbeat != nil {
+					f.heartbeat()
+					// log.Printf("SpecialFunnel[%s] 已处理的数据条数: %d\n", f.id, atomic.LoadInt64(&f.processedCount))
+				}
 			case <-f.tickerCloseChan:
 				log.Printf("SpecialFunnel[%s] 定时器被关闭，协程退出。\n", f.id)
 				return
