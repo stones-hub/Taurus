@@ -96,10 +96,8 @@ func (f *SpecialFunnel) do(data interface{}) {
 	//  sync/atomic 包提供了 AddInt64、LoadInt64 等函数。
 	// 原子计数, 协程安全
 	atomic.AddInt64(&f.processedCount, 1)
-	// 有可能handler是阻塞的，所以需要单独协程来执行
-	go func() {
-		f.handler(data)
-	}()
+	// 有可能handler是阻塞的，但是不可以用协程，避免无休止的开协程
+	f.handler(data)
 }
 
 // 启动定时器, 定时器每隔interval秒检查一次已处理的数据条数， 按需启用即可
