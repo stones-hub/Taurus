@@ -3,6 +3,7 @@ package app
 import (
 	"Taurus/config"
 	"Taurus/internal"
+	"Taurus/pkg/cron"
 	"Taurus/pkg/db"
 	"Taurus/pkg/loggerx"
 	"Taurus/pkg/redisx"
@@ -97,6 +98,11 @@ func Initialize(configPath string, env string) {
 			MaxRetries:   config.AppConfig.Redis.MaxRetries,
 		})
 		log.Println("Redis initialized successfully")
+	}
+
+	// initialize cron
+	if config.AppConfig.CronEnable {
+		cron.CronManagerInstance.Start()
 	}
 
 	// initialize injector

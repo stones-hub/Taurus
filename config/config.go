@@ -21,6 +21,7 @@ type Config struct {
 	PrintConfig   bool   `json:"print_config" yaml:"print_config" toml:"print_config"`    // 是否打印配置
 	DBEnable      bool   `json:"db_enable" yaml:"db_enable" toml:"db_enable"`             // 是否启用数据库
 	RedisEnable   bool   `json:"redis_enable" yaml:"redis_enable" toml:"redis_enable"`    // 是否启用redis
+	CronEnable    bool   `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`       // 是否启用cron
 
 	// 支持多个数据库配置
 	Databases []struct {

@@ -70,9 +70,7 @@ func Start(host string, port int) {
 		log.Fatalf("%sServer forced to shutdown: %v %s\n", Red, err, Reset)
 	}
 
-	// 等待2秒，确保所有请求都处理完毕
 	log.Printf("%sWaiting for all requests to be processed... %s\n", Yellow, Reset)
-
 	done := make(chan struct{})
 
 	go func() {
