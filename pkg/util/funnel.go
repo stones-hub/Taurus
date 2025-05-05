@@ -21,17 +21,17 @@ type SpecialFunnel struct {
 	dataChan        chan interface{}
 	wg              *sync.WaitGroup
 	handler         func(data interface{})
-	tickerCloseChan chan struct{} // 定时器关闭通道
-	processedCount  int64         // 已处理的数据条数
-	closed          atomic.Bool   // 标记漏斗是否关闭
-	heartbeat       func()        // 心跳函数
+	tickerCloseChan chan struct{}        // 定时器关闭通道
+	processedCount  int64                // 已处理的数据条数
+	closed          atomic.Bool          // 标记漏斗是否关闭
+	heartbeat       func(*SpecialFunnel) // 心跳函数
 }
 
 type FunnelConfig struct {
 	Cap       int
 	Interval  int
 	Handler   func(data interface{})
-	Heartbeat func()
+	Heartbeat func(*SpecialFunnel)
 }
 
 // 创建漏斗
@@ -93,10 +93,13 @@ func (f *SpecialFunnel) do(data interface{}) {
 		log.Printf("SpeialFunnel[%s] handler 为空，数据未被处理: %v", f.id, data)
 		return
 	}
-	f.handler(data)
 	//  sync/atomic 包提供了 AddInt64、LoadInt64 等函数。
 	// 原子计数, 协程安全
 	atomic.AddInt64(&f.processedCount, 1)
+	// 有可能handler是阻塞的，所以需要单独协程来执行
+	go func() {
+		f.handler(data)
+	}()
 }
 
 // 启动定时器, 定时器每隔interval秒检查一次已处理的数据条数， 按需启用即可
@@ -109,7 +112,7 @@ func (f *SpecialFunnel) startTimer(interval int) {
 			select {
 			case <-ticker.C:
 				if f.heartbeat != nil {
-					f.heartbeat()
+					f.heartbeat(f)
 					// log.Printf("SpecialFunnel[%s] 已处理的数据条数: %d\n", f.id, atomic.LoadInt64(&f.processedCount))
 				}
 			case <-f.tickerCloseChan:
