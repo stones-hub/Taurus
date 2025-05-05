@@ -5,6 +5,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // 漏斗模型, 用于多协程处理数据
@@ -14,6 +16,7 @@ const (
 )
 
 type SpecialFunnel struct {
+	id              string
 	closeChan       chan struct{}
 	dataChan        chan interface{}
 	wg              *sync.WaitGroup
@@ -32,6 +35,8 @@ type FunnelConfig struct {
 // 创建漏斗
 func NewSpecialFunnel(config *FunnelConfig) *SpecialFunnel {
 	f := &SpecialFunnel{
+		// 生成唯一ID
+		id:              uuid.NewString(),
 		closeChan:       make(chan struct{}),
 		dataChan:        make(chan interface{}, config.Cap),
 		wg:              &sync.WaitGroup{},
@@ -59,7 +64,7 @@ func (f *SpecialFunnel) worker() {
 		select {
 		case data, ok := <-f.dataChan:
 			if !ok {
-				log.Printf("SpecialFunnel worker 管道被关闭，协程将退出。\n")
+				log.Printf("SpecialFunnel[%s] worker 管道被关闭，协程将退出。\n", f.id)
 				return
 			}
 			f.do(data)
@@ -82,7 +87,7 @@ func (f *SpecialFunnel) worker() {
 // 处理数据
 func (f *SpecialFunnel) do(data interface{}) {
 	if f.handler == nil {
-		log.Printf("handler 为空，数据未被处理: %v", data)
+		log.Printf("SpeialFunnel[%s] handler 为空，数据未被处理: %v", f.id, data)
 		return
 	}
 	f.handler(data)
@@ -100,9 +105,9 @@ func (f *SpecialFunnel) startTimer(interval int) {
 		for {
 			select {
 			case <-ticker.C:
-				log.Printf("SpecialFunnel 已处理的数据条数: %d\n", atomic.LoadInt64(&f.processedCount))
+				log.Printf("SpecialFunnel[%s] 已处理的数据条数: %d\n", f.id, atomic.LoadInt64(&f.processedCount))
 			case <-f.tickerCloseChan:
-				log.Printf("SpecialFunnel 定时器被关闭，协程退出。\n")
+				log.Printf("SpecialFunnel[%s] 定时器被关闭，协程退出。\n", f.id)
 				return
 			}
 		}
@@ -113,7 +118,7 @@ func (f *SpecialFunnel) startTimer(interval int) {
 func (f *SpecialFunnel) Close() {
 
 	if !f.closed.CompareAndSwap(false, true) {
-		log.Printf("SpecialFunnel 漏斗已关闭, 重复调用。\n")
+		log.Printf("SpecialFunnel[%s] 漏斗已关闭, 重复调用。\n", f.id)
 		return
 	}
 
@@ -129,13 +134,13 @@ func (f *SpecialFunnel) Close() {
 // 添加数据
 func (f *SpecialFunnel) AddData(data interface{}) {
 	if f.closed.Load() {
-		log.Printf("SpecialFunnel 漏斗已关闭, 无法添加数据。\n")
+		log.Printf("SpecialFunnel[%s]  漏斗已关闭, 无法添加数据。\n", f.id)
 		return
 	}
 
 	select {
 	case f.dataChan <- data:
 	case <-time.After(time.Second * 60): // 如果通道满了，等待5后重试
-		log.Printf("数据通道已满，丢弃数据 ： %v\n", data)
+		log.Printf("SpecialFunnel[%s]数据通道已满，丢弃数据 ： %v\n", f.id, data)
 	}
 }
