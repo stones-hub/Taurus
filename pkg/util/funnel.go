@@ -144,3 +144,8 @@ func (f *SpecialFunnel) AddData(data interface{}) {
 		log.Printf("SpecialFunnel[%s]数据通道已满，丢弃数据 ： %v\n", f.id, data)
 	}
 }
+
+// 获取已处理的数据条数
+func (f *SpecialFunnel) GetProcessedCount() int64 {
+	return atomic.LoadInt64(&f.processedCount)
+}
