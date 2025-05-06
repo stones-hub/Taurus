@@ -215,3 +215,5 @@ docker-swarm-update-app:
 	docker service update $$ENV_VARS --image $(REGISTRY_URL)/$(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm updated.$(RESET)"
 	@echo -e "$(SEPARATOR)"
+
+# docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量

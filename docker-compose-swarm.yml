@@ -36,7 +36,7 @@ services:
       replicas: 5  # 设置为 5 个应用实例
       update_config: # 配置服务更新策略的
         parallelism: 2 # 设置并行更新数量
-        delay: 60s # 设置更新延迟时间
+        delay: 10s # 设置更新延迟时间
       restart_policy:
         condition: on-failure # 设置重启策略,当容器因失败而退出时才会重启。
 
