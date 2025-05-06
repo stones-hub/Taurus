@@ -1,0 +1,10 @@
+# 系统版本
+version: "${VERSION:v1.0.0}"
+app_name: "${APP_NAME:taurus}"
+app_host: "${APP_HOST:0.0.0.0}"
+app_port: ${APP_PORT:8080}
+authorization: "Bearer 123456" # 授权码
+db_enable: true # 是否启用数据库
+redis_enable: true # 是否启用redis
+cron_enable: true # 是否启用cron
+print_config: true # 是否打印配置

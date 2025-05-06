@@ -28,12 +28,21 @@ RUN apk --no-cache add ca-certificates curl
 
 # 设置工作目录
 ARG WORKDIR
+# 设置应用配置文件
+ARG APP_CONFIG
+
+# 设置工作目录
 WORKDIR ${WORKDIR}
 
 # 从构建阶段复制编译好的二进制文件
 # 在 Dockerfile 中，COPY 指令用于将文件或目录从构建阶段复制到新镜像中。
 # 这里，--from=builder 指定从构建阶段（builder）中复制文件，/app/main 是构建阶段中编译好的二进制文件路径。
 COPY --from=builder ${WORKDIR}/main .
-
+# 复制应用配置文件
+COPY ${APP_CONFIG} ${WORKDIR}/config
+# 复制静态文件
+COPY ./static ${WORKDIR}/static
+# 复制模板文件
+COPY ./templates ${WORKDIR}/templates
 # 运行应用程序, 为什么这里的配置文件路径是${WORKDIR}/config, 是因为我在Makefile中 docker run的时候bind的目录就是这个
 CMD ["sh", "-c", "./main -config=${WORKDIR}/config"]

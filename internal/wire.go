@@ -9,6 +9,7 @@ import (
 
 func BuildInjector() (*Injector, func(), error) {
 	panic(
+		// 构建injector
 		wire.Build(InjectorSet),
 	)
 	return new(Injector), func() {}, nil

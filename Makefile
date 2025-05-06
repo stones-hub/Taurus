@@ -6,13 +6,6 @@ ifeq ($(wildcard $(ENV_FILE)),)
 $(error $(RED)Environment file '$(ENV_FILE)' not found. Please create it or specify a different file.$(RESET))
 endif
 
-# ---------- 注意事项 ----------
-# 1. 凡是通过make命令运行的程序，都会加载ENV_FILE中的环境变量，所以程序启动的时候，环境变量已经有了(包括docker-compose.yml类似的文件中需要的环境变量都已经加载进去了无需重复加载)
-# 2. make local-run 还是传递了-env参数，只不过是为了兼容应用程序而已，其实可以不传
-# 3. make docker-run 传递了 --env-file $(ENV_FILE) 是因为docker容器中的环境变量跟宿主机不互通，所以需要传，但是我在Dockerfile中并没有让容器运行的时候传递-env参数， 是因为--env-file $(ENV_FILE) 会自动将ENV_FILE中的环境变量写入到容器中
-# 4. 用法 # make run-local  ENV_FILE=.env.local,  make docker-run ENV_FILE=.env.local 指定环境变量文件  
-#
-# -----------------------------
 
 # ---------------------------- 加载环境变量 --------------------------------
 include $(ENV_FILE)
@@ -67,10 +60,11 @@ BUILD_DIR := build
 DOCKER_IMAGE := $(APP_NAME):$(VERSION)
 DOCKER_CONTAINER := $(APP_NAME)
 DOCKER_NETWORK := $(APP_NAME)-network
-DOCKER_LOG_VOLUME := $(APP_NAME)_log_data
+DOCKER_LOG_VOLUME := $(APP_NAME)_log
+DOCKER_DOWNLOAD_VOLUME := $(APP_NAME)_download
 
 # ---------------------------- 构建目标 --------------------------------
-.PHONY: all build clean docker-build docker-run docker-stop local-run local-stop
+.PHONY: all build clean docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app
 # Default target
 all: build
 
@@ -112,7 +106,9 @@ docker-build:
 	@echo -e "$(BLUE)Removing old Docker image if it exists...$(RESET)"
 	@docker rmi -f $(DOCKER_IMAGE) || echo -e "$(YELLOW)No existing image to remove.$(RESET)"
 	@echo -e "$(BLUE)Building Docker image...$(RESET)"
-	@docker build --build-arg WORKDIR=$(WORKDIR) -t $(DOCKER_IMAGE) . || echo -e "$(RED)Failed to build Docker image.$(RESET)"
+	@docker build --build-arg WORKDIR=$(WORKDIR) \
+		--build-arg APP_CONFIG=$(APP_CONFIG) \
+		-t $(DOCKER_IMAGE) . || echo -e "$(RED)Failed to build Docker image.$(RESET)"
 	@echo -e "$(GREEN)Docker image built: $(DOCKER_IMAGE)$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
@@ -129,8 +125,8 @@ docker-run: docker-build
 	@echo -e "$(BLUE)Running the application in Docker...$(RESET)"
 	@docker run -d --name $(DOCKER_CONTAINER) --network $(DOCKER_NETWORK) -p ${HOST_PORT}:${CONTAINER_PORT} \
 		--env-file $(ENV_FILE) \
-		--mount type=bind,source=$(shell realpath $(APP_CONFIG)),target=$(WORKDIR)/config \
-		--mount source=$(DOCKER_LOG_VOLUME),target=$(WORKDIR)/logs \
+		--mount type=volume,source=$(DOCKER_LOG_VOLUME),target=$(WORKDIR)/logs \
+		--mount type=volume,source=$(DOCKER_DOWNLOAD_VOLUME),target=$(WORKDIR)/downloads \
 		$(DOCKER_IMAGE) || echo -e "$(RED)Failed to run the application in Docker.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 

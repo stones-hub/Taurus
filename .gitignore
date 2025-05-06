@@ -22,11 +22,11 @@ go.work
 go.work.sum
 
 # env file
-logs/
+logs/db
+logs/*.log
 .vscode/
 .idea/
 .git/
 .DS_Store
 .wire_gen.go
 build/
-./data

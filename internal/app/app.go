@@ -1,7 +1,6 @@
 package app
 
 import (
-	"Taurus/config"
 	"Taurus/pkg/router" // 替换为实际的包路径
 	"context"
 	"flag"
@@ -32,7 +31,7 @@ var (
 
 // Default initializes and starts the HTTP server with default settings
 func Default() {
-	Start(config.AppConfig.AppHost, config.AppConfig.AppPort)
+	Start(AppConfig.AppHost, AppConfig.AppPort)
 }
 
 // Start initializes and starts the HTTP server with graceful shutdown
@@ -87,17 +86,8 @@ func Start(host string, port int) {
 	}
 }
 
-/*
-init 函数的特点
-自动调用：init 函数会在程序运行时自动调用，无需显式调用。
-执行顺序：
-每个包可以有多个 init 函数（包括在同一个文件或不同文件中）。
-init 函数的执行顺序是按照包的依赖关系，从被依赖的包到依赖包依次执行。
-在同一个包中，init 函数按照文件的编译顺序执行。
-无参数和返回值：init 函数不能接受参数，也不能返回值。
-*/
-
 // init is automatically called before the main function
+// --env .env.local --config ./config
 func init() {
 	// 自定义帮助信息
 	flag.Usage = func() {
@@ -119,5 +109,5 @@ func init() {
 	flag.Parse()
 
 	// Initialize all modules, 其实env传不传无所谓，因为makefile中已经将环境变量写入了， 但是为了严谨还是将envifle传入
-	Initialize(configPath, env)
+	initialize(configPath, env)
 }
