@@ -316,8 +316,8 @@ update_framework() {
   echo -e "${BLUE}更新 pkg、script、example、internal/app 目录...${RESET}"
 
   # 使用 --delete 选项同步内容而不是复制整个目录
-  rsync -aq --delete update_temp/pkg/ "$project_path/pkg/"
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
+  rsync -aq --delete update_temp/pkg/ "$project_path/pkg/"
   rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
   rsync -aq --delete update_temp/example/ "$project_path/example/"
 
@@ -361,11 +361,7 @@ update_framework() {
     ".dockerignore"
     ".gitignore"
     ".releaserc"
-    "docker-compose.yml"
-    "docker-compose-swarm.yml"
     "Dockerfile"
-    "go.mod"
-    "go.sum"
     "LICENSE"
     "Makefile"
     "README.md"

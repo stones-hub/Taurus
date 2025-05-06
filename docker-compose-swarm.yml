@@ -57,7 +57,7 @@ services:
       - .env.docker-compose
     volumes:
       - db_data:/var/lib/mysql # 设置卷
-      - ./docs:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件(凡是放在这个目录下的sql文件都会被执行)
+      - ./scripts/data/init_mysql:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件(凡是放在这个目录下的sql文件都会被执行)
     networks:
       - taurus-network
     deploy:
