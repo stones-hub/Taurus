@@ -5,7 +5,6 @@ services:
       dockerfile: Dockerfile
       args:
         WORKDIR: ${WORKDIR:-/app} # 设置工作目录 Dockerfile文件中需要
-    #image: "${APP_NAME}:${VERSION}"
     image: "${APP_NAME}:${VERSION}"
     container_name: "${APP_NAME}"
     ports:
