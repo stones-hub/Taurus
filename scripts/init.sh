@@ -321,6 +321,7 @@ update_framework() {
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
   rsync -aq --delete update_temp/pkg/ "$project_path/pkg/"
   rsync -aq --delete update_temp/logs/ "$project_path/logs/"
+  rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
   rsync -aq --delete update_temp/example/ "$project_path/example/"
   rsync -aq --delete update_temp/downloads/ "$project_path/downloads/"
   rsync -aq --delete update_temp/docs/ "$project_path/docs/"
@@ -363,8 +364,6 @@ update_framework() {
 
   # 定义要更新的文件列表
   files_to_update=(
-    "internal/app/app.go"
-    "internal/app/initializer.go"
     ".dockerignore"
     ".gitignore"
     ".releaserc"

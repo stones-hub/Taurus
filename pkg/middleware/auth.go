@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"Taurus/internal/app"
+	"Taurus/config"
 	"Taurus/pkg/httpx"
 	"net/http"
 )
@@ -28,7 +28,7 @@ func ApiKeyAuthMiddleware(next http.Handler) http.Handler {
 // isValidAPIKey checks if the provided API key is valid
 func isValidApiKey(apiKey string) bool {
 	// Implement your API key validation logic here
-	if apiKey == app.AppConfig.Authorization {
+	if apiKey == config.AppConfig.Authorization {
 		return true
 	} else {
 		return false

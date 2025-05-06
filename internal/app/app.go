@@ -1,6 +1,7 @@
 package app
 
 import (
+	"Taurus/config"
 	"Taurus/pkg/router" // 替换为实际的包路径
 	"context"
 	"flag"
@@ -31,7 +32,7 @@ var (
 
 // Default initializes and starts the HTTP server with default settings
 func Default() {
-	Start(AppConfig.AppHost, AppConfig.AppPort)
+	Start(config.AppConfig.AppHost, config.AppConfig.AppPort)
 }
 
 // Start initializes and starts the HTTP server with graceful shutdown
