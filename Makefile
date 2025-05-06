@@ -203,6 +203,15 @@ docker-swarm-down:
 docker-swarm-update-app:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
-	@docker service update --image $(REGISTRY_URL)/$(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
+	@if [ -z "$(ENV_FILE)" ]; then \
+		echo "ENV_FILE is not set! Please provide the path to the environment file."; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(ENV_FILE)" ]; then \
+		echo "Environment file $(ENV_FILE) not found!"; \
+		exit 1; \
+	fi
+	@ENV_VARS=$$(awk -F= '/^[^#]/ && NF==2 {print "--env-add", $$1"="$$2}' $(ENV_FILE)); \
+	docker service update $$ENV_VARS --image $(REGISTRY_URL)/$(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm updated.$(RESET)"
 	@echo -e "$(SEPARATOR)"
