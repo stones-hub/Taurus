@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         WORKDIR: ${WORKDIR:-/app} # 设置工作目录 Dockerfile文件中需要
+        APP_CONFIG: ${APP_CONFIG:-./config} # 设置应用配置文件 Dockerfile文件中需要
     image: "${APP_NAME}:${VERSION}"
     container_name: "${APP_NAME}"
     ports:
@@ -20,8 +21,8 @@ services:
       redis:
         condition: service_healthy
     volumes: 
-      - ${APP_CONFIG:-./config}:${WORKDIR:-/app}/config # 设置卷将本地config目录挂载到容器中
       - log_data:${WORKDIR:-/app}/logs # 设置卷, 将容器生成的日志文件挂载到本地卷
+      - download_data:${WORKDIR:-/app}/downloads # 设置卷, 将容器生成的下载文件挂载到本地卷
     networks:
       - taurus-network
 
@@ -66,18 +67,8 @@ volumes:
   db_data:
   redis_data:
   log_data:
-
+  download_data:
 # 使用 bridge 网络，单机版必须使用 bridge 网络，集群版必须使用 overlay 网络
 networks:
   taurus-network:
     driver: bridge
-
-
-# ------------------------------------------------------------
-# 以下是docker-compose.yml文件的详细说明
-# ------------------------------------------------------------
-# 注意:
-# 1. 新建卷，让容器的内容被挂载到卷volume中，防止容器被删除后，内容被删除。 但是如果是配置文件需要这样做呢，如何处理?
-# 答: 一般处理配置信息有3个办法， 1. 利用环境变量， 2. 利用卷挂载，前提是你的Dockfile打包镜像的时候，里面就已经有了配置文件 3. 直接将主机的配置文件共享给容器(这里使用的方法)
-# 2. 如何让docker-compose.yml文件中的环境变量生效?
-# 答：要么docker-compose 运行命令的时候指定 比如 docker-compose up -e DB_DSN=apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local， 要么在.env文件中指定， docker-compose会自动读取.env文件中的环境变量

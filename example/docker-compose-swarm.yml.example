@@ -10,7 +10,7 @@ services:
       - ./scripts/config/nginx.conf:/etc/nginx/nginx.conf
       - nginx_logs:/var/log/nginx  # 使用命名卷持久化日志
     networks:
-      - taurus-network
+      - taurus-network-swarm
     deploy:
       replicas: 1  # 确保只有一个 Nginx 实例
 
@@ -21,22 +21,22 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
     env_file: # 设置环境变量文件
       - .env.docker-compose # 设置环境变量文件
-    healthcheck:
+    healthcheck: # 如果健康检查不通过，容器会一直自动重启
       test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT}/health"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s # 延长启动等待时间，确保 mysql 和 redis 已准备好
     volumes: 
-      - ${APP_CONFIG}:${WORKDIR:-/app}/config # 设置卷将本地config目录挂载到容器中
       - log_data:${WORKDIR:-/app}/logs # 设置卷, 将容器生成的日志文件挂载到本地卷
+      - download_data:${WORKDIR:-/app}/downloads # 设置卷, 将容器生成的下载文件挂载到本地卷
     networks:
-      - taurus-network
+      - taurus-network-swarm
     deploy:
-      replicas: 3  # 设置为 3 个应用实例
-      update_config:
+      replicas: 5  # 设置为 5 个应用实例
+      update_config: # 配置服务更新策略的
         parallelism: 2 # 设置并行更新数量
-        delay: 60s # 设置更新延迟时间
+        delay: 10s # 设置更新延迟时间
       restart_policy:
         condition: on-failure # 设置重启策略,当容器因失败而退出时才会重启。
 
@@ -59,7 +59,7 @@ services:
       - db_data:/var/lib/mysql # 设置卷
       - ./scripts/data/init_mysql:/docker-entrypoint-initdb.d # 设置卷, 初始化数据库，执行sql文件(凡是放在这个目录下的sql文件都会被执行)
     networks:
-      - taurus-network
+      - taurus-network-swarm
     deploy:
       replicas: 1  # 确保只有一个 MySQL 实例
 
@@ -72,7 +72,7 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - taurus-network
+      - taurus-network-swarm
     volumes:
       - redis_data:/data 
     deploy:
@@ -83,19 +83,12 @@ volumes:
   db_data:
   redis_data:
   log_data:
+  download_data:
   nginx_logs:  # 定义 Nginx 日志卷
 
 # 使用 overlay 网络，适用于 Swarm 集群
 networks:
-  taurus-network:
+  taurus-network-swarm:
     driver: overlay
 
 
-# ------------------------------------------------------------
-# 以下是docker-compose.yml文件的详细说明
-# ------------------------------------------------------------
-# 注意:
-# 1. 新建卷，让容器的内容被挂载到卷volume中，防止容器被删除后，内容被删除。 但是如果是配置文件需要这样做呢，如何处理?
-# 答: 一般处理配置信息有3个办法， 1. 利用环境变量， 2. 利用卷挂载，前提是你的Dockfile打包镜像的时候，里面就已经有了配置文件 3. 直接将主机的配置文件共享给容器(这里使用的方法)
-# 2. 如何让docker-compose.yml文件中的环境变量生效?
-# 答：要么docker-compose 运行命令的时候指定 比如 docker-compose up -e DB_DSN=apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local， 要么在.env文件中指定， docker-compose会自动读取.env文件中的环境变量
