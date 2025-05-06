@@ -316,15 +316,15 @@ update_framework() {
   echo -e "${BLUE}更新 pkg、script、example、internal/app 目录...${RESET}"
 
   # 使用 --delete 选项同步内容而不是复制整个目录
-  rsync -aq --delete update_temp/templates/ "$project_path/templates/"
-  rsync -aq --delete update_temp/static/ "$project_path/static/"
+  # rsync -aq --delete update_temp/templates/ "$project_path/templates/"
+  # rsync -aq --delete update_temp/static/ "$project_path/static/"
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
   rsync -aq --delete update_temp/pkg/ "$project_path/pkg/"
-  rsync -aq --delete update_temp/logs/ "$project_path/logs/"
+  # rsync -aq --delete update_temp/logs/ "$project_path/logs/"
   rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
   rsync -aq --delete update_temp/example/ "$project_path/example/"
-  rsync -aq --delete update_temp/downloads/ "$project_path/downloads/"
-  rsync -aq --delete update_temp/docs/ "$project_path/docs/"
+  # rsync -aq --delete update_temp/downloads/ "$project_path/downloads/"
+  # rsync -aq --delete update_temp/docs/ "$project_path/docs/"
 
 
   # 更新 internal 目录下的 injector.go 和 wire.go 文件
