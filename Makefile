@@ -204,7 +204,7 @@ docker-swarm-down:
 	@echo -e "$(SEPARATOR)"
 
 # 更新Docker Swarm服务中的app
-docker-swarm-update:
+docker-swarm-update-app:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
 	@docker service update --image $(REGISTRY_URL)/$(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
