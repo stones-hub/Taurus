@@ -207,6 +207,6 @@ docker-swarm-down:
 docker-swarm-update:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
-	@docker service update --image $(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
+	@docker service update --image $(REGISTRY_URL)/$(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm updated.$(RESET)"
 	@echo -e "$(SEPARATOR)"
