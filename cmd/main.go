@@ -57,6 +57,7 @@ func main() {
 		Middleware: []router.MiddlewareFunc{},
 	})
 
+	// 重定向到静态文件
 	router.AddRouter(router.Router{
 		Path: "/",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
