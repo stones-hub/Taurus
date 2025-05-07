@@ -64,7 +64,7 @@ DOCKER_LOG_VOLUME := $(APP_NAME)_log
 DOCKER_DOWNLOAD_VOLUME := $(APP_NAME)_download
 
 # ---------------------------- 构建目标 --------------------------------
-.PHONY: all build clean docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app docker-swarm-rm-app docker-swarm-deploy-app
+.PHONY: all build clean _docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop _docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app _docker-swarm-rm-app docker-swarm-deploy-app
 # Default target
 all: build
 
@@ -101,7 +101,7 @@ local-stop:
 	@echo -e "$(SEPARATOR)"
 
 # Build the Docker image
-docker-build:
+_docker-build:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Removing old Docker image if it exists...$(RESET)"
 	@docker rmi -f $(DOCKER_IMAGE) || echo -e "$(YELLOW)No existing image to remove.$(RESET)"
@@ -113,7 +113,7 @@ docker-build:
 	@echo -e "$(SEPARATOR)"
 
 # Run the application in Docker
-docker-run: docker-build
+docker-run: _docker-build
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Creating Docker network if it does not exist...$(RESET)"
 	@docker network inspect $(DOCKER_NETWORK) >/dev/null 2>&1 || docker network create $(DOCKER_NETWORK)
@@ -174,7 +174,7 @@ docker-compose-stop:
 	@echo -e "$(SEPARATOR)"
 
 # 推送Docker镜像到注册中心
-docker-image-push: docker-build
+_docker-image-push: _docker-build
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Tagging Docker image...$(RESET)"
 	@docker tag $(DOCKER_IMAGE) $(REGISTRY_URL)/$(DOCKER_IMAGE)
@@ -185,7 +185,7 @@ docker-image-push: docker-build
 	@echo -e "$(SEPARATOR)"
 
 # 初始化swarm集群，并部署
-docker-swarm-up: docker-image-push
+docker-swarm-up: _docker-image-push
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
@@ -200,7 +200,7 @@ docker-swarm-down:
 	@echo -e "$(SEPARATOR)"
 
 # 更新Docker Swarm服务中的app服务
-docker-swarm-update-app: docker-image-push
+docker-swarm-update-app: _docker-image-push
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
 	@if [ -z "$(ENV_FILE)" ]; then \
@@ -219,7 +219,7 @@ docker-swarm-update-app: docker-image-push
 # docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量
 
 # 删除swarm集群中的app服务, 由于nginx服务是依赖app服务，所以需要先删除app服务，再删除nginx服务, 否则nginx服务会连不上app服务
-docker-swarm-rm-app:
+_docker-swarm-rm-app:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Removing app service from Docker Swarm...$(RESET)"
 	@docker service rm $(APP_NAME)_nginx || echo -e "$(RED)Failed to remove nginx service from Docker Swarm.$(RESET)"
@@ -229,7 +229,7 @@ docker-swarm-rm-app:
 
 
 # 删除swarm集群中的app服务，并重新部署app服务（其他的服务不会发生变化, 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务）
-docker-swarm-deploy-app: docker-image-push docker-swarm-rm-app
+docker-swarm-deploy-app: _docker-image-push _docker-swarm-rm-app
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
