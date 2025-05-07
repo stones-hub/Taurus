@@ -2,6 +2,7 @@ package redisx
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -57,6 +58,11 @@ func InitRedis(config RedisConfig) *RedisClient {
 			WriteTimeout: config.WriteTimeout * time.Second,
 			MaxRetries:   config.MaxRetries,
 		})
+	}
+
+	_, err := client.Ping(context.Background()).Result()
+	if err != nil {
+		log.Fatalf("redis 连接失败: %v\n", err)
 	}
 
 	Redis = &RedisClient{client: client}
