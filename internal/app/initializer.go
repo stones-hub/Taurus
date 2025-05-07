@@ -40,25 +40,25 @@ func initialize(configPath string, env string) {
 	loadConfig(configPath)
 
 	// print application configuration
-	if config.AppConfig.PrintConfig {
-		log.Println("Configuration:", util.ToJsonString(config.AppConfig))
+	if config.Core.PrintConfig {
+		log.Println("Configuration:", util.ToJsonString(config.Core))
 	}
 
 	// initialize logger
 	loggerx.Initialize(loggerx.LoggerConfig{
-		OutputType:  config.AppConfig.Logger.OutputType,
-		LogFilePath: config.AppConfig.Logger.LogFilePath,
-		MaxSize:     config.AppConfig.Logger.MaxSize,
-		MaxBackups:  config.AppConfig.Logger.MaxBackups,
-		MaxAge:      config.AppConfig.Logger.MaxAge,
-		Compress:    config.AppConfig.Logger.Compress,
-		Perfix:      config.AppConfig.Logger.Perfix,
-		LogLevel:    parseCustomLoggerLevel(config.AppConfig.Logger.LogLevel),
+		OutputType:  config.Core.Logger.OutputType,
+		LogFilePath: config.Core.Logger.LogFilePath,
+		MaxSize:     config.Core.Logger.MaxSize,
+		MaxBackups:  config.Core.Logger.MaxBackups,
+		MaxAge:      config.Core.Logger.MaxAge,
+		Compress:    config.Core.Logger.Compress,
+		Perfix:      config.Core.Logger.Perfix,
+		LogLevel:    parseCustomLoggerLevel(config.Core.Logger.LogLevel),
 	})
 
 	// initialize database
-	if config.AppConfig.DBEnable {
-		for _, dbConfig := range config.AppConfig.Databases {
+	if config.Core.DBEnable {
+		for _, dbConfig := range config.Core.Databases {
 			// 构造 DSN
 			dsn := dbConfig.DSN
 			if dsn == "" {
@@ -93,23 +93,23 @@ func initialize(configPath string, env string) {
 	}
 
 	// initialize redis
-	if config.AppConfig.RedisEnable {
+	if config.Core.RedisEnable {
 		redisx.InitRedis(redisx.RedisConfig{
-			Addrs:        config.AppConfig.Redis.Addrs,
-			Password:     config.AppConfig.Redis.Password,
-			DB:           config.AppConfig.Redis.DB,
-			PoolSize:     config.AppConfig.Redis.PoolSize,
-			MinIdleConns: config.AppConfig.Redis.MinIdleConns,
-			DialTimeout:  time.Duration(config.AppConfig.Redis.DialTimeout),
-			ReadTimeout:  time.Duration(config.AppConfig.Redis.ReadTimeout),
-			WriteTimeout: time.Duration(config.AppConfig.Redis.WriteTimeout),
-			MaxRetries:   config.AppConfig.Redis.MaxRetries,
+			Addrs:        config.Core.Redis.Addrs,
+			Password:     config.Core.Redis.Password,
+			DB:           config.Core.Redis.DB,
+			PoolSize:     config.Core.Redis.PoolSize,
+			MinIdleConns: config.Core.Redis.MinIdleConns,
+			DialTimeout:  time.Duration(config.Core.Redis.DialTimeout),
+			ReadTimeout:  time.Duration(config.Core.Redis.ReadTimeout),
+			WriteTimeout: time.Duration(config.Core.Redis.WriteTimeout),
+			MaxRetries:   config.Core.Redis.MaxRetries,
 		})
 		log.Println("Redis initialized successfully")
 	}
 
 	// initialize cron
-	if config.AppConfig.CronEnable {
+	if config.Core.CronEnable {
 		cron.CronManagerInstance.Start()
 	}
 
@@ -167,17 +167,17 @@ func loadConfigFile(filePath string) {
 
 	switch ext {
 	case ".json":
-		err = json.Unmarshal([]byte(content), &config.AppConfig)
+		err = json.Unmarshal([]byte(content), &config.Core)
 		if err != nil {
 			log.Printf("Failed to parse JSON config file: %s; error: %v\n", filePath, err)
 		}
 	case ".yaml", ".yml":
-		err = yaml.Unmarshal([]byte(content), &config.AppConfig)
+		err = yaml.Unmarshal([]byte(content), &config.Core)
 		if err != nil {
 			log.Printf("Failed to parse YAML config file: %s; error: %v\n", filePath, err)
 		}
 	case ".toml":
-		_, err = toml.Decode(content, &config.AppConfig)
+		_, err = toml.Decode(content, &config.Core)
 		if err != nil {
 			log.Printf("Failed to parse TOML config file: %s; error: %v\n", filePath, err)
 		}

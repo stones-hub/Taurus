@@ -62,5 +62,5 @@ type Config struct {
 	} `json:"redis" yaml:"redis" toml:"redis"`
 }
 
-// AppConfig is the global configuration instance
-var AppConfig Config
+// global configuration instance
+var Core Config

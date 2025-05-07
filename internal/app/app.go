@@ -32,7 +32,7 @@ var (
 
 // Default initializes and starts the HTTP server with default settings
 func Default() {
-	Start(config.AppConfig.AppHost, config.AppConfig.AppPort)
+	Start(config.Core.AppHost, config.Core.AppPort)
 }
 
 // Start initializes and starts the HTTP server with graceful shutdown
