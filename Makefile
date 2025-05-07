@@ -64,7 +64,7 @@ DOCKER_LOG_VOLUME := $(APP_NAME)_log
 DOCKER_DOWNLOAD_VOLUME := $(APP_NAME)_download
 
 # ---------------------------- 构建目标 --------------------------------
-.PHONY: all build clean docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app
+.PHONY: all build clean docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app docker-swarm-rm-app docker-swarm-deploy-app
 # Default target
 all: build
 
@@ -200,7 +200,7 @@ docker-swarm-down:
 	@echo -e "$(SEPARATOR)"
 
 # 更新Docker Swarm服务中的app服务
-docker-swarm-update-app:
+docker-swarm-update-app: docker-image-push
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
 	@if [ -z "$(ENV_FILE)" ]; then \
@@ -218,7 +218,6 @@ docker-swarm-update-app:
 
 # docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量
 
-
 # 删除swarm集群中的app服务
 docker-swarm-rm-app:
 	@echo -e "$(SEPARATOR)"
@@ -229,7 +228,7 @@ docker-swarm-rm-app:
 
 
 # 删除swarm集群中的app服务，并重新部署app服务（其他的服务不会发生变化, 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务）
-docker-swarm-deploy-app: docker-swarm-rm-app
+docker-swarm-deploy-app: docker-image-push docker-swarm-rm-app
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
