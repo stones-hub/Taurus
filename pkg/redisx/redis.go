@@ -59,7 +59,9 @@ func InitRedis(config RedisConfig) *RedisClient {
 		})
 	}
 
-	return &RedisClient{client: client}
+	Redis = &RedisClient{client: client}
+
+	return Redis
 }
 
 // Set 设置键值对

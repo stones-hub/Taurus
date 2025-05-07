@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"Taurus/pkg/httpx"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -13,9 +14,7 @@ func ErrorHandlerMiddleware(next http.Handler) http.Handler {
 			if err := recover(); err != nil {
 				// Log the error and stack trace
 				log.Printf("Recovered from panic: %v\n%s", err, debug.Stack())
-
-				// Respond with a generic error message
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				httpx.SendErrorResponse(w, http.StatusInternalServerError, "Internal Server Error")
 			}
 		}()
 		// Call the next handler
