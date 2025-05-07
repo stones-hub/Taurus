@@ -17,6 +17,19 @@ import (
 // DBConnections stores multiple database connections
 var dbConnections = make(map[string]*gorm.DB)
 
+// CloseDB closes a database connection by name
+func CloseDB() {
+	for dbName, db := range dbConnections {
+		sqlDB, err := db.DB()
+		if err != nil {
+			log.Fatalf("Failed to get database from GORM: %v", err)
+		}
+		sqlDB.Close()
+		delete(dbConnections, dbName)
+		log.Printf("Database connection '%s' closed successfully", dbName)
+	}
+}
+
 // InitDB initializes a database connection and stores it in DBConnections
 func InitDB(dbName, dbType, dsn string, customLogger logger.Interface, maxRetries int, delay int) {
 	var err error

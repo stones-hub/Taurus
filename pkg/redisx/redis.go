@@ -35,9 +35,9 @@ func InitRedis(config RedisConfig) *RedisClient {
 		DB:           config.DB,
 		PoolSize:     config.PoolSize,
 		MinIdleConns: config.MinIdleConns,
-		DialTimeout:  config.DialTimeout,
-		ReadTimeout:  config.ReadTimeout,
-		WriteTimeout: config.WriteTimeout,
+		DialTimeout:  config.DialTimeout * time.Second,
+		ReadTimeout:  config.ReadTimeout * time.Second,
+		WriteTimeout: config.WriteTimeout * time.Second,
 		MaxRetries:   config.MaxRetries,
 	}
 
@@ -52,9 +52,9 @@ func InitRedis(config RedisConfig) *RedisClient {
 			DB:           config.DB,
 			PoolSize:     config.PoolSize,
 			MinIdleConns: config.MinIdleConns,
-			DialTimeout:  config.DialTimeout,
-			ReadTimeout:  config.ReadTimeout,
-			WriteTimeout: config.WriteTimeout,
+			DialTimeout:  config.DialTimeout * time.Second,
+			ReadTimeout:  config.ReadTimeout * time.Second,
+			WriteTimeout: config.WriteTimeout * time.Second,
 			MaxRetries:   config.MaxRetries,
 		})
 	}
@@ -65,13 +65,17 @@ func InitRedis(config RedisConfig) *RedisClient {
 }
 
 // Set 设置键值对
-func (r *RedisClient) Set(ctx context.Context, key string, value interface{}) error {
-	return r.client.Set(ctx, key, value, 0).Err()
+func (r *RedisClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	return r.client.Set(ctx, key, value, expiration).Err()
 }
 
 // Get 获取键的值
 func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
-	return r.client.Get(ctx, key).Result()
+	result, err := r.client.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	return result, err
 }
 
 // Incr 原子递增
@@ -91,7 +95,11 @@ func (r *RedisClient) HSet(ctx context.Context, key string, field string, value 
 
 // HGet 获取哈希字段的值
 func (r *RedisClient) HGet(ctx context.Context, key string, field string) (string, error) {
-	return r.client.HGet(ctx, key, field).Result()
+	result, err := r.client.HGet(ctx, key, field).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	return result, err
 }
 
 // LPush 向列表左侧推入元素

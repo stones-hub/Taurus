@@ -250,5 +250,16 @@ func initializeInjector() {
 	if err != nil {
 		log.Fatalf("Failed to build injector: %v", err)
 	}
-	Cleanup = cleanup
+	Cleanup = func() {
+		cleanup()
+		if redisx.Redis != nil {
+			err = redisx.Redis.Close()
+			if err != nil {
+				log.Printf("Failed to close redis: %v", err)
+			} else {
+				log.Println("Redis closed successfully")
+			}
+		}
+		db.CloseDB()
+	}
 }
