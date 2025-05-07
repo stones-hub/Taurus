@@ -218,10 +218,11 @@ docker-swarm-update-app: docker-image-push
 
 # docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量
 
-# 删除swarm集群中的app服务
+# 删除swarm集群中的app服务, 由于nginx服务是依赖app服务，所以需要先删除app服务，再删除nginx服务, 否则nginx服务会连不上app服务
 docker-swarm-rm-app:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Removing app service from Docker Swarm...$(RESET)"
+	@docker service rm $(APP_NAME)_nginx || echo -e "$(RED)Failed to remove nginx service from Docker Swarm.$(RESET)"
 	@docker service rm $(APP_NAME)_app || echo -e "$(RED)Failed to remove app service from Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)App service removed from Docker Swarm.$(RESET)"
 	@echo -e "$(SEPARATOR)"
