@@ -5,6 +5,9 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 //@author: [piexlmax](https://github.com/piexlmax)
@@ -56,12 +59,15 @@ func FirstLower(s string) string {
 	return strings.ToLower(s[:1]) + s[1:]
 }
 
-// MaheHump 将字符串转换为驼峰命名
-func MaheHump(s string) string {
-	words := strings.Split(s, "-")
+// MaheHump 将字符串转换为驼峰命名，支持自定义分隔符
+func MaheHump(s, delimiter string) string {
+	// Replace the custom delimiter with a space
+	s = strings.ReplaceAll(s, delimiter, " ")
+	words := strings.Fields(s)
+	c := cases.Title(language.Und)
 
 	for i := 1; i < len(words); i++ {
-		words[i] = strings.Title(words[i])
+		words[i] = c.String(words[i])
 	}
 
 	return strings.Join(words, "")
@@ -69,7 +75,7 @@ func MaheHump(s string) string {
 
 // 随机字符串
 func RandomString(n int) string {
-	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:',.<>?/~`")
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letters[RandomInt(0, len(letters))]
@@ -79,4 +85,17 @@ func RandomString(n int) string {
 
 func RandomInt(min, max int) int {
 	return min + rand.Intn(max-min)
+}
+
+// FilterInvisibleChars removes invisible characters from a string.
+// ASCII码，通常小于等于32或者大于等于127的都属于不可见字符, 比如空格, 换行符, 制表符等，过滤掉
+func FilterInvisibleChars(s string) string {
+	resRunes := []rune{}
+	for _, r := range s {
+		// ASCII码，通常小于等于32或者大于等于127的都属于不可见字符
+		if r > 32 && r < 127 {
+			resRunes = append(resRunes, r)
+		}
+	}
+	return string(resRunes)
 }
