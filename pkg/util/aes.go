@@ -134,7 +134,7 @@ func generateKey(key []byte) (genKey []byte) {
 
 // Aes CFB模式
 
-func AesEncryptCFB(origData []byte, key []byte) ([]byte, error) {
+func AesEncryptCTR(origData []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -144,11 +144,12 @@ func AesEncryptCFB(origData []byte, key []byte) ([]byte, error) {
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return nil, err
 	}
-	stream := cipher.NewCFBEncrypter(block, iv)
+	stream := cipher.NewCTR(block, iv)
 	stream.XORKeyStream(encrypted[aes.BlockSize:], origData)
 	return encrypted, nil
 }
-func AesDecryptCFB(encrypted []byte, key []byte) ([]byte, error) {
+
+func AesDecryptCTR(encrypted []byte, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -160,7 +161,7 @@ func AesDecryptCFB(encrypted []byte, key []byte) ([]byte, error) {
 	iv := encrypted[:aes.BlockSize]
 	encrypted = encrypted[aes.BlockSize:]
 
-	stream := cipher.NewCFBDecrypter(block, iv)
+	stream := cipher.NewCTR(block, iv)
 	stream.XORKeyStream(encrypted, encrypted)
 	return encrypted, nil
 }

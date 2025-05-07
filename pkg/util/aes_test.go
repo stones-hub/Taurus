@@ -108,12 +108,12 @@ func TestAesDecryptECB(t *testing.T) {
 }
 
 // 每次变化
-func TestAesCFB(t *testing.T) {
-	if encrypted, err := AesEncryptCFB([]byte(origData), []byte(k)); err != nil {
+func TestAesCTR(t *testing.T) {
+	if encrypted, err := AesEncryptCTR([]byte(origData), []byte(k)); err != nil {
 		t.Errorf("aes加密失败,err:%v", err)
 	} else {
 
-		if s, err := AesDecryptCFB(encrypted, []byte(k)); err != nil {
+		if s, err := AesDecryptCTR(encrypted, []byte(k)); err != nil {
 			t.Errorf("aes解密失败,err:%v", err)
 		} else {
 			// fmt.Printf("明文:%s, base(64)密文: %s, hex密文: %s ", origData, base64.StdEncoding.EncodeToString(encrypted), hex.EncodeToString(encrypted))
