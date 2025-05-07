@@ -184,14 +184,14 @@ docker-image-push: docker-build
 	@echo -e "$(GREEN)Docker image pushed to registry.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# docker-swarm-up目标
-docker-swarm-up: 
+# 初始化swarm集群，并部署
+docker-swarm-up: docker-image-push
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# docker-swarm-down目标
+# 删除swarm集群
 docker-swarm-down:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Removing stack from Docker Swarm...$(RESET)"
@@ -199,7 +199,7 @@ docker-swarm-down:
 	@echo -e "$(GREEN)Stack removed from Docker Swarm.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# 更新Docker Swarm服务中的app
+# 更新Docker Swarm服务中的app服务
 docker-swarm-update-app:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
@@ -217,3 +217,21 @@ docker-swarm-update-app:
 	@echo -e "$(SEPARATOR)"
 
 # docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量
+
+
+# 删除swarm集群中的app服务
+docker-swarm-rm-app:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Removing app service from Docker Swarm...$(RESET)"
+	@docker service rm $(APP_NAME)_app || echo -e "$(RED)Failed to remove app service from Docker Swarm.$(RESET)"
+	@echo -e "$(GREEN)App service removed from Docker Swarm.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
+
+# 删除swarm集群中的app服务，并重新部署app服务（其他的服务不会发生变化, 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务）
+docker-swarm-deploy-app: docker-swarm-rm-app
+	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
+	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
+	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
