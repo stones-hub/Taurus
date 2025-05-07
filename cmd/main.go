@@ -2,6 +2,8 @@ package main
 
 import (
 	"Taurus/internal/app"
+	"Taurus/internal/controller"
+	"Taurus/internal/mid"
 
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/router"
@@ -59,11 +61,19 @@ func main() {
 
 	// 重定向到静态文件
 	router.AddRouter(router.Router{
-		Path: "/",
+		Path: "/demo",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/static/index.html", http.StatusFound)
 		}),
 		Middleware: []router.MiddlewareFunc{},
+	})
+
+	router.AddRouter(router.Router{
+		Path:    "/",
+		Handler: http.HandlerFunc(controller.ServeMarkdownDoc),
+		Middleware: []router.MiddlewareFunc{
+			mid.HostMiddleware,
+		},
 	})
 
 	app.Default()
