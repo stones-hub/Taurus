@@ -36,7 +36,7 @@ var errorMessages = map[int]string{
 // SendResponse formats and sends a JSON response with a flexible content type
 func sendResponse(w http.ResponseWriter, status int, message string, data interface{}, contentType string) {
 	if contentType == "" {
-		contentType = "application/json"
+		contentType = "application/json; charset=utf-8"
 	}
 	response := Response{
 		Status:  status,

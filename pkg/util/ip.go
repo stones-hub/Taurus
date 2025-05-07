@@ -1,6 +1,11 @@
 package util
 
-import "net"
+import (
+	"log"
+	"net"
+	"net/http"
+	"strings"
+)
 
 func GetLocalIPs() ([]string, error) {
 	addrs, err := net.InterfaceAddrs()
@@ -31,4 +36,58 @@ func GetLocalIPs() ([]string, error) {
 	}
 
 	return ips, nil
+}
+
+/*
+- 192.0.0.0/8 192.168.0.0/16 192.168.1.0/24
+- /24：子网掩码为255.255.255.0，表示前24位是网络部分，后8位是主机部分。
+- /16：子网掩码为255.255.0.0，表示前16位是网络部分，后16位是主机部分。
+- /8：子网掩码为255.0.0.0，表示前8位是网络部分，后24位是主机部分。
+*/
+// isIPAllowed 检查IP是否在允许的网段中
+func IsIPAllowed(ip string, allowedHosts []string) bool {
+	for _, host := range allowedHosts {
+		// 检查是否为CIDR格式
+		if strings.Contains(host, "/") {
+			_, ipNet, err := net.ParseCIDR(host)
+			if err != nil {
+				continue
+			}
+			if ipNet.Contains(net.ParseIP(ip)) {
+				return true
+			}
+		} else {
+			// 直接比较IP
+			if ip == host {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// GetRemoteIP 获取远程IP
+func GetRemoteIP(r *http.Request) []string {
+	var ips []string
+	// 提取X-Forwarded-For
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+	if xForwardedFor != "" {
+		ips = strings.Split(xForwardedFor, ", ")
+	}
+
+	// 提取X-Real-Ip
+	xRealIP := r.Header.Get("X-Real-Ip")
+	if xRealIP != "" {
+		ips = append(ips, xRealIP)
+	}
+
+	// 提取RemoteAddr
+	remoteAddr := r.RemoteAddr
+	parts := strings.Split(remoteAddr, ":")
+	if len(parts) > 0 {
+		ips = append(ips, parts[0])
+	} else {
+		log.Printf("RemoteAddr 格式错误 : %v\n", remoteAddr)
+	}
+	return ips
 }
