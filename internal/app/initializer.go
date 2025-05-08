@@ -5,7 +5,7 @@ import (
 	"Taurus/internal"
 	"Taurus/pkg/cron"
 	"Taurus/pkg/db"
-	"Taurus/pkg/loggerx"
+	"Taurus/pkg/logx"
 	"Taurus/pkg/redisx"
 	"Taurus/pkg/util"
 	"Taurus/pkg/websocket"
@@ -45,7 +45,7 @@ func initialize(configPath string, env string) {
 	}
 
 	// initialize logger
-	loggerx.Initialize(loggerx.LoggerConfig{
+	logx.Initialize(logx.LoggerConfig{
 		OutputType:  config.Core.Logger.OutputType,
 		LogFilePath: config.Core.Logger.LogFilePath,
 		MaxSize:     config.Core.Logger.MaxSize,
@@ -221,21 +221,21 @@ func parseDBLogLevel(level string) logger.LogLevel {
 }
 
 // none(无效) error（错误）、warn（警告）、info（信息）、debug（调试）
-func parseCustomLoggerLevel(level string) loggerx.LogLevel {
+func parseCustomLoggerLevel(level string) logx.LogLevel {
 	switch level {
 	case "none":
-		return loggerx.LEVEL_NONE
+		return logx.LEVEL_NONE
 	case "error":
-		return loggerx.LEVEL_ERROR
+		return logx.LEVEL_ERROR
 	case "warn":
-		return loggerx.LEVEL_WARN
+		return logx.LEVEL_WARN
 	case "info":
-		return loggerx.LEVEL_INFO
+		return logx.LEVEL_INFO
 	case "debug":
-		return loggerx.LEVEL_DEBUG
+		return logx.LEVEL_DEBUG
 	default:
 		log.Printf("Unknown log level '%s', defaulting to 'info'", level)
-		return loggerx.LEVEL_NONE
+		return logx.LEVEL_NONE
 	}
 }
 

@@ -2,7 +2,7 @@ package controller
 
 import (
 	"Taurus/pkg/httpx"
-	"Taurus/pkg/loggerx"
+	"Taurus/pkg/logx"
 	"net/http"
 
 	"github.com/google/wire"
@@ -15,6 +15,6 @@ var DemoCtrlSet = wire.NewSet(wire.Struct(new(DemoCtrl), "*"))
 
 func (c *DemoCtrl) Get(w http.ResponseWriter, r *http.Request) {
 	data, _ := httpx.ParseJson(r)
-	loggerx.Core.Info("demo get %v", data)
+	logx.Core.Info("demo get %v", data)
 	httpx.SendResponse(w, http.StatusOK, data, nil)
 }
