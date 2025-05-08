@@ -80,13 +80,6 @@ wire
 
 #### 使用指南：
 
-- **将要app镜像推送到仓库**
-  ```shell
-  make docker-image-push ENV_FILE=.env.docker-compose
-  ```
-
-- **同步调整docker-compose-swarm.yml文件中的 app 服务的 拉取镜像地址**
-
 - **启动集群**
   ```shell
   make docker-swarm-up ENV_FILE=.env.docker-compose
@@ -97,7 +90,17 @@ wire
   make docker-swarm-down ENV_FILE=.env.docker-compose
   ```
 
-- **更新集群**
+- **更新集群中的app服务**
+  ```shell
+  make docker-swarm-update-app ENV_FILE=.env.docker-compose
+  ```
+- **重新部署集群中的app服务**
+  ```shell
+  make docker-swarm-deploy-app ENV_FILE=.env.docker-compose
+
+  ```
+  > 注意：
+  > 重新部署集群中的app服务 , 适用于修改了dokcer-compose-swarm.yml 的场景
 
 #### 注意事项：
 
