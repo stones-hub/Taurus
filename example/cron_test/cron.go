@@ -21,16 +21,16 @@ func main() {
 	// 每个月的 1 号凌晨 0 点执行: 0 0 1 * *
 	// 每隔 5 分钟执行一次: */5 * * * *
 	// 每隔 10 秒执行一次（需要启用秒字段支持）: */10 * * * * *
-	cron.CronManagerInstance.AddTask("*/10 * * * * *", "每隔 10 秒执行一次", func() {
+	cron.Core.AddTask("*/10 * * * * *", "每隔 10 秒执行一次", func() {
 		log.Println("每隔 10 秒执行一次")
 	})
 
 	// 每分钟的第 5 秒执行
-	cron.CronManagerInstance.AddTask("5 * * * * *", "每分钟的第 5 秒执行", func() {
+	cron.Core.AddTask("5 * * * * *", "每分钟的第 5 秒执行", func() {
 		log.Println("每分钟的第 5 秒执行")
 
 		// 获取任务所有信息
-		taskStatuses := cron.CronManagerInstance.ListTasks()
+		taskStatuses := cron.Core.ListTasks()
 
 		// 准备表格数据
 		headers := []string{"任务ID", "任务名称", "开始时间", "上次运行时间", "下次运行时间"}
@@ -50,7 +50,7 @@ func main() {
 	})
 
 	// 启动 cron 调度器
-	cron.CronManagerInstance.Start()
+	cron.Core.Start()
 
 	// 阻止主线程退出
 	select {}

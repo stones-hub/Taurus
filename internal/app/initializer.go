@@ -110,7 +110,7 @@ func initialize(configPath string, env string) {
 
 	// initialize cron
 	if config.Core.CronEnable {
-		cron.CronManagerInstance.Start()
+		cron.Core.Start()
 	}
 
 	// initialize injector

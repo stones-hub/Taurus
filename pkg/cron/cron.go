@@ -24,11 +24,11 @@ type CronManager struct {
 }
 
 var (
-	CronManagerInstance *CronManager
+	Core *CronManager
 )
 
 func init() {
-	CronManagerInstance = InitializeCronManager()
+	Core = InitializeCronManager()
 }
 
 // InitializeCronManager 创建一个新的 CronManager 实例

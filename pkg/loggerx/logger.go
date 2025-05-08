@@ -62,7 +62,7 @@ type Logger struct {
 	writer io.Writer
 }
 
-var DefaultLogger *Logger
+var Core *Logger
 
 // NewLogger 创建一个新的日志工具
 func Initialize(config LoggerConfig) *Logger {
@@ -111,13 +111,13 @@ func Initialize(config LoggerConfig) *Logger {
 		config.CustomFormat = defaultFormatFunc
 	}
 
-	DefaultLogger = &Logger{
+	Core = &Logger{
 		config: config,
 		logger: logger,
 		writer: writer,
 	}
 
-	return DefaultLogger
+	return Core
 }
 
 // defaultFormatFunc 默认日志格式化函数

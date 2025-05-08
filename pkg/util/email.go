@@ -1,7 +1,7 @@
 package util
 
 import (
-	"Taurus/pkg/loggerx"
+	"log"
 	"strings"
 	"time"
 
@@ -117,7 +117,7 @@ func SendMultipleEmails(content *EmailContent, toList []string, info EmailInfo) 
 			case <-ticker.C:
 				err := smtpClient.Noop()
 				if err != nil {
-					loggerx.DefaultLogger.Error("Failed to send NOOP: %v", err)
+					log.Printf("Failed to send NOOP: %v \n", err)
 					return
 				}
 			}
@@ -128,7 +128,7 @@ func SendMultipleEmails(content *EmailContent, toList []string, info EmailInfo) 
 	for _, to := range toList {
 		err = send(content, to, smtpClient)
 		if err != nil {
-			loggerx.DefaultLogger.Error("Failed to send email to %s: %v", to, err)
+			log.Printf("Failed to send email to %s: %v \n", to, err)
 			done <- true
 			return err
 		}
