@@ -393,7 +393,8 @@ update_framework() {
 # 主程序逻辑
 case "$1" in
   install)
-    install_framework
+    echo "To install the framework, please visit our GitHub repository and download the latest release."
+    echo "GitHub Repository: https://github.com/stones-hub/Taurus"
     ;;
   update)
     update_framework
