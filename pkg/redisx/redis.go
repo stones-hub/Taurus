@@ -122,3 +122,34 @@ func (r *RedisClient) RPop(ctx context.Context, key string) (string, error) {
 func (r *RedisClient) Close() error {
 	return r.client.Close()
 }
+
+// Lock 尝试获取一个分布式锁
+func (r *RedisClient) Lock(ctx context.Context, lockKey string, lockValue string, lockExpireTime time.Duration) (bool, error) {
+	// lockExpireTime 锁的过期时间, 必须设置，防止死锁
+	if lockExpireTime <= 0 {
+		lockExpireTime = 10 * time.Second
+	}
+
+	// SetNX 设置一个键值对，如果键不存在，则设置键值对，并返回true，否则返回false
+	if flag, err := r.client.SetNX(ctx, lockKey, lockValue, lockExpireTime).Result(); err != nil {
+		return false, err
+	} else {
+		return flag, nil
+	}
+}
+
+// Unlock 释放分布式锁
+func (r *RedisClient) Unlock(ctx context.Context, lockKey string, currentProcessLockValue string) error {
+	// 获取锁的值, 检查是否是当前线程持有的锁
+	val, err := r.client.Get(ctx, lockKey).Result()
+	if err != nil {
+		return err
+	}
+
+	if val == currentProcessLockValue {
+		// 删除锁
+		_, err = r.client.Del(ctx, lockKey).Result()
+	}
+
+	return err
+}
