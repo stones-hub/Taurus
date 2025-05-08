@@ -111,7 +111,7 @@ func ParseText(r *http.Request) (string, error) {
 
 // ParseMultipartFile 解析(multipart/form-data)表单上传的文件
 func ParseMultipartFile(r *http.Request, key string) ([]*multipart.FileHeader, error) {
-	// 解析 multipart/form-data
+	// 解析 multipart/form-data, 10MB 内存缓冲， 如果文件不上传完， 会报错， 所以当前函数只要返回没有错误， 就可以返回数据给客户端，不用等待
 	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB max memory
 		return nil, fmt.Errorf("failed to parse multipart form data: %w", err)
 	}
