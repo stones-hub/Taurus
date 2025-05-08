@@ -16,14 +16,14 @@ func JwtMiddleware(next http.Handler) http.Handler {
 		// 通过http header中的token解析来认证
 		token := r.Header.Get("token")
 		if token == "" {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			httpx.SendResponse(w, http.StatusUnauthorized, "Jwt Token is empty", nil)
 			return
 		}
 
 		// 解析token中包含的相关信息（有效载荷）
 		claims, err := util.ParseToken(token)
 		if err != nil {
-			httpx.SendErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+			httpx.SendResponse(w, http.StatusUnauthorized, "Jwt Token is parse error", nil)
 			return
 		}
 
@@ -31,17 +31,17 @@ func JwtMiddleware(next http.Handler) http.Handler {
 		val, err := redisx.Redis.HGet(r.Context(), strconv.Itoa(int(claims.Uid)), ua)
 
 		if err != nil { // 说明该token是其他User-Agent的token（比如说电脑端的token的map key 是User-Agent，当然不能用来登录手机端）
-			httpx.SendErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+			httpx.SendResponse(w, http.StatusUnauthorized, "Jwt Token form redis error", nil)
 			return
 		}
 
 		if token != val { // 请求携带的token与redis中存储的token不一致，说明是旧的token
-			httpx.SendErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+			httpx.SendResponse(w, http.StatusUnauthorized, "Jwt Token is invalid", nil)
 			return
 		}
 		// 处理过期token
 		if time.Now().Unix() > claims.ExpiresAt {
-			httpx.SendErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+			httpx.SendResponse(w, http.StatusUnauthorized, "Jwt Token is expired", nil)
 			return
 		}
 
@@ -57,7 +57,7 @@ token返回给前端以后， 前端需要存储下来，每次请求要带过�
 // -----> 登录成功，存token <-----
 token, err := util.GenerateToken(user.ID, user.UserName) // 生产token
 if err != nil {
-	return response.Response{
+	return httpx.Response{
 		Status: http.StatusInternalServerError,
 		Msg:    "token签发失败！",
 		Error:  err.Error(),
@@ -78,5 +78,4 @@ return response.Response{
 ua := r.Header.Get("User-Agent")
 // 存的时候  key = userid  value = map["User-Agent"]token, 取的时候  取 UID 对于的 map里面的key="User-Agent"对应的值
 val, err := redisx.Redis.HGet(r.Context(), strconv.Itoa(int(claims.Uid)), ua).Result()
-
 */

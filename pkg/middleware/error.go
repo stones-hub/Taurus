@@ -14,7 +14,7 @@ func ErrorHandlerMiddleware(next http.Handler) http.Handler {
 			if err := recover(); err != nil {
 				// Log the error and stack trace
 				log.Printf("Recovered from panic: %v\n%s", err, debug.Stack())
-				httpx.SendErrorResponse(w, http.StatusInternalServerError, "Internal Server Error")
+				httpx.SendResponse(w, http.StatusInternalServerError, "Internal Server Error", nil)
 			}
 		}()
 		// Call the next handler

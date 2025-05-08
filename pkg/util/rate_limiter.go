@@ -133,3 +133,22 @@ func (compositeRateLimiter *CompositeRateLimiter) processQueue() {
 		compositeRateLimiter.mutex.Unlock()
 	}
 }
+
+// ------------------  例子 ------------------
+/*
+
+func main() {
+	// 创建一个 CompositeRateLimiter 实例
+	limiter := util.NewCompositeRateLimiter(1, 5, time.Minute) // 每分钟允许5个请求, 每个IP允许1个请求
+
+	// 创建一个新的 HTTP 服务器
+	mux := http.NewServeMux()
+
+	// 使用 RateLimitMiddleware 包装处理器
+	mux.Handle("/", middleware.RateLimitMiddleware(http.HandlerFunc(helloHandler), limiter))
+
+	// 启动服务器
+	http.ListenAndServe(":8080", mux)
+}
+
+*/

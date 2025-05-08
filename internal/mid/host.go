@@ -25,7 +25,7 @@ func HostMiddleware(next http.Handler) http.Handler {
 		}
 
 		if !allowed {
-			httpx.SendErrorResponse(w, http.StatusForbidden, "访问被拒绝：未授权的主机", "application/json; charset=utf-8")
+			httpx.SendResponse(w, http.StatusForbidden, "访问被拒绝：未授权的主机", nil)
 			return
 		}
 

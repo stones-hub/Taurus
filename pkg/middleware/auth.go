@@ -11,13 +11,13 @@ func ApiKeyAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		apiKey := r.Header.Get("Authorization")
 		if apiKey == "" {
-			httpx.SendErrorResponse(w, http.StatusUnauthorized, nil, "")
+			httpx.SendResponse(w, http.StatusUnauthorized, "Authorization is empty", nil)
 			return
 		}
 
 		// Validate the API key (this is a placeholder, replace with actual validation logic)
 		if !isValidApiKey(apiKey) {
-			httpx.SendErrorResponse(w, http.StatusUnauthorized, nil, "")
+			httpx.SendResponse(w, http.StatusUnauthorized, "Authorization is invalid", nil)
 			return
 		}
 

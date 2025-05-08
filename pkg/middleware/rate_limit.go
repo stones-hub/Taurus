@@ -14,7 +14,7 @@ func RateLimitMiddleware(next http.Handler, limiter *util.CompositeRateLimiter) 
 
 		allowed, message := limiter.Allow(ip)
 		if !allowed {
-			httpx.SendErrorResponse(w, http.StatusTooManyRequests, message)
+			httpx.SendResponse(w, http.StatusTooManyRequests, message, nil)
 			return
 		}
 

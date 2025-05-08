@@ -16,7 +16,7 @@ type Claims struct {
 	jwt.StandardClaims        // StandardClaims结构体实现了Claims接口(Valid()函数)
 }
 
-// GenerateToken 签发token（调用jwt-go库生成token）, 传入用户名和ID 返回一个token字符串
+// GenerateToken 签发token（调用jwt-go库生成token）, 传入用户名和ID 返回一个token字符串. 用户登录成功签发token
 func GenerateToken(uid uint, username string) (string, error) {
 	nowTime := time.Now()
 	expireTime := nowTime.Add(time.Hour * 24)
@@ -36,7 +36,7 @@ func GenerateToken(uid uint, username string) (string, error) {
 	return token.SignedString(JwtSecret)
 }
 
-// ParseToken token解码, 传入token字符串， 解析出Claims结构体
+// ParseToken token解码, 传入token字符串， 解析出Claims结构体. 用户请求携带token， 解析出Claims结构体
 func ParseToken(tokenString string) (*Claims, error) {
 	// 输入用户token字符串,自定义的Claims结构体对象,以及自定义函数来解析token字符串为jwt的Token结构体指针
 	//Keyfunc是匿名函数类型: type Keyfunc func(*Token) (interface{}, error)
