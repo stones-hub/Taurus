@@ -15,18 +15,24 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+# vend*or/
+
 
 # Go workspace file
 go.work
 go.work.sum
 
 # env file
-logs/db
-logs/*.log
 .vscode/
 .idea/
 .git/
 .DS_Store
-.wire_gen.go
 build/
+
+download/*
+!download/*.temp
+
+logs/*
+!logs/*.temp
+
+internal/wire_gen.go
