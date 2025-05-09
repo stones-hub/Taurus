@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Taurus/pkg/mcpx"
+	"Taurus/pkg/mcp/mcp_server"
 	"context"
 	"fmt"
 	"log"
@@ -101,6 +101,42 @@ func Router() *server.MCPServer {
 		},
 	)
 
+	handler.AddTool(
+		mcp.NewTool(
+			"Add",                                  // tool name
+			mcp.WithDescription("Add two numbers"), // tool description
+			mcp.WithNumber("input1",
+				mcp.Description("The first number"),
+				mcp.Required(),
+			), // input parameter
+			mcp.WithNumber("input2",
+				mcp.Description("The second number"),
+				mcp.Required(),
+			), // output parameter
+		),
+		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+
+			arguments := request.Params.Arguments
+			input1 := arguments["input1"].(float64)
+			input2 := arguments["input2"].(float64)
+
+			if input1 == 0 || input2 == 0 {
+				log.Println("input1 or input2 is empty")
+			}
+
+			fmt.Printf("input1: %f, input2: %f", input1, input2)
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("input1: %f, input2: %f", input1, input2),
+					},
+				},
+			}, nil
+		},
+	)
+
 	return handler
 }
 
@@ -143,15 +179,15 @@ func main() {
 
 	handler := Router()
 
-	s := &mcpx.Server{
+	s := &mcp_server.Server{
 		Addr:      "localhost:8080",
-		Transport: mcpx.TransportStdio,
+		Transport: mcp_server.TransportStdio,
 		Handler:   handler,
 	}
 
 	s.ListenAndServe(
-		mcpx.WithStdioContextFunc(stdioContextFunc),
-		mcpx.WithSSEContextFunc(sseContextFunc),
+		mcp_server.WithStdioContextFunc(stdioContextFunc),
+		mcp_server.WithSSEContextFunc(sseContextFunc),
 	)
 
 	// 强制阻塞

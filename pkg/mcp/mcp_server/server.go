@@ -1,4 +1,4 @@
-package mcpx
+package mcp_server
 
 import (
 	"fmt"
