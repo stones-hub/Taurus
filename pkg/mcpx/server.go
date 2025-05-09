@@ -3,11 +3,7 @@ package mcpx
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -88,17 +84,4 @@ func (s *Server) ListenAndServe(opts ...ServerOption) error {
 	} else {
 		return fmt.Errorf("invalid transport: %s", s.Transport)
 	}
-}
-
-// 退出
-func GracefullyClose(timeout time.Duration) {
-	// 创建一个通道来监听信号
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// 等待信号
-	sig := <-signalChan
-	log.Printf("Received signal: %s. Shutting down gracefully...\n", sig)
-
-	log.Println("Server shutdown complete.")
 }

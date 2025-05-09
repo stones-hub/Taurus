@@ -80,7 +80,7 @@ func (excelWriter *ExcelWriter) WriteBatch(datas []interface{}) error {
 
 				case reflect.Struct:
 					if fieldVal.Type() == reflect.TypeOf(time.Now()) { // 字段类型是时间结构体time.Time
-						// 这个写法很有意思， 先将fieldVal转成interface在转成time.Time, TODO 用通义看一下这里有什么 意义
+						// 这个写法很有意思， 先将fieldVal转成interface在转成time.Time
 						row[i] = fieldVal.Interface().(time.Time).Format("2006-01-02 15:04:05")
 					} else { // 如果不是time.Time结构体类型，统一json成字符串在写入到Excel
 						jsonBytes, _ := json.Marshal(fieldVal.Interface())

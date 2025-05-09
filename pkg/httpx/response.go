@@ -164,7 +164,7 @@ func FileResponseWithManualRangeSupport(w http.ResponseWriter, r *http.Request, 
 	io.CopyN(w, file, end-start+1)
 }
 
-// sendFullFile 发送整个文件
+// sendFullFile send full file to client
 func sendFullFile(w http.ResponseWriter, file *os.File, fileInfo os.FileInfo, fileName string) {
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	w.Header().Set("Content-Type", "application/octet-stream")
@@ -172,7 +172,7 @@ func sendFullFile(w http.ResponseWriter, file *os.File, fileInfo os.FileInfo, fi
 	io.Copy(w, file)
 }
 
-// parseRange 解析 Range 请求头
+// parseRange parse range header
 func parseRange(rangeHeader string, fileSize int64) (int64, int64, error) {
 	rangeParts := strings.Split(rangeHeader, "=")
 	if len(rangeParts) != 2 || rangeParts[0] != "bytes" {
@@ -198,7 +198,7 @@ func parseRange(rangeHeader string, fileSize int64) (int64, int64, error) {
 	return start, end, nil
 }
 
-// FileDownloadWithRange  客户端断点续传下载文件
+// FileDownloadWithRange client download file with range
 func FileDownloadWithRange(url, destPath string) error {
 	// 打开文件，准备写入
 	file, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY, 0666)

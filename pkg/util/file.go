@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strings"
 )
@@ -208,9 +207,8 @@ func CreateDir(dirs ...string) (err error) {
 }
 
 // FileMove 文件移动
-//@param: src string, dst string(src: 源位置,绝对路径or相对路径, dst: 目标位置,绝对路径or相对路径,必须为文件夹)
-//@return: err error
-
+// @param: src string, dst string(src: 源位置,绝对路径or相对路径, dst: 目标位置,绝对路径or相对路径,必须为文件夹)
+// @return: err error
 func FileMove(src string, dst string) (err error) {
 	if dst == "" {
 		return nil
@@ -238,24 +236,6 @@ Redirect:
 		}
 	}
 	return os.Rename(src, dst)
-}
-
-//@description: 去除结构体空格
-//@param: target interface (target: 目标结构体,传入必须是指针类型)
-
-func TrimSpace(target interface{}) {
-	t := reflect.TypeOf(target)
-	if t.Kind() != reflect.Ptr {
-		return
-	}
-	t = t.Elem()
-	v := reflect.ValueOf(target).Elem()
-	for i := 0; i < t.NumField(); i++ {
-		switch v.Field(i).Kind() {
-		case reflect.String:
-			v.Field(i).SetString(strings.TrimSpace(v.Field(i).String()))
-		}
-	}
 }
 
 // FileExist 判断文件是否存在

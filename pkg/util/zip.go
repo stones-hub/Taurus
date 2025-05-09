@@ -73,6 +73,7 @@ func CompressGzip(data string) (string, error) {
 	return buf.String(), nil
 }
 
+// 字符串解压
 func DecompressGzip(data string) (string, error) {
 	var (
 		buf              bytes.Buffer

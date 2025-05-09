@@ -69,7 +69,6 @@ func createPri(priKey *rsa.PrivateKey, filename string) error {
 }
 
 // RSA 公钥加密 public 公钥文件地址, plaintext 明文
-
 func EncryptByPublicKey(public string, plaintext []byte) ([]byte, error) {
 
 	pemBlock, err := os.ReadFile(public)
@@ -97,7 +96,6 @@ func EncryptByPublicKey(public string, plaintext []byte) ([]byte, error) {
 }
 
 // RSA 私钥解密 private 私钥文件地址, ciphertext 密文
-
 func DecryptByPrivateKey(private string, ciphertext []byte) ([]byte, error) {
 
 	pemBlock, err := os.ReadFile(private)

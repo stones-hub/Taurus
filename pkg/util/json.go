@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// GetJSONKeys 获取JSON字符串中的所有键 Key
 func GetJSONKeys(jsonStr string) (keys []string, err error) {
 	// 使用json.Decoder，以便在解析过程中记录键的顺序
 	dec := json.NewDecoder(strings.NewReader(jsonStr))

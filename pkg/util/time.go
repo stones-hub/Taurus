@@ -73,6 +73,8 @@ func ParseDuration(d string) (time.Duration, error) {
 	return time.Duration(dv), err
 }
 
+// 将 ISO 8601 格式的时间字符串转换为更易读的格式，用于日志记录或显示。
+// 例如："2024-01-01T00:00:00.000Z" 转换为 "2024-01-01 00:00:00.000"
 func ParseTime(input []byte) string {
 	var re = regexp.MustCompile(`"((\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.(\d{3}))\d*)(Z|[\+-]\d{2}:\d{2})"`)
 	var substitution = "\"$2 $3.$4\""

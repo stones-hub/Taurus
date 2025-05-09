@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// IsIdCard 检查身份证号码是否合法
 func IsIdCard(idCard string) bool {
 
 	if len(idCard) != 18 {
