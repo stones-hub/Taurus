@@ -1,6 +1,7 @@
-package main
+package mcps
 
 import (
+	"Taurus/pkg/mcp/mcp_server"
 	"context"
 	"fmt"
 	"log"
@@ -9,13 +10,12 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func Router() *server.MCPServer {
-	handler := server.NewMCPServer("mcp-test", "0.1.0",
-		server.WithResourceCapabilities(true, true),
-		server.WithPromptCapabilities(true),
-		server.WithToolCapabilities(true),
-		server.WithLogging(),
-	)
+func init() {
+	Router(mcp_server.Core.Handler)
+}
+
+func Router(handler *server.MCPServer) {
+	log.Println("mcp router init")
 
 	handler.AddTool(
 		mcp.NewTool(
@@ -125,45 +125,4 @@ func Router() *server.MCPServer {
 		},
 	)
 
-	return handler
-}
-
-/*
-func main() {
-
-	handler := Router()
-
-	s := &mcpx.Server{
-		Addr:      "localhost:8080",
-		Transport: mcpx.TransportStdio,
-		Handler:   handler,
-	}
-
-	s.ListenAndServe(
-		mcpx.WithStdioContextFunc(stdioContextFunc),
-		mcpx.WithSSEContextFunc(sseContextFunc),
-	)
-
-	// 强制阻塞
-	select {}
-}
-*/
-
-/*
-{
-  "mcpServers": {
-    "mcp-test": {
-      "url": "http://localhost:8080/sse",
-      "autoApprove": [
-        "Echo",
-        "Echo2"
-      ]
-    }
-  }
-}
-*/
-
-func main() {
-
-	// 强制阻塞
 }

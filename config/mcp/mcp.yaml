@@ -1,0 +1,11 @@
+mcp:
+  transport: "stdio"
+  addr: "127.0.0.1:9001"
+  name: "mcp-server-stdio"
+  version: "0.0.1"
+  resource:
+    subscribe: true
+    listChanged: true
+  prompt: true
+  tool: true
+

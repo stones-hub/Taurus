@@ -60,6 +60,19 @@ type Config struct {
 		WriteTimeout int      `json:"write_timeout" yaml:"write_timeout" toml:"write_timeout"`
 		MaxRetries   int      `json:"max_retries" yaml:"max_retries" toml:"max_retries"`
 	} `json:"redis" yaml:"redis" toml:"redis"`
+
+	MCP struct {
+		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式 (stdio, sse)
+		Addr      string `json:"addr" yaml:"addr" toml:"addr"`                // 地址
+		Name      string `json:"name" yaml:"name" toml:"name"`                // 名称
+		Version   string `json:"version" yaml:"version" toml:"version"`       // 版本
+		Resource  struct {
+			Subscribe   bool `json:"subscribe" yaml:"subscribe" toml:"subscribe"`
+			ListChanged bool `json:"list_changed" yaml:"list_changed" toml:"list_changed"`
+		} `json:"resource" yaml:"resource" toml:"resource"`
+		Prompt bool `json:"prompt" yaml:"prompt" toml:"prompt"`
+		Tool   bool `json:"tool" yaml:"tool" toml:"tool"`
+	} `json:"mcp" yaml:"mcp" toml:"mcp"`
 }
 
 // global configuration instance

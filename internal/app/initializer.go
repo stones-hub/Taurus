@@ -6,6 +6,7 @@ import (
 	"Taurus/pkg/cron"
 	"Taurus/pkg/db"
 	"Taurus/pkg/logx"
+	"Taurus/pkg/mcp/mcp_server"
 	"Taurus/pkg/redisx"
 	"Taurus/pkg/util"
 	"Taurus/pkg/websocket"
@@ -118,6 +119,21 @@ func initialize(configPath string, env string) {
 
 	// initialize websocket
 	websocket.Initialize()
+
+	// initialize mcp server
+	mcp_server.InitializeServer(&mcp_server.ServerConfig{
+		Name:        config.Core.MCP.Name,
+		Version:     config.Core.MCP.Version,
+		Addr:        config.Core.MCP.Addr,
+		Transport:   config.Core.MCP.Transport,
+		Subscribe:   config.Core.MCP.Resource.Subscribe,
+		ListChanged: config.Core.MCP.Resource.ListChanged,
+		Prompt:      config.Core.MCP.Prompt,
+		Tool:        config.Core.MCP.Tool,
+	})
+	log.Println("mcp server initialized")
+	mcp_server.Core.ListenAndServe()
+	log.Println("mcp server started")
 }
 
 // loadConfig reads and parses configuration files from a directory or a single file
