@@ -64,7 +64,7 @@ type Logger struct {
 
 var Core *Logger
 
-// NewLogger 创建一个新的日志工具
+// Initialize 初始化日志工具（默认）
 func Initialize(config LoggerConfig) *Logger {
 	var (
 		logFilePath string
