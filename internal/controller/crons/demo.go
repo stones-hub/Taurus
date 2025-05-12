@@ -7,6 +7,6 @@ import (
 
 func init() {
 	cron.Core.AddTask("*/2 * * * * *", "DemoCron", func() {
-		logx.Core.Info("demo crond been executed")
+		logx.Core.Info("default", "demo crond been executed")
 	})
 }

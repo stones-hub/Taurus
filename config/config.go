@@ -2,18 +2,19 @@ package config
 
 // Config holds the application configuration
 type Config struct {
-	Version         string `json:"version" yaml:"version" toml:"version"`                            // 版本
-	AppName         string `json:"app_name" yaml:"app_name" toml:"app_name"`                         // 应用名称
-	AppHost         string `json:"app_host" yaml:"app_host" toml:"app_host"`                         // 应用主机
-	AppPort         int    `json:"app_port" yaml:"app_port" toml:"app_port"`                         // 应用端口
-	Authorization   string `json:"authorization" yaml:"authorization" toml:"authorization"`          // app授权码
-	PrintConfig     bool   `json:"print_config" yaml:"print_config" toml:"print_config"`             // 是否打印配置
-	DBEnable        bool   `json:"db_enable" yaml:"db_enable" toml:"db_enable"`                      // 是否启用数据库
-	RedisEnable     bool   `json:"redis_enable" yaml:"redis_enable" toml:"redis_enable"`             // 是否启用redis
-	CronEnable      bool   `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`                // 是否启用cron
-	TemplatesEnable bool   `json:"templates_enable" yaml:"templates_enable" toml:"templates_enable"` // 是否启用模板
-	MCPEnable       bool   `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
-	WebsocketEnable bool   `json:"websocket_enable" yaml:"websocket_enable" toml:"websocket_enable"` // 是否启用websocket
+	Version       string `json:"version" yaml:"version" toml:"version"`                   // 版本
+	AppName       string `json:"app_name" yaml:"app_name" toml:"app_name"`                // 应用名称
+	AppHost       string `json:"app_host" yaml:"app_host" toml:"app_host"`                // 应用主机
+	AppPort       int    `json:"app_port" yaml:"app_port" toml:"app_port"`                // 应用端口
+	Authorization string `json:"authorization" yaml:"authorization" toml:"authorization"` // app授权码
+
+	PrintEnable     bool `json:"print_enable" yaml:"print_enable" toml:"print_enable"`             // 是否打印配置
+	DBEnable        bool `json:"db_enable" yaml:"db_enable" toml:"db_enable"`                      // 是否启用数据库
+	RedisEnable     bool `json:"redis_enable" yaml:"redis_enable" toml:"redis_enable"`             // 是否启用redis
+	CronEnable      bool `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`                // 是否启用cron
+	TemplatesEnable bool `json:"templates_enable" yaml:"templates_enable" toml:"templates_enable"` // 是否启用模板
+	MCPEnable       bool `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
+	WebsocketEnable bool `json:"websocket_enable" yaml:"websocket_enable" toml:"websocket_enable"` // 是否启用websocket
 
 	Templates []struct {
 		Name string `json:"name" yaml:"name" toml:"name"` // 模板名称
@@ -46,7 +47,8 @@ type Config struct {
 		} `json:"logger" yaml:"logger" toml:"logger"`
 	} `json:"databases" yaml:"databases" toml:"databases"`
 
-	Logger struct {
+	Loggers []struct {
+		Name        string `json:"name" yaml:"name" toml:"name"`                            // 日志名称
 		Perfix      string `json:"perfix" yaml:"perfix" toml:"perfix"`                      // 日志前缀
 		LogLevel    string `json:"log_level" yaml:"log_level" toml:"log_level"`             // 日志等级
 		OutputType  string `json:"output_type" yaml:"output_type" toml:"output_type"`       // 输出类型（console/file）
@@ -55,7 +57,8 @@ type Config struct {
 		MaxBackups  int    `json:"max_backups" yaml:"max_backups" toml:"max_backups"`       // 保留的旧日志文件的最大数量
 		MaxAge      int    `json:"max_age" yaml:"max_age" toml:"max_age"`                   // 日志文件的最大保存天数
 		Compress    bool   `json:"compress" yaml:"compress" toml:"compress"`                // 是否压缩旧日志文件
-	} `json:"logger" yaml:"logger" toml:"logger"`
+		Formatter   string `json:"formatter" yaml:"formatter" toml:"formatter"`             // 自定义日志格式化函数的名称
+	} `json:"loggers" yaml:"loggers" toml:"loggers"`
 
 	Redis struct {
 		Addrs        []string `json:"addrs" yaml:"addrs" toml:"addrs"`
@@ -70,10 +73,10 @@ type Config struct {
 	} `json:"redis" yaml:"redis" toml:"redis"`
 
 	MCP struct {
-		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式 (stdio, sse)
-		Addr      string `json:"addr" yaml:"addr" toml:"addr"`                // 地址
-		Name      string `json:"name" yaml:"name" toml:"name"`                // 名称
-		Version   string `json:"version" yaml:"version" toml:"version"`       // 版本
+		MCPTransport string `json:"mcp_transport" yaml:"mcp_transport" toml:"mcp_transport"` // 传输方式 (stdio, sse)
+		MCPAddr      string `json:"mcp_addr" yaml:"mcp_addr" toml:"mcp_addr"`                // 地址
+		MCPName      string `json:"mcp_name" yaml:"mcp_name" toml:"mcp_name"`                // 名称
+		MCPVersion   string `json:"mcp_version" yaml:"mcp_version" toml:"mcp_version"`       // 版本
 	} `json:"mcp" yaml:"mcp" toml:"mcp"`
 }
 

@@ -10,6 +10,7 @@ services:
     container_name: "${APP_NAME}"
     ports:
       - "${HOST_PORT:-8080}:${CONTAINER_PORT:-8080}" # 设置端口映射
+      - "${HOST_MCP_PORT:-9001}:${CONTAINER_MCP_PORT:-9001}" # 设置端口映射
     environment: # 给容器设置环境变量
       - MYSQL_DSN=${DB_DSN:-apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接

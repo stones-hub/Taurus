@@ -1,6 +1,6 @@
 mcp:
-  transport: "sse" # 传输方式，可选值：stdio, sse, 如果启用的是stdio，则必须关闭其他组件(websocket, templates，db，redis，cron 等)
-  addr: "127.0.0.1:9001"
-  name: "mcp-server-sse"
-  version: "0.0.1"
+  mcp_transport: "${MCP_TRANSPORT:sse}" # 传输方式，可选值：stdio, sse, 如果启用的是stdio，则必须关闭其他组件(websocket, templates，db，redis，cron 等)
+  mcp_addr: "${MCP_ADDR:127.0.0.1:9001}"
+  mcp_name: "${MCP_NAME:mcp-server-sse}"
+  mcp_version: "${MCP_VERSION:0.0.1}"
 

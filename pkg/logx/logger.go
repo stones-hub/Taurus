@@ -6,8 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
-	"time"
 
 	"github.com/natefinch/lumberjack"
 )
@@ -43,29 +41,81 @@ var levelColors = map[LogLevel]string{
 }
 
 // LoggerConfig 定义日志配置
-type LoggerConfig struct {
-	Perfix       string                        // 日志前缀, outputType = file下有用
-	LogLevel     LogLevel                      // 日志等级
-	OutputType   string                        // 输出类型（console/file）
-	LogFilePath  string                        // 日志文件路径, 支持相对路径和绝对路径, outputType = file下有用
-	MaxSize      int                           // 单个日志文件的最大大小（单位：MB） outputType = file下有用
-	MaxBackups   int                           // 保留的旧日志文件的最大数量 outputType = file下有用
-	MaxAge       int                           // 日志文件的最大保存天数 outputType = file下有用
-	Compress     bool                          // 是否压缩旧日志文件 outputType = file下有用
-	CustomFormat func(LogLevel, string) string // 自定义日志格式化函数 outputType = file下有用
+type Config struct {
+	Name        string   // 日志名称
+	Perfix      string   // 日志前缀, outputType = file下有用
+	LogLevel    LogLevel // 日志等级
+	OutputType  string   // 输出类型（console/file）
+	LogFilePath string   // 日志文件路径, 支持相对路径和绝对路径, outputType = file下有用
+	MaxSize     int      // 单个日志文件的最大大小（单位：MB） outputType = file下有用
+	MaxBackups  int      // 保留的旧日志文件的最大数量 outputType = file下有用
+	MaxAge      int      // 日志文件的最大保存天数 outputType = file下有用
+	Compress    bool     // 是否压缩旧日志文件 outputType = file下有用
+	Formatter   string   // 自定义日志格式化函数的名称 outputType = file下有用
 }
 
 // Logger 定义日志工具
 type Logger struct {
-	config LoggerConfig
+	config Config
 	logger *log.Logger
 	writer io.Writer
 }
 
-var Core *Logger
+// 定义新的类型
+// LoggerMap 封装了 map[string]*Logger
 
-// Initialize 初始化日志工具（默认）
-func Initialize(config LoggerConfig) *Logger {
+type LoggerMap map[string]*Logger
+
+// 为 LoggerMap 添加方法
+func (lm LoggerMap) Info(name string, format string, a ...any) {
+	if _, ok := lm[name]; !ok {
+		log.Fatalf("Logger %s not found", name)
+	}
+	lm[name].Info(format, a...)
+}
+
+func (lm LoggerMap) Debug(name string, format string, a ...any) {
+	if _, ok := lm[name]; !ok {
+		log.Fatalf("Logger %s not found", name)
+	}
+	lm[name].Debug(format, a...)
+}
+
+func (lm LoggerMap) Warn(name string, format string, a ...any) {
+	if _, ok := lm[name]; !ok {
+		log.Fatalf("Logger %s not found", name)
+	}
+	lm[name].Warn(format, a...)
+}
+
+func (lm LoggerMap) Error(name string, format string, a ...any) {
+	if _, ok := lm[name]; !ok {
+		log.Fatalf("Logger %s not found", name)
+	}
+	lm[name].Error(format, a...)
+}
+
+func (lm LoggerMap) Fatal(name string, format string, a ...any) {
+	if _, ok := lm[name]; !ok {
+		log.Fatalf("Logger %s not found", name)
+	}
+	lm[name].Fatal(format, a...)
+}
+
+// 将 Core 定义为 LoggerMap 类型的实例
+var Core = LoggerMap{}
+
+func Initialize(configs []Config) {
+	for _, config := range configs {
+		if _, ok := Core[config.Name]; ok {
+			log.Fatalf("Logger %s already exists", config.Name)
+		}
+		Core[config.Name] = new(config)
+	}
+}
+
+// initialize 初始化日志工具（默认）
+func new(c Config) *Logger {
 	var (
 		logFilePath string
 		// 配置日志文件轮转
@@ -75,9 +125,9 @@ func Initialize(config LoggerConfig) *Logger {
 		logger  *log.Logger
 	)
 
-	if config.OutputType == "file" {
-		if filepath.IsAbs(config.LogFilePath) {
-			logFilePath = config.LogFilePath // 绝对路径
+	if c.OutputType == "file" {
+		if filepath.IsAbs(c.LogFilePath) {
+			logFilePath = c.LogFilePath // 绝对路径
 		} else {
 			baseDIR, err = os.Getwd()
 			if err != nil {
@@ -85,7 +135,7 @@ func Initialize(config LoggerConfig) *Logger {
 			}
 
 			// 相对路径基于 logs 目录, 相对路径
-			logFilePath = filepath.Join(baseDIR, config.LogFilePath)
+			logFilePath = filepath.Join(baseDIR, c.LogFilePath)
 		}
 
 		logDir := filepath.Dir(logFilePath)
@@ -95,39 +145,22 @@ func Initialize(config LoggerConfig) *Logger {
 
 		writer = &lumberjack.Logger{
 			Filename:   logFilePath,
-			MaxSize:    config.MaxSize,
-			MaxBackups: config.MaxBackups,
-			MaxAge:     config.MaxAge,
-			Compress:   config.Compress,
+			MaxSize:    c.MaxSize,
+			MaxBackups: c.MaxBackups,
+			MaxAge:     c.MaxAge,
+			Compress:   c.Compress,
 		}
-		logger = log.New(writer, config.Perfix, 0)
+		logger = log.New(writer, c.Perfix, 0)
 	} else {
 		writer = os.Stdout
 		logger = log.New(writer, "", 0)
 	}
 
-	// 如果 FormatFunc 为空，设置默认格式化函数
-	if config.CustomFormat == nil {
-		config.CustomFormat = defaultFormatFunc
-	}
-
-	Core = &Logger{
-		config: config,
+	return &Logger{
+		config: c,
 		logger: logger,
 		writer: writer,
 	}
-
-	return Core
-}
-
-// defaultFormatFunc 默认日志格式化函数
-func defaultFormatFunc(level LogLevel, message string) string {
-	// 获取当前时间
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	// 获取调用者信息
-	_, file, line, _ := runtime.Caller(3)
-	caller := fmt.Sprintf("%s:%d", filepath.Base(file), line)
-	return fmt.Sprintf("[%s] [%s] [%s] : %s", timestamp, caller, getLevelSTR(level), message)
 }
 
 // logWithLevel 根据日志等级输出日志
@@ -138,7 +171,7 @@ func (l *Logger) logWithLevel(level LogLevel, message string) {
 	}
 
 	// 格式化日志内容
-	formattedMessage := l.config.CustomFormat(level, message)
+	formattedMessage := GetFormatter(l.config.Formatter).Format(level, message)
 
 	// 如果是控制台输出，添加颜色
 	if l.config.OutputType == "console" {
@@ -149,23 +182,6 @@ func (l *Logger) logWithLevel(level LogLevel, message string) {
 
 	// 打印日志
 	l.logger.Println(formattedMessage)
-}
-
-func getLevelSTR(level LogLevel) string {
-	switch level {
-	case LEVEL_DEBUG:
-		return LEVEL_DEBUG_STR
-	case LEVEL_INFO:
-		return LEVEL_INFO_STR
-	case LEVEL_WARN:
-		return LEVEL_WARN_STR
-	case LEVEL_ERROR:
-		return LEVEL_ERROR_STR
-	case LEVEL_FATAL:
-		return LEVEL_FATAL_STR
-	default:
-		return ""
-	}
 }
 
 // Debug 输出 Debug 级别日志
@@ -200,6 +216,6 @@ func (l *Logger) SetLogLevel(level LogLevel) {
 }
 
 // 设置日志输出格式函数
-func (l *Logger) SetFormatFunc(formatFunc func(LogLevel, string) string) {
-	l.config.CustomFormat = formatFunc
+func (l *Logger) SetFormatter(formatter string) {
+	l.config.Formatter = formatter
 }

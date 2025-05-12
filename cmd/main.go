@@ -12,6 +12,7 @@ import (
 
 	_ "Taurus/internal/controller/crons" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/controller/mcps"  // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/log_formatter"    // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 )
 
 func main() {
@@ -43,10 +44,10 @@ func main() {
 		},
 		Routes: []router.Router{
 			{
-				Path:    "/",
-				Handler: http.HandlerFunc(app.GlobalInjector.DemoCtrl.Get),
+				Path:       "/",
+				Handler:    http.HandlerFunc(app.GlobalInjector.DemoCtrl.Get),
 				Middleware: []router.MiddlewareFunc{
-					middleware.ApiKeyAuthMiddleware,
+					// middleware.ApiKeyAuthMiddleware,
 				},
 			},
 		},

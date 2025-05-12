@@ -43,21 +43,27 @@ func initialize(configPath string, env string) {
 	loadConfig(configPath)
 
 	// print application configuration
-	if config.Core.PrintConfig {
+	if config.Core.PrintEnable {
 		log.Println("Configuration:", util.ToJsonString(config.Core))
 	}
 
 	// initialize logger
-	logx.Initialize(logx.LoggerConfig{
-		OutputType:  config.Core.Logger.OutputType,
-		LogFilePath: config.Core.Logger.LogFilePath,
-		MaxSize:     config.Core.Logger.MaxSize,
-		MaxBackups:  config.Core.Logger.MaxBackups,
-		MaxAge:      config.Core.Logger.MaxAge,
-		Compress:    config.Core.Logger.Compress,
-		Perfix:      config.Core.Logger.Perfix,
-		LogLevel:    parseCustomLoggerLevel(config.Core.Logger.LogLevel),
-	})
+	logConfigs := make([]logx.Config, 0)
+	for _, c := range config.Core.Loggers {
+		logConfigs = append(logConfigs, logx.Config{
+			Name:        c.Name,
+			Perfix:      c.Perfix,
+			LogLevel:    parseLevel(c.LogLevel),
+			OutputType:  c.OutputType,
+			LogFilePath: c.LogFilePath,
+			MaxSize:     c.MaxSize,
+			MaxBackups:  c.MaxBackups,
+			MaxAge:      c.MaxAge,
+			Compress:    c.Compress,
+			Formatter:   c.Formatter,
+		})
+	}
+	logx.Initialize(logConfigs)
 
 	// initialize database
 	if config.Core.DBEnable {
@@ -84,7 +90,7 @@ func initialize(configPath string, env string) {
 				MaxBackups:    dbConfig.Logger.MaxBackups,
 				MaxAge:        dbConfig.Logger.MaxAge,
 				Compress:      dbConfig.Logger.Compress,
-				LogLevel:      parseDBLogLevel(dbConfig.Logger.LogLevel),
+				LogLevel:      parseDbLevel(dbConfig.Logger.LogLevel),
 				SlowThreshold: time.Duration(dbConfig.Logger.SlowThreshold),
 			}
 			customLogger := db.NewDBCustomLogger(loggerConfig)
@@ -137,10 +143,10 @@ func initialize(configPath string, env string) {
 	// initialize mcp server
 	if config.Core.MCPEnable {
 		mcp_server.Core = mcp_server.NewServer(
-			mcp_server.WithName(config.Core.MCP.Name),
-			mcp_server.WithAddr(config.Core.MCP.Addr),
-			mcp_server.WithVersion(config.Core.MCP.Version),
-			mcp_server.WithTransport(config.Core.MCP.Transport),
+			mcp_server.WithName(config.Core.MCP.MCPName),
+			mcp_server.WithAddr(config.Core.MCP.MCPAddr),
+			mcp_server.WithVersion(config.Core.MCP.MCPVersion),
+			mcp_server.WithTransport(config.Core.MCP.MCPTransport),
 		)
 		go mcp_server.Core.ListenAndServe()
 		log.Println("MCP server initialized successfully")
@@ -234,7 +240,7 @@ func replacePlaceholders(content string) string {
 }
 
 // ParseLogLevel converts a string log level to gorm's logger.LogLevel
-func parseDBLogLevel(level string) logger.LogLevel {
+func parseDbLevel(level string) logger.LogLevel {
 	switch level {
 	case "silent":
 		return logger.Silent
@@ -251,7 +257,7 @@ func parseDBLogLevel(level string) logger.LogLevel {
 }
 
 // none(无效) error（错误）、warn（警告）、info（信息）、debug（调试）
-func parseCustomLoggerLevel(level string) logx.LogLevel {
+func parseLevel(level string) logx.LogLevel {
 	switch level {
 	case "none":
 		return logx.LEVEL_NONE
