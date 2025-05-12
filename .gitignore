@@ -36,3 +36,5 @@ logs/*
 !logs/*.temp
 
 internal/wire_gen.go
+
+release/*

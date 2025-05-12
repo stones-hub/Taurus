@@ -66,7 +66,7 @@ DOCKER_DOWNLOAD_VOLUME := $(APP_NAME)_download
 # 定义发布目录
 RELEASE_DIR := release
 RELEASE_FILE_NAME := $(APP_NAME)-$(VERSION)
-RELEASE_DIR := $(RELEASE_DIR)/$(RELEASE_FILE_NAME)
+PACKAGE_DIR := $(RELEASE_DIR)/$(RELEASE_FILE_NAME)
 
 # ---------------------------- 构建目标 --------------------------------
 .PHONY: all build clean _docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop _docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app _docker-swarm-rm-app docker-swarm-deploy-app local-release
@@ -110,10 +110,10 @@ local-stop:
 local-release: clean build
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Packaging the application...$(RESET)"
-	@mkdir -p $(RELEASE_DIR)
-	@cp $(BUILD_DIR)/$(APP_NAME) $(RELEASE_DIR)/
-	@cp $(ENV_FILE) $(RELEASE_DIR)/.env.local
-	@mkdir -p $(RELEASE_DIR)/logs
+	@mkdir -p $(PACKAGE_DIR)
+	@cp $(BUILD_DIR)/$(APP_NAME) $(PACKAGE_DIR)/
+	@cp $(ENV_FILE) $(PACKAGE_DIR)/.env.local
+	@mkdir -p $(PACKAGE_DIR)/logs
 	@mkdir -p $(PACKAGE_DIR)/downloads
 	@cp -r templates $(PACKAGE_DIR)/
 	@cp -r static $(PACKAGE_DIR)/
