@@ -213,3 +213,31 @@ func defaultStdioContextFunc(ctx context.Context) context.Context {
 	fmt.Println("stdio context")
 	return ctx
 }
+
+/*
+{
+  "mcpServers": {
+    "mcp-server-stdio": {
+      "disabled": false,
+      "timeout": 30,
+      "command": "/Users/yelei/data/code/projects/go/Taurus/release/taurus-v0.0.1/taurus",
+      "args" : [
+        "-config",
+        "/Users/yelei/data/code/projects/go/Taurus/release/taurus-v0.0.1/config"
+      ],
+      "transportType": "stdio"
+    },
+    "mcp-server-sse": {
+      "autoApprove": [
+        "Add",
+        "Echo",
+        "Echo2"
+      ],
+      "disabled": true,
+      "timeout": 60,
+      "url": "http://127.0.0.1:9001/sse",
+      "transportType": "sse"
+    }
+  }
+}
+*/
