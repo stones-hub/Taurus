@@ -1,4 +1,4 @@
-package util
+package templates
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	Templates *TemplateManager
+	Core *TemplateManager
 )
 
 // TemplateManager 管理多个模板对象
@@ -18,15 +18,38 @@ type TemplateManager struct {
 	templates map[string]*template.Template
 }
 
-// NewTemplateManager 创建一个新的 TemplateManager 实例
-func NewTemplateManager() *TemplateManager {
-	return &TemplateManager{
+type TemplateConfig struct {
+	Name string `json:"name" yaml:"name" toml:"name"` // 模板名称
+	Path string `json:"path" yaml:"path" toml:"path"` // 模板路径
+}
+
+// InitTemplates 创建一个新的 TemplateManager 实例
+func InitTemplates(configs []TemplateConfig) *TemplateManager {
+	Core = &TemplateManager{
 		templates: make(map[string]*template.Template),
 	}
+
+	for _, config := range configs {
+		// 加载模板, 路径统一改成绝对路径
+		absPath, err := filepath.Abs(config.Path)
+		if err != nil {
+			log.Fatalf("load templates failed, %s", err)
+		}
+		log.Printf("load templates from %s, name: %s", absPath, config.Name)
+
+		// 检查目录是否存在
+		if _, err := os.Stat(absPath); os.IsNotExist(err) {
+			log.Panicf("[Warning] templates directory %s does not exist", absPath)
+			continue
+		}
+
+		Core.loadTemplatesFromDir(config.Name, absPath)
+	}
+	return Core
 }
 
 // LoadTemplatesFromDir 从指定目录加载模板，包括子目录
-func (tm *TemplateManager) LoadTemplatesFromDir(name, dir string) error {
+func (tm *TemplateManager) loadTemplatesFromDir(name, dir string) error {
 	tmpl := template.New(name)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -62,7 +85,7 @@ func (tm *TemplateManager) AddTemplate(name, templateName, content string) error
 	return err
 }
 
-// Render 渲染指定模板
+// Render 渲染指定模板, name 板对象，, templateName 模板名称, data 模板数据
 func (tm *TemplateManager) Render(name, templateName string, data interface{}) (string, error) {
 	tmpl, exists := tm.templates[name]
 	if !exists {
@@ -76,12 +99,4 @@ func (tm *TemplateManager) Render(name, templateName string, data interface{}) (
 	}
 
 	return sb.String(), nil
-}
-
-func init() {
-	Templates = NewTemplateManager()
-	err := Templates.LoadTemplatesFromDir("default", "./templates")
-	if err != nil {
-		log.Printf("Failed to load templates: %v \n", err)
-	}
 }

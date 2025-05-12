@@ -2,15 +2,21 @@ package config
 
 // Config holds the application configuration
 type Config struct {
-	Version       string `json:"version" yaml:"version" toml:"version"`                   // 版本
-	AppName       string `json:"app_name" yaml:"app_name" toml:"app_name"`                // 应用名称
-	AppHost       string `json:"app_host" yaml:"app_host" toml:"app_host"`                // 应用主机
-	AppPort       int    `json:"app_port" yaml:"app_port" toml:"app_port"`                // 应用端口
-	Authorization string `json:"authorization" yaml:"authorization" toml:"authorization"` // app授权码
-	PrintConfig   bool   `json:"print_config" yaml:"print_config" toml:"print_config"`    // 是否打印配置
-	DBEnable      bool   `json:"db_enable" yaml:"db_enable" toml:"db_enable"`             // 是否启用数据库
-	RedisEnable   bool   `json:"redis_enable" yaml:"redis_enable" toml:"redis_enable"`    // 是否启用redis
-	CronEnable    bool   `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`       // 是否启用cron
+	Version         string `json:"version" yaml:"version" toml:"version"`                            // 版本
+	AppName         string `json:"app_name" yaml:"app_name" toml:"app_name"`                         // 应用名称
+	AppHost         string `json:"app_host" yaml:"app_host" toml:"app_host"`                         // 应用主机
+	AppPort         int    `json:"app_port" yaml:"app_port" toml:"app_port"`                         // 应用端口
+	Authorization   string `json:"authorization" yaml:"authorization" toml:"authorization"`          // app授权码
+	PrintConfig     bool   `json:"print_config" yaml:"print_config" toml:"print_config"`             // 是否打印配置
+	DBEnable        bool   `json:"db_enable" yaml:"db_enable" toml:"db_enable"`                      // 是否启用数据库
+	RedisEnable     bool   `json:"redis_enable" yaml:"redis_enable" toml:"redis_enable"`             // 是否启用redis
+	CronEnable      bool   `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`                // 是否启用cron
+	TemplatesEnable bool   `json:"templates_enable" yaml:"templates_enable" toml:"templates_enable"` // 是否启用模板
+
+	Templates []struct {
+		Name string `json:"name" yaml:"name" toml:"name"` // 模板名称
+		Path string `json:"path" yaml:"path" toml:"path"` // 模板路径
+	} `json:"templates" yaml:"templates" toml:"templates"`
 
 	// 支持多个数据库配置
 	Databases []struct {

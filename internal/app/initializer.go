@@ -8,6 +8,7 @@ import (
 	"Taurus/pkg/logx"
 	"Taurus/pkg/mcp/mcp_server"
 	"Taurus/pkg/redisx"
+	"Taurus/pkg/templates"
 	"Taurus/pkg/util"
 	"Taurus/pkg/websocket"
 	"encoding/json"
@@ -38,6 +39,7 @@ func initialize(configPath string, env string) {
 	}
 
 	// load application configuration file
+	log.Printf("Loading application configuration file: %s", configPath)
 	loadConfig(configPath)
 
 	// print application configuration
@@ -109,13 +111,23 @@ func initialize(configPath string, env string) {
 		log.Println("Redis initialized successfully")
 	}
 
+	// initialize templates
+	if config.Core.TemplatesEnable {
+		tmplConfigs := make([]templates.TemplateConfig, 0)
+		for _, tmplConf := range config.Core.Templates {
+			tmplConfig := templates.TemplateConfig{
+				Name: tmplConf.Name,
+				Path: tmplConf.Path,
+			}
+			tmplConfigs = append(tmplConfigs, tmplConfig)
+		}
+		templates.InitTemplates(tmplConfigs)
+	}
+
 	// initialize cron
 	if config.Core.CronEnable {
 		cron.Core.Start()
 	}
-
-	// initialize injector
-	initializeInjector()
 
 	// initialize websocket
 	websocket.Initialize()
@@ -134,6 +146,9 @@ func initialize(configPath string, env string) {
 	log.Println("mcp server initialized")
 	mcp_server.Core.ListenAndServe()
 	log.Println("mcp server started")
+
+	// initialize injector (internal module initialization)
+	initializeInjector()
 }
 
 // loadConfig reads and parses configuration files from a directory or a single file
@@ -267,6 +282,7 @@ func initializeInjector() {
 		log.Fatalf("Failed to build injector: %v", err)
 	}
 	Cleanup = func() {
+		mcp_server.Core.Shutdown()
 		cleanup()
 		if redisx.Redis != nil {
 			err = redisx.Redis.Close()

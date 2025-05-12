@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -50,6 +51,23 @@ var (
 )
 
 func InitializeServer(config *ServerConfig, opts ...ServerOption) *Server {
+
+	if config.Addr == "" {
+		config.Addr = "localhost:8080"
+	}
+
+	if config.Transport == "" {
+		config.Transport = TransportStdio
+	}
+
+	if config.Name == "" {
+		config.Name = "taurus-mcp-server"
+	}
+
+	if config.Version == "" {
+		config.Version = "0.0.1"
+	}
+
 	s := &Server{
 		Name:      config.Name,
 		Version:   config.Version,
@@ -170,6 +188,16 @@ func (s *Server) ListenAndServe() error {
 	}
 
 	return nil
+}
+
+func (s *Server) Shutdown() {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		if s.sse != nil {
+			s.sse.Shutdown(ctx)
+		}
+	}()
 }
 
 func defaultLogger() *log.Logger {

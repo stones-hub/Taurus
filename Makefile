@@ -63,8 +63,13 @@ DOCKER_NETWORK := $(APP_NAME)-network
 DOCKER_LOG_VOLUME := $(APP_NAME)_log
 DOCKER_DOWNLOAD_VOLUME := $(APP_NAME)_download
 
+# 定义发布目录
+RELEASE_DIR := release
+RELEASE_FILE_NAME := $(APP_NAME)-$(VERSION)
+RELEASE_DIR := $(RELEASE_DIR)/$(RELEASE_FILE_NAME)
+
 # ---------------------------- 构建目标 --------------------------------
-.PHONY: all build clean _docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop _docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app _docker-swarm-rm-app docker-swarm-deploy-app
+.PHONY: all build clean _docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop _docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app _docker-swarm-rm-app docker-swarm-deploy-app local-release
 # Default target
 all: build
 
@@ -82,6 +87,7 @@ clean:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(YELLOW)Cleaning up...$(RESET)"
 	@rm -rf $(BUILD_DIR)
+	@rm -rf $(RELEASE_DIR)
 	@echo -e "$(GREEN)Clean complete.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
@@ -98,6 +104,25 @@ local-stop:
 	@echo -e "$(YELLOW)Stopping the local application...$(RESET)"
 	@pkill -f "$(BUILD_DIR)/$(APP_NAME)" || echo -e "$(RED)No local application is running.$(RESET)"
 	@echo -e "$(GREEN)Local application stopped.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
+# 打包项目并创建发布包
+local-release: clean build
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Packaging the application...$(RESET)"
+	@mkdir -p $(RELEASE_DIR)
+	@cp $(BUILD_DIR)/$(APP_NAME) $(RELEASE_DIR)/
+	@cp $(ENV_FILE) $(RELEASE_DIR)/.env.local
+	@mkdir -p $(RELEASE_DIR)/logs
+	@mkdir -p $(PACKAGE_DIR)/downloads
+	@cp -r templates $(PACKAGE_DIR)/
+	@cp -r static $(PACKAGE_DIR)/
+	@cp -r scripts $(PACKAGE_DIR)/
+	@cp -r config $(PACKAGE_DIR)/
+	@echo -e "$(GREEN)Package created at $(PACKAGE_DIR)$(RESET)"
+	@echo -e "$(BLUE)Creating release archive...$(RESET)"
+	@cd $(RELEASE_DIR) && tar -czf $(RELEASE_FILE_NAME).tar.gz $(RELEASE_FILE_NAME)
+	@echo -e "$(GREEN)Release archive created at $(RELEASE_FILE_NAME).tar.gz$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
 # Build the Docker image
