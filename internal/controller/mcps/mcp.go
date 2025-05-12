@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	Router(mcp_server.Core.Handler)
+	Router(mcp_server.Core.GetHandler())
 }
 
 func Router(handler *server.MCPServer) {
@@ -55,34 +55,34 @@ func Router(handler *server.MCPServer) {
 
 	handler.AddTool(
 		mcp.NewTool(
-			"Echo2",                                // tool name
-			mcp.WithDescription("Echo the input2"), // tool description
-			mcp.WithString("input",
-				mcp.Description("The input to echo2"),
+			"乘法",                      // tool name
+			mcp.WithDescription("乘法"), // tool description
+			mcp.WithNumber("input1",
+				mcp.Description("输入一个数字"),
 				mcp.Required(),
 			), // input parameter
-			mcp.WithString("output",
-				mcp.Description("The output to echo2"),
+			mcp.WithNumber("input2",
+				mcp.Description("输入一个数字"),
 				mcp.Required(),
 			), // output parameter
 		),
 		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 			arguments := request.Params.Arguments
-			input := arguments["input"].(string)
-			output := arguments["output"].(string)
+			input1 := arguments["input1"].(float64)
+			input2 := arguments["input2"].(float64)
 
-			if input == "" || output == "" {
-				log.Println("input2 or output2 is empty")
+			if input1 == 0 || input2 == 0 {
+				log.Println("input1 or input2 is empty")
 			}
 
-			fmt.Printf("input2: %s, output2: %s", input, output)
+			fmt.Printf("input1: %f, input2: %f", input1, input2)
 
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
 					mcp.TextContent{
 						Type: "text",
-						Text: fmt.Sprintf("input: %s, output: %s", input, output),
+						Text: fmt.Sprintf("input1: %f, input2: %f, result: %f", input1, input2, input1*input2),
 					},
 				},
 			}, nil

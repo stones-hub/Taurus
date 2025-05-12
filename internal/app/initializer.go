@@ -136,17 +136,14 @@ func initialize(configPath string, env string) {
 
 	// initialize mcp server
 	if config.Core.MCPEnable {
-		mcp_server.InitializeServer(&mcp_server.ServerConfig{
-			Name:        config.Core.MCP.Name,
-			Version:     config.Core.MCP.Version,
-			Addr:        config.Core.MCP.Addr,
-			Transport:   config.Core.MCP.Transport,
-			Subscribe:   config.Core.MCP.Resource.Subscribe,
-			ListChanged: config.Core.MCP.Resource.ListChanged,
-			Prompt:      config.Core.MCP.Prompt,
-			Tool:        config.Core.MCP.Tool,
-		})
-		mcp_server.Core.ListenAndServe()
+		mcp_server.Core = mcp_server.NewServer(
+			mcp_server.WithName(config.Core.MCP.Name),
+			mcp_server.WithAddr(config.Core.MCP.Addr),
+			mcp_server.WithVersion(config.Core.MCP.Version),
+			mcp_server.WithTransport(config.Core.MCP.Transport),
+		)
+		go mcp_server.Core.ListenAndServe()
+		log.Println("MCP server initialized successfully")
 	}
 
 	// initialize injector (internal module initialization)
@@ -284,7 +281,6 @@ func initializeInjector() {
 		log.Fatalf("Failed to build injector: %v", err)
 	}
 	Cleanup = func() {
-		mcp_server.Core.Shutdown()
 		cleanup()
 		if redisx.Redis != nil {
 			err = redisx.Redis.Close()
