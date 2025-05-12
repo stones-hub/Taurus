@@ -130,22 +130,24 @@ func initialize(configPath string, env string) {
 	}
 
 	// initialize websocket
-	websocket.Initialize()
+	if config.Core.WebsocketEnable {
+		websocket.Initialize()
+	}
 
 	// initialize mcp server
-	mcp_server.InitializeServer(&mcp_server.ServerConfig{
-		Name:        config.Core.MCP.Name,
-		Version:     config.Core.MCP.Version,
-		Addr:        config.Core.MCP.Addr,
-		Transport:   config.Core.MCP.Transport,
-		Subscribe:   config.Core.MCP.Resource.Subscribe,
-		ListChanged: config.Core.MCP.Resource.ListChanged,
-		Prompt:      config.Core.MCP.Prompt,
-		Tool:        config.Core.MCP.Tool,
-	})
-	log.Println("mcp server initialized")
-	mcp_server.Core.ListenAndServe()
-	log.Println("mcp server started")
+	if config.Core.MCPEnable {
+		mcp_server.InitializeServer(&mcp_server.ServerConfig{
+			Name:        config.Core.MCP.Name,
+			Version:     config.Core.MCP.Version,
+			Addr:        config.Core.MCP.Addr,
+			Transport:   config.Core.MCP.Transport,
+			Subscribe:   config.Core.MCP.Resource.Subscribe,
+			ListChanged: config.Core.MCP.Resource.ListChanged,
+			Prompt:      config.Core.MCP.Prompt,
+			Tool:        config.Core.MCP.Tool,
+		})
+		mcp_server.Core.ListenAndServe()
+	}
 
 	// initialize injector (internal module initialization)
 	initializeInjector()

@@ -12,6 +12,8 @@ type Config struct {
 	RedisEnable     bool   `json:"redis_enable" yaml:"redis_enable" toml:"redis_enable"`             // 是否启用redis
 	CronEnable      bool   `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`                // 是否启用cron
 	TemplatesEnable bool   `json:"templates_enable" yaml:"templates_enable" toml:"templates_enable"` // 是否启用模板
+	MCPEnable       bool   `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
+	WebsocketEnable bool   `json:"websocket_enable" yaml:"websocket_enable" toml:"websocket_enable"` // 是否启用websocket
 
 	Templates []struct {
 		Name string `json:"name" yaml:"name" toml:"name"` // 模板名称
