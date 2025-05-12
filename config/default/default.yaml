@@ -8,6 +8,6 @@ db_enable: true # 是否启用数据库
 redis_enable: true # 是否启用redis
 cron_enable: true # 是否启用cron
 templates_enable: true # 是否启用模板
-mcp_enable: true # 是否启用MCP, 默认启用sse，如果是启用设置的是stdio，则关闭其他组件(websocket, templates，db，redis，cron 等)
+mcp_enable: false # 是否启用MCP(默认关闭), 如果是启用设置的是stdio，则关闭其他组件(websocket, templates，db，redis，cron 等)
 websocket_enable: true # 是否启用websocket
 print_config: true #是否打印配置

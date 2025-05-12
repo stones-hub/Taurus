@@ -117,7 +117,6 @@ local-release: clean build
 	@mkdir -p $(PACKAGE_DIR)/downloads
 	@cp -r templates $(PACKAGE_DIR)/
 	@cp -r static $(PACKAGE_DIR)/
-	@cp -r scripts $(PACKAGE_DIR)/
 	@cp -r config $(PACKAGE_DIR)/
 	@echo -e "$(GREEN)Package created at $(PACKAGE_DIR)$(RESET)"
 	@echo -e "$(BLUE)Creating release archive...$(RESET)"
