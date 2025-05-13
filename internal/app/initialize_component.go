@@ -142,7 +142,7 @@ func InitializeMCP() {
 	if err != nil {
 		log.Printf("Failed to get local ips: %v", err)
 	}
-	logx.Core.Info("custom", "local ips: %v", ips)
+	logx.Core.Info("custom", "initialize mcp, local ips: %v", ips)
 	localIP := ips[0]
 	mcpPort := strings.Split(config.Core.MCP.MCPAddr, ":")[1]
 	// initialize mcp server
