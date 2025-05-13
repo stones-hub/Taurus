@@ -13,7 +13,6 @@ type Config struct {
 	RedisEnable     bool `json:"redis_enable" yaml:"redis_enable" toml:"redis_enable"`             // 是否启用redis
 	CronEnable      bool `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`                // 是否启用cron
 	TemplatesEnable bool `json:"templates_enable" yaml:"templates_enable" toml:"templates_enable"` // 是否启用模板
-	MCPEnable       bool `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
 	WebsocketEnable bool `json:"websocket_enable" yaml:"websocket_enable" toml:"websocket_enable"` // 是否启用websocket
 
 	Templates []struct {
@@ -71,13 +70,6 @@ type Config struct {
 		WriteTimeout int      `json:"write_timeout" yaml:"write_timeout" toml:"write_timeout"`
 		MaxRetries   int      `json:"max_retries" yaml:"max_retries" toml:"max_retries"`
 	} `json:"redis" yaml:"redis" toml:"redis"`
-
-	MCP struct {
-		MCPTransport string `json:"mcp_transport" yaml:"mcp_transport" toml:"mcp_transport"` // 传输方式 (stdio, sse)
-		MCPAddr      string `json:"mcp_addr" yaml:"mcp_addr" toml:"mcp_addr"`                // 地址
-		MCPName      string `json:"mcp_name" yaml:"mcp_name" toml:"mcp_name"`                // 名称
-		MCPVersion   string `json:"mcp_version" yaml:"mcp_version" toml:"mcp_version"`       // 版本
-	} `json:"mcp" yaml:"mcp" toml:"mcp"`
 }
 
 // global configuration instance

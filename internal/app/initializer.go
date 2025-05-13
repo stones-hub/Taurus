@@ -37,7 +37,6 @@ func initialize(configPath string, env string) {
 	InitializeTemplates()
 	InitializeCron()
 	InitializeWebsocket()
-	InitializeMCP()
 	// initialize injector (internal module initialization)
 	InitializeInjector()
 }

@@ -6,14 +6,11 @@ import (
 	"Taurus/pkg/cron"
 	"Taurus/pkg/db"
 	"Taurus/pkg/logx"
-	"Taurus/pkg/mcp/mcp_server"
 	"Taurus/pkg/redisx"
 	"Taurus/pkg/templates"
-	"Taurus/pkg/util"
 	"Taurus/pkg/websocket"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"gorm.io/gorm/logger"
@@ -133,28 +130,6 @@ func InitializeWebsocket() {
 	// initialize websocket
 	if config.Core.WebsocketEnable {
 		websocket.Initialize()
-	}
-}
-
-// InitializeMCP 初始化MCP
-func InitializeMCP() {
-	ips, err := util.GetLocalIPs()
-	if err != nil {
-		log.Printf("Failed to get local ips: %v", err)
-	}
-	logx.Core.Info("custom", "initialize mcp, local ips: %v", ips)
-	localIP := ips[0]
-	mcpPort := strings.Split(config.Core.MCP.MCPAddr, ":")[1]
-	// initialize mcp server
-	if config.Core.MCPEnable {
-		mcp_server.Core = mcp_server.NewServer(
-			mcp_server.WithName(config.Core.MCP.MCPName),
-			mcp_server.WithAddr(localIP+":"+mcpPort),
-			mcp_server.WithVersion(config.Core.MCP.MCPVersion),
-			mcp_server.WithTransport(config.Core.MCP.MCPTransport),
-		)
-		go mcp_server.Core.ListenAndServe()
-		log.Println("MCP server initialized successfully")
 	}
 }
 
