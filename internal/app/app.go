@@ -109,6 +109,6 @@ func init() {
 	// 解析命令行参数
 	flag.Parse()
 
-	// Initialize all modules, 其实env传不传无所谓，因为makefile中已经将环境变量写入了， 但是为了严谨还是将envifle传入
+	// initialize all modules, 其实env传不传无所谓，因为makefile中已经将环境变量写入了， 但是为了严谨还是将envifle传入
 	initialize(configPath, env)
 }

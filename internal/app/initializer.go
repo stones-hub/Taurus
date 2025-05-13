@@ -2,32 +2,16 @@ package app
 
 import (
 	"Taurus/config"
-	"Taurus/internal"
-	"Taurus/pkg/cron"
-	"Taurus/pkg/db"
-	"Taurus/pkg/logx"
-	"Taurus/pkg/mcp/mcp_server"
-	"Taurus/pkg/redisx"
-	"Taurus/pkg/templates"
 	"Taurus/pkg/util"
-	"Taurus/pkg/websocket"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
-	"gorm.io/gorm/logger"
-)
-
-var (
-	GlobalInjector *internal.Injector
-	Cleanup        func()
 )
 
 // initialize calls the initialization functions of all modules
@@ -47,113 +31,15 @@ func initialize(configPath string, env string) {
 		log.Println("Configuration:", util.ToJsonString(config.Core))
 	}
 
-	// initialize logger
-	logConfigs := make([]logx.Config, 0)
-	for _, c := range config.Core.Loggers {
-		logConfigs = append(logConfigs, logx.Config{
-			Name:        c.Name,
-			Perfix:      c.Perfix,
-			LogLevel:    parseLevel(c.LogLevel),
-			OutputType:  c.OutputType,
-			LogFilePath: c.LogFilePath,
-			MaxSize:     c.MaxSize,
-			MaxBackups:  c.MaxBackups,
-			MaxAge:      c.MaxAge,
-			Compress:    c.Compress,
-			Formatter:   c.Formatter,
-		})
-	}
-	logx.Initialize(logConfigs)
-
-	// initialize database
-	if config.Core.DBEnable {
-		for _, dbConfig := range config.Core.Databases {
-			// 构造 DSN
-			dsn := dbConfig.DSN
-			if dsn == "" {
-				switch dbConfig.Type {
-				case "postgres":
-					dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-						dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.DBName, dbConfig.SSLMode)
-				case "mysql":
-					dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-						dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.DBName)
-				default:
-					log.Fatalf("Unsupported database type: %s", dbConfig.Type)
-				}
-			}
-
-			// 创建自定义日志器
-			loggerConfig := db.DBLoggerConfig{
-				LogFilePath:   dbConfig.Logger.LogFilePath,
-				MaxSize:       dbConfig.Logger.MaxSize,
-				MaxBackups:    dbConfig.Logger.MaxBackups,
-				MaxAge:        dbConfig.Logger.MaxAge,
-				Compress:      dbConfig.Logger.Compress,
-				LogLevel:      parseDbLevel(dbConfig.Logger.LogLevel),
-				SlowThreshold: time.Duration(dbConfig.Logger.SlowThreshold),
-			}
-			customLogger := db.NewDBCustomLogger(loggerConfig)
-
-			// 初始化数据库
-			db.InitDB(dbConfig.Name, dbConfig.Type, dsn, customLogger, dbConfig.MaxRetries, dbConfig.Delay)
-			log.Printf("Database '%s' initialized successfully", dbConfig.Name)
-		}
-	}
-
-	// initialize redis
-	if config.Core.RedisEnable {
-		redisx.InitRedis(redisx.RedisConfig{
-			Addrs:        config.Core.Redis.Addrs,
-			Password:     config.Core.Redis.Password,
-			DB:           config.Core.Redis.DB,
-			PoolSize:     config.Core.Redis.PoolSize,
-			MinIdleConns: config.Core.Redis.MinIdleConns,
-			DialTimeout:  time.Duration(config.Core.Redis.DialTimeout),
-			ReadTimeout:  time.Duration(config.Core.Redis.ReadTimeout),
-			WriteTimeout: time.Duration(config.Core.Redis.WriteTimeout),
-			MaxRetries:   config.Core.Redis.MaxRetries,
-		})
-		log.Println("Redis initialized successfully")
-	}
-
-	// initialize templates
-	if config.Core.TemplatesEnable {
-		tmplConfigs := make([]templates.TemplateConfig, 0)
-		for _, tmplConf := range config.Core.Templates {
-			tmplConfig := templates.TemplateConfig{
-				Name: tmplConf.Name,
-				Path: tmplConf.Path,
-			}
-			tmplConfigs = append(tmplConfigs, tmplConfig)
-		}
-		templates.InitTemplates(tmplConfigs)
-	}
-
-	// initialize cron
-	if config.Core.CronEnable {
-		cron.Core.Start()
-	}
-
-	// initialize websocket
-	if config.Core.WebsocketEnable {
-		websocket.Initialize()
-	}
-
-	// initialize mcp server
-	if config.Core.MCPEnable {
-		mcp_server.Core = mcp_server.NewServer(
-			mcp_server.WithName(config.Core.MCP.MCPName),
-			mcp_server.WithAddr(config.Core.MCP.MCPAddr),
-			mcp_server.WithVersion(config.Core.MCP.MCPVersion),
-			mcp_server.WithTransport(config.Core.MCP.MCPTransport),
-		)
-		go mcp_server.Core.ListenAndServe()
-		log.Println("MCP server initialized successfully")
-	}
-
+	InitialzeLog()
+	InitializeDB()
+	InitializeRedis()
+	InitializeTemplates()
+	InitializeCron()
+	InitializeWebsocket()
+	InitializeMCP()
 	// initialize injector (internal module initialization)
-	initializeInjector()
+	InitializeInjector()
 }
 
 // loadConfig reads and parses configuration files from a directory or a single file
@@ -237,65 +123,4 @@ func replacePlaceholders(content string) string {
 		}
 		return match
 	})
-}
-
-// ParseLogLevel converts a string log level to gorm's logger.LogLevel
-func parseDbLevel(level string) logger.LogLevel {
-	switch level {
-	case "silent":
-		return logger.Silent
-	case "error":
-		return logger.Error
-	case "warn":
-		return logger.Warn
-	case "info":
-		return logger.Info
-	default:
-		log.Printf("Unknown log level '%s', defaulting to 'info'", level)
-		return logger.Info
-	}
-}
-
-// none(无效) error（错误）、warn（警告）、info（信息）、debug（调试）
-func parseLevel(level string) logx.LogLevel {
-	switch level {
-	case "none":
-		return logx.LEVEL_NONE
-	case "error":
-		return logx.LEVEL_ERROR
-	case "warn":
-		return logx.LEVEL_WARN
-	case "info":
-		return logx.LEVEL_INFO
-	case "debug":
-		return logx.LEVEL_DEBUG
-	default:
-		log.Printf("Unknown log level '%s', defaulting to 'info'", level)
-		return logx.LEVEL_NONE
-	}
-}
-
-// initialize injector
-func initializeInjector() {
-	var (
-		err     error
-		cleanup func()
-	)
-	// initialize injector
-	GlobalInjector, cleanup, err = internal.BuildInjector()
-	if err != nil {
-		log.Fatalf("Failed to build injector: %v", err)
-	}
-	Cleanup = func() {
-		cleanup()
-		if redisx.Redis != nil {
-			err = redisx.Redis.Close()
-			if err != nil {
-				log.Printf("Failed to close redis: %v", err)
-			} else {
-				log.Println("Redis closed successfully")
-			}
-		}
-		db.CloseDB()
-	}
 }
