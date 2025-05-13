@@ -36,14 +36,13 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-kf_ai} 
       MYSQL_USER: ${DB_USER:-apps}
       MYSQL_PASSWORD: ${DB_PASSWORD:-apps}
+      TZ: Asia/Shanghai # 设置时区
     healthcheck: # 设置健康检查，配合depends_on使用，如果依赖的服务没有启动成功，当前服务不会启动
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    environment:
-      - TZ=Asia/Shanghai # 设置时区
     env_file: # 当前容器内的应用需要的环境变量, 这里是mysql
       - .env.docker-compose
     volumes:
@@ -62,7 +61,7 @@ services:
       retries: 5
       start_period: 10s
     environment:
-      - TZ=Asia/Shanghai # 设置时区
+      TZ: Asia/Shanghai # 设置时区
     networks:
       - taurus-network
     volumes:
