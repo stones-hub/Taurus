@@ -9,6 +9,7 @@ import (
 	"Taurus/pkg/mcp/mcp_server"
 	"Taurus/pkg/redisx"
 	"Taurus/pkg/templates"
+	"Taurus/pkg/util"
 	"Taurus/pkg/websocket"
 	"fmt"
 	"log"
@@ -136,6 +137,11 @@ func InitializeWebsocket() {
 
 // InitializeMCP 初始化MCP
 func InitializeMCP() {
+	ips, err := util.GetLocalIPs()
+	if err != nil {
+		log.Printf("Failed to get local ips: %v", err)
+	}
+	logx.Core.Info("custom", "local ips: %v", ips)
 	// initialize mcp server
 	if config.Core.MCPEnable {
 		mcp_server.Core = mcp_server.NewServer(
