@@ -2,8 +2,9 @@ package app
 
 import (
 	"Taurus/config"
-	"Taurus/pkg/router" // 替换为实际的包路径
+	"Taurus/pkg/router"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -14,7 +15,7 @@ import (
 	"time"
 )
 
-// ANSI 转义序列定义颜色
+// ANSI escape sequences define colors
 const (
 	Reset  = "\033[0m"
 	Red    = "\033[31m"
@@ -42,24 +43,32 @@ func Start(host string, port int) {
 
 	addr := fmt.Sprintf("%s:%d", host, port)
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: r,
+		Addr:        addr,
+		Handler:     r,
+		IdleTimeout: 1 * time.Minute,
 	}
 
-	// Channel to listen for interrupt or terminate signals
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, os.Interrupt, syscall.SIGTERM)
+	// use errChan to receive http server startup error
+	errChan := make(chan error, 1)
 
 	// Run server in a goroutine
 	go func() {
 		log.Printf("%sServer is running on %s %s \n", Green, addr, Reset)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("%sCould not listen on %s: %v %s\n", Red, addr, err, Reset)
+		// when server startup failed, write error to errChan.
+		// But http.ErrServerClosed is not an error,,because it is expected when the server is closed.
+		// ListenAndServe is a blocking call
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errChan <- err
 		}
 	}()
 
-	// Block until a signal is received
-	<-stop
+	// Block until a signal is received or an error is returned.
+	// If an error is returned, it is a fatal error and the program will exit.
+	if err := signalWaiter(errChan); err != nil {
+		log.Fatalf("%sServer startup failed: %v %s\n", Red, err, Reset)
+	}
+
+	// If signalWaiter returns nil, it means the server is running. But received a signal, so we need to shutdown the server.
 
 	// Create a deadline to wait for, 5 seconds or cancel() are all called ctx.Done()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -69,6 +78,38 @@ func Start(host string, port int) {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("%sServer forced to shutdown: %v %s\n", Red, err, Reset)
 	}
+
+	gracefulCleanup(ctx)
+}
+
+// signalWaiter waits for a signal or an error, then return
+func signalWaiter(errCh chan error) error {
+	signalToNotify := []os.Signal{syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM}
+	if signal.Ignored(syscall.SIGHUP) {
+		signalToNotify = []os.Signal{syscall.SIGINT, syscall.SIGTERM}
+	}
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, signalToNotify...)
+
+	// Block until a signal is received or an error is returned
+	select {
+	case sig := <-signals:
+		switch sig {
+		case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM:
+			log.Printf("Received signal: %s\n", sig)
+			// graceful shutdown
+			return nil
+		}
+	case err := <-errCh:
+		return err
+	}
+
+	return nil
+}
+
+// gracefulCleanup is called when the server is shutting down. we can do some cleanup work here.
+func gracefulCleanup(ctx context.Context) {
 
 	log.Printf("%sWaiting for all requests to be processed... %s\n", Yellow, Reset)
 	done := make(chan struct{})
@@ -82,7 +123,7 @@ func Start(host string, port int) {
 	case <-done:
 		log.Printf("%sServer stopped successfully. %s\n", Green, Reset)
 	case <-ctx.Done():
-		// 如果5秒内没有处理完，则强制关闭
+		// If 5 seconds have passed and the server has not stopped, it means the server is not responding, so we need to force it to stop.
 		log.Printf("%sServer stopped forcefully. %s\n", Red, Reset)
 	}
 }
@@ -90,7 +131,7 @@ func Start(host string, port int) {
 // init is automatically called before the main function
 // --env .env.local --config ./config
 func init() {
-	// 自定义帮助信息
+	// custom usage
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "\n%s\n", Cyan+"==================== Usage ===================="+Reset)
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -100,15 +141,16 @@ func init() {
 		fmt.Fprintf(os.Stderr, "%s\n", Cyan+"==============================================="+Reset)
 	}
 
-	// 设置命令行参数及其别名
+	// set command line arguments and their aliases
 	flag.StringVar(&env, "env", ".env.local", "Environment file")
 	flag.StringVar(&env, "e", ".env.local", "Environment file (alias)")
 	flag.StringVar(&configPath, "config", "config", "Path to the configuration file or directory")
 	flag.StringVar(&configPath, "c", "config", "Path to the configuration file or directory (alias)")
 
-	// 解析命令行参数
+	// parse command line arguments
 	flag.Parse()
 
-	// initialize all modules, 其实env传不传无所谓，因为makefile中已经将环境变量写入了， 但是为了严谨还是将envifle传入
+	// initialize all modules.
+	// the env file is not needed, because the makefile has already written the environment variables into the env file, but for the sake of rigor, we still pass the env file to the initialize function
 	initialize(configPath, env)
 }

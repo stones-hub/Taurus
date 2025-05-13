@@ -28,18 +28,19 @@ var (
 )
 
 func init() {
-	Core = InitializeCronManager()
+	Initialize()
 }
 
-// InitializeCronManager 创建一个新的 CronManager 实例
-func InitializeCronManager() *CronManager {
-	return &CronManager{
+// Initialize 创建一个新的 CronManager 实例
+func Initialize() *CronManager {
+	Core = &CronManager{
 		cronInstance: cron.New(cron.WithChain(
 			cron.Recover(cron.DefaultLogger), // 使用默认日志记录器恢复任务
 		), cron.WithSeconds()),
 		tasks: make(map[cron.EntryID]*TaskInfo),
 		mu:    sync.Mutex{},
 	}
+	return Core
 }
 
 // Start 启动 cron 调度器

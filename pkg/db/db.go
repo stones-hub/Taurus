@@ -35,6 +35,11 @@ func InitDB(dbName, dbType, dsn string, customLogger logger.Interface, maxRetrie
 	var err error
 	var db *gorm.DB
 
+	if _, ok := dbConnections[dbName]; ok {
+		log.Printf("[Warning] Database connection '%s' already exists", dbName)
+		return
+	}
+
 	for i := 0; i < maxRetries; i++ {
 		switch dbType {
 		case "postgres":

@@ -23,14 +23,20 @@ type TemplateConfig struct {
 	Path string `json:"path" yaml:"path" toml:"path"` // 模板路径
 }
 
-// InitTemplates 创建一个新的 TemplateManager 实例
+// InitTemplates
 func InitTemplates(configs []TemplateConfig) *TemplateManager {
 	Core = &TemplateManager{
 		templates: make(map[string]*template.Template),
 	}
 
 	for _, config := range configs {
-		// 加载模板, 路径统一改成绝对路径
+
+		if _, ok := Core.templates[config.Name]; ok {
+			log.Printf("[Warning] template %s already exists", config.Name)
+			continue
+		}
+
+		// add template, use absolute path
 		absPath, err := filepath.Abs(config.Path)
 		if err != nil {
 			log.Fatalf("load templates failed, %s", err)

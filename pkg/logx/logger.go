@@ -108,7 +108,8 @@ var Core = LoggerMap{}
 func Initialize(configs []Config) {
 	for _, config := range configs {
 		if _, ok := Core[config.Name]; ok {
-			log.Fatalf("Logger %s already exists", config.Name)
+			log.Printf("[Warning] Logger %s already exists", config.Name)
+			continue
 		}
 		Core[config.Name] = new(config)
 	}

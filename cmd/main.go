@@ -9,9 +9,6 @@ import (
 	"Taurus/pkg/router"
 	"Taurus/pkg/websocket"
 	"net/http"
-
-	_ "Taurus/internal/controller/crons" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/log_formatter"    // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 )
 
 func main() {

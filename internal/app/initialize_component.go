@@ -13,6 +13,9 @@ import (
 	"log"
 	"time"
 
+	_ "Taurus/internal/controller/crons" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/log_formatter"    // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+
 	"gorm.io/gorm/logger"
 )
 
@@ -21,7 +24,7 @@ var (
 	Cleanup        func()
 )
 
-// InitialzeLog 初始化日志
+// InitialzeLog initialize logger
 func InitialzeLog() {
 	// initialize logger
 	logConfigs := make([]logx.Config, 0)
@@ -42,7 +45,7 @@ func InitialzeLog() {
 	logx.Initialize(logConfigs)
 }
 
-// InitializeDB 初始化数据库
+// InitializeDB initialize database
 func InitializeDB() {
 	// initialize database
 	if config.Core.DBEnable {
@@ -82,7 +85,7 @@ func InitializeDB() {
 
 }
 
-// InitializeRedis 初始化Redis
+// InitializeRedis initialize redis
 func InitializeRedis() {
 	// initialize redis
 	if config.Core.RedisEnable {
@@ -101,7 +104,7 @@ func InitializeRedis() {
 	}
 }
 
-// InitializeTemplates 初始化模板
+// InitializeTemplates initialize templates
 func InitializeTemplates() {
 	// initialize templates
 	if config.Core.TemplatesEnable {
@@ -117,15 +120,14 @@ func InitializeTemplates() {
 	}
 }
 
-// InitializeCron 初始化定时任务
+// InitializeCron initialize cron
 func InitializeCron() {
-	// initialize cron
 	if config.Core.CronEnable {
 		cron.Core.Start()
 	}
 }
 
-// InitializeWebsocket 初始化WebSocket
+// InitializeWebsocket initialize websocket
 func InitializeWebsocket() {
 	// initialize websocket
 	if config.Core.WebsocketEnable {
@@ -133,7 +135,7 @@ func InitializeWebsocket() {
 	}
 }
 
-// initialize injector
+// InitializeInjector initialize injector
 func InitializeInjector() {
 	var (
 		err     error
@@ -146,6 +148,11 @@ func InitializeInjector() {
 	}
 	Cleanup = func() {
 		cleanup()
+
+		if cron.Core != nil {
+			cron.Core.Stop()
+		}
+
 		if redisx.Redis != nil {
 			err = redisx.Redis.Close()
 			if err != nil {
@@ -221,4 +228,9 @@ func parseLevel(level string) logx.LogLevel {
 
 	注意：
 	1. 重定向状态码(code) 是可选的，默认是 http.StatusFound (302)
+*/
+
+/*
+执行顺序:
+导入包全局变量执行 -> 导入包的init函数执行 -> 当前包的全局变量执行 -> 当前包的init函数执行
 */
