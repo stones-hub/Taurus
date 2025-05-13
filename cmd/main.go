@@ -5,10 +5,13 @@ import (
 	"Taurus/internal/controller"
 	"Taurus/internal/mid"
 
+	"Taurus/pkg/mcp"
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/router"
 	"Taurus/pkg/websocket"
 	"net/http"
+
+	"github.com/ThinkInAIXYZ/go-mcp/transport"
 )
 
 func main() {
@@ -75,5 +78,17 @@ func main() {
 		},
 	})
 
+	s := mcp.NewMCPServer("taurus", "0.0.1", "streamable_http", transport.Stateless)
+
+	s.RegisterTool(mcp.CurrentTimeTool(), mcp.CurrentTime)
+
 	app.Default()
 }
+
+/*
+
+停止时间比较长，要处理
+思考如何封装工具，集中处理
+docker, swarm compose 测试
+
+*/
