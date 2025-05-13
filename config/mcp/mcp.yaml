@@ -1,0 +1,4 @@
+mcp:
+  transport: "${MCP_TRANSPORT:sse}" # 传输方式，可选值：sse, 
+
+

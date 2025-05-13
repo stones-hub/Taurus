@@ -14,6 +14,11 @@ type Config struct {
 	CronEnable      bool `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`                // 是否启用cron
 	TemplatesEnable bool `json:"templates_enable" yaml:"templates_enable" toml:"templates_enable"` // 是否启用模板
 	WebsocketEnable bool `json:"websocket_enable" yaml:"websocket_enable" toml:"websocket_enable"` // 是否启用websocket
+	McpEnable       bool `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
+
+	Mcp struct {
+		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式，可选值：sse,
+	} `json:"mcp" yaml:"mcp" toml:"mcp"`
 
 	Templates []struct {
 		Name string `json:"name" yaml:"name" toml:"name"` // 模板名称
