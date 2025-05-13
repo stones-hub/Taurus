@@ -13,6 +13,7 @@ import (
 	"Taurus/pkg/websocket"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"gorm.io/gorm/logger"
@@ -142,11 +143,13 @@ func InitializeMCP() {
 		log.Printf("Failed to get local ips: %v", err)
 	}
 	logx.Core.Info("custom", "local ips: %v", ips)
+	localIP := ips[0]
+	mcpPort := strings.Split(config.Core.MCP.MCPAddr, ":")[1]
 	// initialize mcp server
 	if config.Core.MCPEnable {
 		mcp_server.Core = mcp_server.NewServer(
 			mcp_server.WithName(config.Core.MCP.MCPName),
-			mcp_server.WithAddr(config.Core.MCP.MCPAddr),
+			mcp_server.WithAddr(localIP+":"+mcpPort),
 			mcp_server.WithVersion(config.Core.MCP.MCPVersion),
 			mcp_server.WithTransport(config.Core.MCP.MCPTransport),
 		)
