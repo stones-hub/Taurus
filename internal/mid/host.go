@@ -2,6 +2,7 @@ package mid
 
 import (
 	"Taurus/pkg/httpx"
+	"Taurus/pkg/logx"
 	"Taurus/pkg/util"
 	"net/http"
 )
@@ -10,6 +11,9 @@ func HostMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		ips := util.GetRemoteIP(r)
+
+		logx.Core.Info("default", "ips: %v", ips)
+
 		// 检查主机是否在允许列表中
 		allowedHosts := getAllowedHosts()
 		allowed := false

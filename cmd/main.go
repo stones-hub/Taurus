@@ -44,10 +44,11 @@ func main() {
 		},
 		Routes: []router.Router{
 			{
-				Path:       "/",
-				Handler:    http.HandlerFunc(app.GlobalInjector.DemoCtrl.Get),
+				Path:    "/",
+				Handler: http.HandlerFunc(app.GlobalInjector.DemoCtrl.Get),
 				Middleware: []router.MiddlewareFunc{
 					// middleware.ApiKeyAuthMiddleware,
+					mid.HostMiddleware,
 				},
 			},
 		},
