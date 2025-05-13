@@ -6,6 +6,7 @@ services:
     image: nginx:latest
     ports:
       - "9527:80"
+      - "9001:9001"
     environment:
       - TZ=Asia/Shanghai # 设置时区
     volumes:
