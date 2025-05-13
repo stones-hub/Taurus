@@ -14,6 +14,7 @@ services:
     environment: # 给容器设置环境变量
       - MYSQL_DSN=${DB_DSN:-apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
+      - TZ=Asia/Shanghai # 设置时区
     env_file: # 设置环境变量文件, 当前容器内的应用需要的环境变量, 这里是app应用
       - .env.docker-compose # 设置环境变量文件
     depends_on: # 设置依赖服务，在启动服务的时候，会先启动依赖的服务，然后启动当前服务。 依赖的服务设置了健康检查
@@ -41,6 +42,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    environment:
+      - TZ=Asia/Shanghai # 设置时区
     env_file: # 当前容器内的应用需要的环境变量, 这里是mysql
       - .env.docker-compose
     volumes:
@@ -58,6 +61,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    environment:
+      - TZ=Asia/Shanghai # 设置时区
     networks:
       - taurus-network
     volumes:

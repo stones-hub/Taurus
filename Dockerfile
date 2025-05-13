@@ -23,8 +23,11 @@ RUN go build -o main cmd/main.go
 # 使用一个更小的基础镜像来运行应用程序
 FROM alpine:latest
 
-# 安装必要的依赖
-RUN apk --no-cache add ca-certificates curl
+# 安装必要的依赖, tzdata和ENV TZ=Asia/Shanghai 配合使用， 保证镜像时区的正确性
+RUN apk --no-cache add ca-certificates curl tzdata
+
+# 设置时区
+ENV TZ=Asia/Shanghai
 
 # 设置工作目录
 ARG WORKDIR
