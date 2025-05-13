@@ -12,7 +12,11 @@ func HostMiddleware(next http.Handler) http.Handler {
 
 		ips := util.GetRemoteIP(r)
 
-		logx.Core.Info("custom", "ips: %v", ips)
+		localIPs, err := util.GetLocalIPs()
+		if err != nil {
+			logx.Core.Error("custom", "failed to get local ips: %v", err)
+		}
+		logx.Core.Info("custom", "local ips: %v, remote ips: %v", localIPs, ips)
 
 		// 检查主机是否在允许列表中
 		allowedHosts := getAllowedHosts()
