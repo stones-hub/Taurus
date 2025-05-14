@@ -16,11 +16,11 @@ var (
 )
 
 const (
-	TransportStdio          = "stdio"
-	TransportSSE            = "sse"
-	TransportStreamableHTTP = "streamable_http"
-	ModeStateful            = "stateful"
-	ModeStateless           = "stateless"
+	TransportStdio          = "stdio"           // 适合单机部署场景
+	TransportSSE            = "sse"             // 适合单机部署场景, 需要维护有状态的session
+	TransportStreamableHTTP = "streamable_http" // 适合集群部署场景
+	ModeStateful            = "stateful"        // 保存上下文
+	ModeStateless           = "stateless"       // 不保存上下文
 )
 
 type MCPServer struct {
