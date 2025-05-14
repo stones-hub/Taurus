@@ -69,7 +69,7 @@ RELEASE_FILE_NAME := $(APP_NAME)-$(VERSION)
 PACKAGE_DIR := $(RELEASE_DIR)/$(RELEASE_FILE_NAME)
 
 # ---------------------------- 构建目标 --------------------------------
-.PHONY: all build clean _docker-build docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop _docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app _docker-swarm-rm-app docker-swarm-deploy-app local-release
+.PHONY: all build clean docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app docker-swarm-deploy-app local-release
 # Default target
 all: build
 
@@ -198,7 +198,7 @@ docker-compose-stop:
 	@echo -e "$(SEPARATOR)"
 
 # 推送Docker镜像到注册中心
-_docker-image-push: _docker-build
+docker-image-push: _docker-build
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Tagging Docker image...$(RESET)"
 	@docker tag $(DOCKER_IMAGE) $(REGISTRY_URL)/$(DOCKER_IMAGE)
@@ -208,8 +208,8 @@ _docker-image-push: _docker-build
 	@echo -e "$(GREEN)Docker image pushed to registry.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# 初始化swarm集群，并部署
-docker-swarm-up: _docker-image-push
+# 初始化swarm集群，并部署, 先docker-image-push
+docker-swarm-up: 
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
@@ -223,8 +223,8 @@ docker-swarm-down:
 	@echo -e "$(GREEN)Stack removed from Docker Swarm.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# 更新Docker Swarm服务中的app服务
-docker-swarm-update-app: _docker-image-push
+# 更新Docker Swarm服务中的app服务, 先docker-image-push
+docker-swarm-update-app: 
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
 	@if [ -z "$(ENV_FILE)" ]; then \
@@ -252,8 +252,8 @@ _docker-swarm-rm-app:
 	@echo -e "$(SEPARATOR)"
 
 
-# 删除swarm集群中的app服务，并重新部署app服务（其他的服务不会发生变化, 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务）
-docker-swarm-deploy-app: _docker-image-push _docker-swarm-rm-app
+# 删除swarm集群中的app服务，并重新部署app服务（其他的服务不会发生变化, 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务）, 先docker-image-push
+docker-swarm-deploy-app: _docker-swarm-rm-app
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
