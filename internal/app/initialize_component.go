@@ -51,6 +51,7 @@ func InitialzeLog() {
 		})
 	}
 	logx.Initialize(logConfigs)
+	log.Println("\033[1;32m🔗 -> Log initialized successfully\033[0m")
 }
 
 // InitializeDB initialize database
@@ -89,8 +90,8 @@ func InitializeDB() {
 			db.InitDB(dbConfig.Name, dbConfig.Type, dsn, customLogger, dbConfig.MaxRetries, dbConfig.Delay)
 			log.Printf("Database '%s' initialized successfully", dbConfig.Name)
 		}
+		log.Println("\033[1;32m🔗 -> Database all initialized successfully\033[0m")
 	}
-
 }
 
 // InitializeRedis initialize redis
@@ -108,7 +109,7 @@ func InitializeRedis() {
 			WriteTimeout: time.Duration(config.Core.Redis.WriteTimeout),
 			MaxRetries:   config.Core.Redis.MaxRetries,
 		})
-		log.Println("Redis initialized successfully")
+		log.Println("\033[1;32m🔗 -> Redis initialized successfully\033[0m")
 	}
 }
 
@@ -125,6 +126,7 @@ func InitializeTemplates() {
 			tmplConfigs = append(tmplConfigs, tmplConfig)
 		}
 		templates.InitTemplates(tmplConfigs)
+		log.Println("\033[1;32m🔗 -> Templates initialized successfully\033[0m")
 	}
 }
 
@@ -132,6 +134,7 @@ func InitializeTemplates() {
 func InitializeCron() {
 	if config.Core.CronEnable {
 		cron.Core.Start()
+		log.Println("\033[1;32m🔗 -> Cron initialized successfully\033[0m")
 	}
 }
 
@@ -151,6 +154,7 @@ func InitializeWebsocket() {
 				middleware.TraceMiddleware,
 			},
 		})
+		log.Println("\033[1;32m🔗 -> Websocket initialized successfully\033[0m")
 	}
 }
 
@@ -161,6 +165,7 @@ func InitializeMCP() {
 		server := mcp.NewMCPServer(config.Core.AppName, config.Core.Version, config.Core.MCP.Transport, config.Core.MCP.Mode)
 		// register handler for mcp server
 		server.RegisterHandler(mcp.MCPHandler)
+		log.Println("\033[1;32m🔗 -> MCP initialized successfully\033[0m")
 	}
 }
 
@@ -192,8 +197,10 @@ func InitializeInjector() {
 		}
 		db.CloseDB()
 
-		log.Printf("%sClean up all components successfully. %s\n", Green, Reset)
+		log.Printf("%s🔗 -> Clean up all components successfully. %s\n", Green, Reset)
 	}
+
+	log.Println("\033[1;32m🔗 -> Injector initialized successfully\033[0m")
 }
 
 // ParseLogLevel converts a string log level to gorm's logger.LogLevel

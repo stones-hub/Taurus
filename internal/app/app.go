@@ -54,7 +54,7 @@ func Start(host string, port int) {
 
 	// Run server in a goroutine
 	go func() {
-		log.Printf("%sServer is running on %s %s \n", Green, addr, Reset)
+		log.Printf("%s🔗 -> Server is running on %s %s \n", Green, addr, Reset)
 		// when server startup failed, write error to errChan.
 		// But http.ErrServerClosed is not an error,,because it is expected when the server is closed.
 		// ListenAndServe is a blocking call
@@ -88,7 +88,7 @@ func Start(host string, port int) {
 		log.Printf("%sServer forced to shutdown: %v %s\n", Red, err, Reset)
 	}
 
-	log.Printf("%sServer shutdown successfully. %s\n", Green, Reset)
+	log.Printf("%s🔗 -> Server shutdown successfully. %s\n", Green, Reset)
 
 	gracefulCleanup(ctx)
 }
@@ -108,7 +108,7 @@ func signalWaiter(errCh chan error) error {
 	case sig := <-signals:
 		switch sig {
 		case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM:
-			log.Printf("%sReceived signal: %s, graceful shutdown... %s\n", Yellow, sig, Reset)
+			log.Printf("%s🔗 -> Received signal: %s, graceful shutdown... %s\n", Yellow, sig, Reset)
 			// graceful shutdown
 			return nil
 		}
@@ -122,7 +122,7 @@ func signalWaiter(errCh chan error) error {
 // gracefulCleanup is called when the server is shutting down. we can do some cleanup work here.
 func gracefulCleanup(ctx context.Context) {
 
-	log.Printf("%sWaiting for all requests to be processed... %s\n", Yellow, Reset)
+	log.Printf("%s🔗 -> Waiting for all requests to be processed... %s\n", Yellow, Reset)
 	done := make(chan struct{})
 
 	go func() {
@@ -132,10 +132,10 @@ func gracefulCleanup(ctx context.Context) {
 
 	select {
 	case <-done:
-		log.Printf("%sServer stopped successfully. %s\n", Green, Reset)
+		log.Printf("%s🔗 -> Server stopped successfully. %s\n", Green, Reset)
 	case <-ctx.Done():
 		// If 5 seconds have passed and the server has not stopped, it means the server is not responding, so we need to force it to stop.
-		log.Printf("%sServer stopped forcefully. %s\n", Red, Reset)
+		log.Printf("%s🔗 -> Server stopped forcefully. %s\n", Red, Reset)
 	}
 }
 

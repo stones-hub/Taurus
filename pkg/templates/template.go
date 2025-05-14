@@ -45,7 +45,7 @@ func InitTemplates(configs []TemplateConfig) *TemplateManager {
 
 		// 检查目录是否存在
 		if _, err := os.Stat(absPath); os.IsNotExist(err) {
-			log.Panicf("[Warning] templates directory %s does not exist", absPath)
+			log.Printf("[Warning] templates directory %s does not exist", absPath)
 			continue
 		}
 
