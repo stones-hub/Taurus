@@ -2,6 +2,7 @@ package app
 
 import (
 	"Taurus/config"
+	"Taurus/pkg/mcp"
 	"Taurus/pkg/router"
 	"context"
 	"errors"
@@ -74,10 +75,20 @@ func Start(host string, port int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	if mcp.GlobalMCPServer != nil {
+		srv.RegisterOnShutdown(func() {
+			if err := mcp.GlobalMCPServer.Shutdown(ctx); err != nil {
+				log.Printf("%sMCP server shutdown failed: %v %s\n", Red, err, Reset)
+			}
+		})
+	}
+
 	// Attempt graceful shutdown
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("%sServer forced to shutdown: %v %s\n", Red, err, Reset)
+		log.Printf("%sServer forced to shutdown: %v %s\n", Red, err, Reset)
 	}
+
+	log.Printf("%sServer shutdown successfully. %s\n", Green, Reset)
 
 	gracefulCleanup(ctx)
 }
@@ -97,7 +108,7 @@ func signalWaiter(errCh chan error) error {
 	case sig := <-signals:
 		switch sig {
 		case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM:
-			log.Printf("Received signal: %s\n", sig)
+			log.Printf("%sReceived signal: %s, graceful shutdown... %s\n", Yellow, sig, Reset)
 			// graceful shutdown
 			return nil
 		}

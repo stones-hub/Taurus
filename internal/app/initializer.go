@@ -36,8 +36,9 @@ func initialize(configPath string, env string) {
 	InitializeRedis()
 	InitializeTemplates()
 	InitializeCron()
-	InitializeWebsocket()
 	InitializeInjector()
+	InitializeWebsocket()
+	InitializeMCP()
 }
 
 // loadConfig reads and parses configuration files from a directory or a single file

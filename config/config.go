@@ -14,11 +14,17 @@ type Config struct {
 	CronEnable      bool `json:"cron_enable" yaml:"cron_enable" toml:"cron_enable"`                // 是否启用cron
 	TemplatesEnable bool `json:"templates_enable" yaml:"templates_enable" toml:"templates_enable"` // 是否启用模板
 	WebsocketEnable bool `json:"websocket_enable" yaml:"websocket_enable" toml:"websocket_enable"` // 是否启用websocket
-	McpEnable       bool `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
+	MCPEnable       bool `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
 
-	Mcp struct {
-		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式，可选值：sse,
+	MCP struct {
+		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式，可选值：sse, streamable_http, stdio
+		Mode      string `json:"mode" yaml:"mode" toml:"mode"`                // 模式，可选值：stateless, stateful
 	} `json:"mcp" yaml:"mcp" toml:"mcp"`
+
+	WebSocket struct {
+		Handler string `json:"handler" yaml:"handler" toml:"handler"` // 处理方式，可选值：default,
+		Path    string `json:"path" yaml:"path" toml:"path"`          // 路径
+	} `json:"websocket" yaml:"websocket" toml:"websocket"`
 
 	Templates []struct {
 		Name string `json:"name" yaml:"name" toml:"name"` // 模板名称

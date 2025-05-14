@@ -6,15 +6,23 @@ import (
 	"Taurus/pkg/cron"
 	"Taurus/pkg/db"
 	"Taurus/pkg/logx"
+	"Taurus/pkg/mcp"
+	"Taurus/pkg/middleware"
 	"Taurus/pkg/redisx"
+	"Taurus/pkg/router"
 	"Taurus/pkg/templates"
-	"Taurus/pkg/websocket"
+	"Taurus/pkg/wsocket"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
-	_ "Taurus/internal/controller/crons" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/log_formatter"    // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/crons"          // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/log_formatter"  // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/mcps/resource"  // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/mcps/templates" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/mcps/tools"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/ws_handler"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 
 	"gorm.io/gorm/logger"
 )
@@ -131,7 +139,28 @@ func InitializeCron() {
 func InitializeWebsocket() {
 	// initialize websocket
 	if config.Core.WebsocketEnable {
-		websocket.Initialize()
+		wsocket.Initialize()
+
+		router.AddRouter(router.Router{
+			Path: "/ws",
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				wsocket.HandleWebSocket(w, r, wsocket.GetHandler(config.Core.WebSocket.Handler).Handle)
+			}),
+			Middleware: []router.MiddlewareFunc{
+				middleware.ErrorHandlerMiddleware,
+				middleware.TraceMiddleware,
+			},
+		})
+	}
+}
+
+// InitializeMCP initialize mcp, but need to register tools, prompts, resources, resource templates
+func InitializeMCP() {
+	// 注意：stdio 模式下，需要手动启动 server，其他模式下，server 会自动启动， 不建议在http服务器上使用stdio模式，如果需要，可以依据工具函数，自行构建main函数
+	if config.Core.MCPEnable && config.Core.MCP.Transport != mcp.TransportStdio {
+		server := mcp.NewMCPServer(config.Core.AppName, config.Core.Version, config.Core.MCP.Transport, config.Core.MCP.Mode)
+		// register handler for mcp server
+		server.RegisterHandler(mcp.MCPHandler)
 	}
 }
 
@@ -162,6 +191,8 @@ func InitializeInjector() {
 			}
 		}
 		db.CloseDB()
+
+		log.Printf("%sClean up all components successfully. %s\n", Green, Reset)
 	}
 }
 

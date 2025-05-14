@@ -8,17 +8,14 @@ package internal
 
 import (
 	"Taurus/internal/controller"
-	"Taurus/internal/controller/ws"
 )
 
 // Injectors from wire.go:
 
 func BuildInjector() (*Injector, func(), error) {
 	demoCtrl := &controller.DemoCtrl{}
-	demoWs := &ws.DemoWs{}
 	injector := &Injector{
 		DemoCtrl: demoCtrl,
-		DemoWs:   demoWs,
 	}
 	return injector, func() {
 	}, nil

@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"Taurus/pkg/router"
+	"context"
 	"fmt"
 	"log"
 
@@ -10,7 +11,33 @@ import (
 	"github.com/ThinkInAIXYZ/go-mcp/transport"
 )
 
-func NewMCPServer(name, version, transportName string, stateMode transport.StateMode) *server.Server {
+var (
+	GlobalMCPServer *MCPServer
+)
+
+const (
+	TransportStdio          = "stdio"
+	TransportSSE            = "sse"
+	TransportStreamableHTTP = "streamable_http"
+	ModeStateful            = "stateful"
+	ModeStateless           = "stateless"
+)
+
+type MCPServer struct {
+	server *server.Server
+}
+
+func NewMCPServer(name, version, transportName string, mode string) *MCPServer {
+
+	var stateMode transport.StateMode
+	switch mode {
+	case ModeStateful:
+		stateMode = transport.Stateful
+	case ModeStateless:
+		stateMode = transport.Stateless
+	default:
+		stateMode = transport.Stateful
+	}
 
 	t, handler := getTransport(transportName, stateMode)
 
@@ -46,8 +73,14 @@ func NewMCPServer(name, version, transportName string, stateMode transport.State
 		log.Fatal(fmt.Errorf("unknown handler type: %T", handler))
 	}
 
-	return mcpServer
+	GlobalMCPServer = &MCPServer{
+		server: mcpServer,
+	}
+	return GlobalMCPServer
+}
 
+func (s *MCPServer) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }
 
 func getTransport(transportName string, stateMode transport.StateMode) (transport.ServerTransport, interface{}) {
@@ -56,19 +89,19 @@ func getTransport(transportName string, stateMode transport.StateMode) (transpor
 	var handler interface{}
 
 	switch transportName {
-	case "stdio":
-		log.Println("start current time mcp server with stdio transport")
+	case TransportStdio:
+		log.Println("start mcp server with stdio transport")
 		t = transport.NewStdioServerTransport()
-	case "sse":
-		log.Println("start current time mcp server with sse transport")
+	case TransportSSE:
+		log.Println("start mcp server with sse transport")
 		var sseHandler *transport.SSEHandler
 		t, sseHandler, err = transport.NewSSEServerTransportAndHandler("/message")
 		if err != nil {
 			log.Fatal(fmt.Errorf("failed to create sse transport: %v", err))
 		}
 		handler = sseHandler
-	case "streamable_http":
-		log.Println("start current time mcp server with streamable http transport")
+	case TransportStreamableHTTP:
+		log.Println("start mcp server with streamable http transport")
 		var streamableHandler *transport.StreamableHTTPHandler
 		t, streamableHandler, err = transport.NewStreamableHTTPServerTransportAndHandler(transport.WithStreamableHTTPServerTransportAndHandlerOptionStateMode(stateMode))
 		if err != nil {
@@ -80,4 +113,56 @@ func getTransport(transportName string, stateMode transport.StateMode) (transpor
 	}
 
 	return t, handler
+}
+
+func (s *MCPServer) RegisterTool(tool *protocol.Tool, handler server.ToolHandlerFunc) {
+	s.server.RegisterTool(tool, handler)
+}
+
+func (s *MCPServer) UnregisterTool(name string) {
+	s.server.UnregisterTool(name)
+}
+
+func (s *MCPServer) RegisterPrompt(prompt *protocol.Prompt, handler server.PromptHandlerFunc) {
+	s.server.RegisterPrompt(prompt, handler)
+}
+
+func (s *MCPServer) UnregisterPrompt(name string) {
+	s.server.UnregisterPrompt(name)
+}
+
+func (s *MCPServer) RegisterResource(resource *protocol.Resource, handler server.ResourceHandlerFunc) {
+	s.server.RegisterResource(resource, handler)
+}
+
+func (s *MCPServer) UnregisterResource(name string) {
+	s.server.UnregisterResource(name)
+}
+
+func (s *MCPServer) RegisterResourceTemplate(resourceTemplate *protocol.ResourceTemplate, handler server.ResourceHandlerFunc) {
+	s.server.RegisterResourceTemplate(resourceTemplate, handler)
+}
+
+func (s *MCPServer) UnregisterResourceTemplate(name string) {
+	s.server.UnregisterResourceTemplate(name)
+}
+
+func (s *MCPServer) RegisterHandler(handler *Handler) {
+	for _, tool := range handler.GetTools() {
+		s.server.RegisterTool(tool.ToolName, tool.ToolHandler)
+	}
+	for _, prompt := range handler.GetPrompts() {
+		s.server.RegisterPrompt(prompt.PromptName, prompt.PromptHandler)
+	}
+	for _, resource := range handler.GetResources() {
+		s.server.RegisterResource(resource.ResourceName, resource.ResourceHandler)
+	}
+	for _, resourceTemplate := range handler.GetResourceTemplates() {
+		s.server.RegisterResourceTemplate(resourceTemplate.ResourceTemplateName, resourceTemplate.ResourceTemplateHandler)
+	}
+}
+
+// for stdio transport, run the server in the main thread
+func (s *MCPServer) Run() error {
+	return s.server.Run()
 }

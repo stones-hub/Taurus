@@ -9,4 +9,5 @@ redis_enable: true # 是否启用redis
 cron_enable: true # 是否启用cron
 templates_enable: true # 是否启用模板
 websocket_enable: true # 是否启用websocket
+mcp_enable: true # 是否启用mcp
 print_enable: true # 是否打印配置信息

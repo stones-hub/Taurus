@@ -1,6 +1,7 @@
-package mcp
+package tools
 
 import (
+	"Taurus/pkg/mcp"
 	"context"
 	"fmt"
 	"log"
@@ -8,6 +9,10 @@ import (
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 )
+
+func init() {
+	mcp.MCPHandler.RegisterTool(CurrentTimeTool(), CurrentTime)
+}
 
 func CurrentTime(_ context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	req := new(CurrentTimeReq)
