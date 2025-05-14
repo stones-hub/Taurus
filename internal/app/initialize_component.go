@@ -161,12 +161,6 @@ func InitializeMCP() {
 		server := mcp.NewMCPServer(config.Core.AppName, config.Core.Version, config.Core.MCP.Transport, config.Core.MCP.Mode)
 		// register handler for mcp server
 		server.RegisterHandler(mcp.MCPHandler)
-		go func() {
-			err := server.Run()
-			if err != nil {
-				log.Fatalf("Failed to start mcp server: %v", err)
-			}
-		}()
 	}
 }
 
