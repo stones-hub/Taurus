@@ -2,7 +2,6 @@ package mid
 
 import (
 	"Taurus/pkg/httpx"
-	"Taurus/pkg/logx"
 	"Taurus/pkg/util"
 	"net/http"
 )
@@ -11,12 +10,6 @@ func HostMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		ips := util.GetRemoteIP(r)
-
-		localIPs, err := util.GetLocalIPs()
-		if err != nil {
-			logx.Core.Error("custom", "failed to get local ips: %v", err)
-		}
-		logx.Core.Info("custom", "host middleware, local ips: %v, remote ips: %v", localIPs, ips)
 
 		// 检查主机是否在允许列表中
 		allowedHosts := getAllowedHosts()
@@ -51,3 +44,10 @@ func getAllowedHosts() []string {
 		"192.168.0.0/16",
 	}
 }
+
+/*
+- 192.0.0.0/8 192.168.0.0/16 192.168.1.0/24
+- /24：子网掩码为255.255.255.0，表示前24位是网络部分，后8位是主机部分。
+- /16：子网掩码为255.255.0.0，表示前16位是网络部分，后16位是主机部分。
+- /8：子网掩码为255.0.0.0，表示前8位是网络部分，后24位是主机部分。
+*/
