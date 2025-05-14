@@ -321,7 +321,7 @@ update_framework() {
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
   rsync -aq --delete update_temp/pkg/ "$project_path/pkg/"
   # rsync -aq --delete update_temp/logs/ "$project_path/logs/"
-  rsync -aq --delete update_temp/internal/app/ "$project_path/internal/app/"
+  rsync -aq --delete --exclude="core/" update_temp/internal/app/ "$project_path/internal/app/"
   rsync -aq --delete update_temp/example/ "$project_path/example/"
   # rsync -aq --delete update_temp/downloads/ "$project_path/downloads/"
   # rsync -aq --delete update_temp/docs/ "$project_path/docs/"
