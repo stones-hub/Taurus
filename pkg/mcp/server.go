@@ -66,7 +66,6 @@ func getTransport(transportName string, stateMode transport.StateMode) (transpor
 		if err != nil {
 			log.Fatal(fmt.Errorf("failed to create sse transport: %v", err))
 		}
-		fmt.Println("sseHandler:---------> ", sseHandler)
 		handler = sseHandler
 	case "streamable_http":
 		log.Println("start current time mcp server with streamable http transport")
