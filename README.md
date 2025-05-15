@@ -80,6 +80,12 @@ wire
 
 #### 使用指南：
 
+- **推送镜像**
+
+  ```shell
+  make docker-image-push ENV_FILE=.env.docker-compose
+  ```
+
 - **启动集群**
   ```shell
   make docker-swarm-up ENV_FILE=.env.docker-compose
