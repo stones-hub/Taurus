@@ -28,8 +28,7 @@ import (
 )
 
 var (
-	GlobalInjector *internal.Injector
-	Cleanup        func()
+	Cleanup func()
 )
 
 // InitialzeLog initialize logger
@@ -176,7 +175,7 @@ func InitializeInjector() {
 		cleanup func()
 	)
 	// initialize injector
-	GlobalInjector, cleanup, err = internal.BuildInjector()
+	internal.Core, cleanup, err = internal.BuildInjector()
 	if err != nil {
 		log.Fatalf("Failed to build injector: %v", err)
 	}

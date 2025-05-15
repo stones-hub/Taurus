@@ -6,6 +6,8 @@ import (
 	"github.com/google/wire"
 )
 
+var Core *Injector
+
 type Injector struct {
 	DemoCtrl *controller.DemoCtrl
 }

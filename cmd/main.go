@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Taurus/internal"
 	"Taurus/internal/app"
 	"Taurus/internal/controller"
 	"Taurus/internal/mid"
@@ -29,7 +30,7 @@ func main() {
 		Routes: []router.Router{
 			{
 				Path:    "/",
-				Handler: http.HandlerFunc(app.GlobalInjector.DemoCtrl.Get),
+				Handler: http.HandlerFunc(internal.Core.DemoCtrl.Get),
 				Middleware: []router.MiddlewareFunc{
 					// middleware.ApiKeyAuthMiddleware,
 					mid.HostMiddleware,

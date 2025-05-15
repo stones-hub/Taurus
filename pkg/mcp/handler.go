@@ -70,6 +70,9 @@ func (h *Handler) UnregisterTool(name string) {
 			h.tools = append(h.tools[:i], h.tools[i+1:]...)
 		}
 	}
+	if GlobalMCPServer != nil {
+		GlobalMCPServer.unregisterTool(name)
+	}
 }
 
 func (h *Handler) UnregisterPrompt(name string) {
@@ -77,6 +80,9 @@ func (h *Handler) UnregisterPrompt(name string) {
 		if prompt.PromptName.Name == name {
 			h.prompts = append(h.prompts[:i], h.prompts[i+1:]...)
 		}
+	}
+	if GlobalMCPServer != nil {
+		GlobalMCPServer.unregisterPrompt(name)
 	}
 }
 
@@ -86,6 +92,9 @@ func (h *Handler) UnregisterResource(name string) {
 			h.resources = append(h.resources[:i], h.resources[i+1:]...)
 		}
 	}
+	if GlobalMCPServer != nil {
+		GlobalMCPServer.unregisterResource(name)
+	}
 }
 
 func (h *Handler) UnregisterResourceTemplate(name string) {
@@ -93,6 +102,9 @@ func (h *Handler) UnregisterResourceTemplate(name string) {
 		if resourceTemplate.ResourceTemplateName.Name == name {
 			h.resourceTemplates = append(h.resourceTemplates[:i], h.resourceTemplates[i+1:]...)
 		}
+	}
+	if GlobalMCPServer != nil {
+		GlobalMCPServer.unregisterResourceTemplate(name)
 	}
 }
 

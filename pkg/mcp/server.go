@@ -17,7 +17,7 @@ var (
 
 const (
 	TransportStdio          = "stdio"           // 适合单机部署场景
-	TransportSSE            = "sse"             // 适合单机部署场景, 需要维护有状态的session
+	TransportSSE            = "sse"             // 单机和集群都适合，但是在集群下需要维护有状态的session， Nginx同一个请求来源要路由到同一个服务上才可以
 	TransportStreamableHTTP = "streamable_http" // 适合集群部署场景
 	ModeStateful            = "stateful"        // 保存上下文
 	ModeStateless           = "stateless"       // 不保存上下文
@@ -115,50 +115,54 @@ func getTransport(transportName string, stateMode transport.StateMode) (transpor
 	return t, handler
 }
 
-func (s *MCPServer) RegisterTool(tool *protocol.Tool, handler server.ToolHandlerFunc) {
+func (s *MCPServer) registerTool(tool *protocol.Tool, handler server.ToolHandlerFunc) {
 	s.server.RegisterTool(tool, handler)
 }
 
-func (s *MCPServer) UnregisterTool(name string) {
+func (s *MCPServer) unregisterTool(name string) {
 	s.server.UnregisterTool(name)
 }
 
-func (s *MCPServer) RegisterPrompt(prompt *protocol.Prompt, handler server.PromptHandlerFunc) {
+func (s *MCPServer) registerPrompt(prompt *protocol.Prompt, handler server.PromptHandlerFunc) {
 	s.server.RegisterPrompt(prompt, handler)
 }
 
-func (s *MCPServer) UnregisterPrompt(name string) {
+func (s *MCPServer) unregisterPrompt(name string) {
 	s.server.UnregisterPrompt(name)
 }
 
-func (s *MCPServer) RegisterResource(resource *protocol.Resource, handler server.ResourceHandlerFunc) {
+func (s *MCPServer) registerResource(resource *protocol.Resource, handler server.ResourceHandlerFunc) {
 	s.server.RegisterResource(resource, handler)
 }
 
-func (s *MCPServer) UnregisterResource(name string) {
+func (s *MCPServer) unregisterResource(name string) {
 	s.server.UnregisterResource(name)
 }
 
-func (s *MCPServer) RegisterResourceTemplate(resourceTemplate *protocol.ResourceTemplate, handler server.ResourceHandlerFunc) {
+func (s *MCPServer) registerResourceTemplate(resourceTemplate *protocol.ResourceTemplate, handler server.ResourceHandlerFunc) {
 	s.server.RegisterResourceTemplate(resourceTemplate, handler)
 }
 
-func (s *MCPServer) UnregisterResourceTemplate(name string) {
+func (s *MCPServer) unregisterResourceTemplate(name string) {
 	s.server.UnregisterResourceTemplate(name)
 }
 
 func (s *MCPServer) RegisterHandler(handler *Handler) {
 	for _, tool := range handler.GetTools() {
-		s.server.RegisterTool(tool.ToolName, tool.ToolHandler)
+		// s.server.RegisterTool(tool.ToolName, tool.ToolHandler)
+		s.registerTool(tool.ToolName, tool.ToolHandler)
 	}
 	for _, prompt := range handler.GetPrompts() {
-		s.server.RegisterPrompt(prompt.PromptName, prompt.PromptHandler)
+		// s.server.RegisterPrompt(prompt.PromptName, prompt.PromptHandler)
+		s.registerPrompt(prompt.PromptName, prompt.PromptHandler)
 	}
 	for _, resource := range handler.GetResources() {
-		s.server.RegisterResource(resource.ResourceName, resource.ResourceHandler)
+		// s.server.RegisterResource(resource.ResourceName, resource.ResourceHandler)
+		s.registerResource(resource.ResourceName, resource.ResourceHandler)
 	}
 	for _, resourceTemplate := range handler.GetResourceTemplates() {
-		s.server.RegisterResourceTemplate(resourceTemplate.ResourceTemplateName, resourceTemplate.ResourceTemplateHandler)
+		// s.server.RegisterResourceTemplate(resourceTemplate.ResourceTemplateName, resourceTemplate.ResourceTemplateHandler)
+		s.registerResourceTemplate(resourceTemplate.ResourceTemplateName, resourceTemplate.ResourceTemplateHandler)
 	}
 }
 
