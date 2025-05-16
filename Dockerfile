@@ -34,6 +34,9 @@ ARG WORKDIR
 # 设置应用配置文件
 ARG APP_CONFIG
 
+RUN echo "APP_CONFIG is set to: ${APP_CONFIG}"
+RUN echo "WORKDIR is set to: ${WORKDIR}"
+
 # 设置工作目录
 WORKDIR ${WORKDIR}
 
