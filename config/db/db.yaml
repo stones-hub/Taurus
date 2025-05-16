@@ -9,7 +9,7 @@ databases:
     sslmode: "disable"                      # SSL 模式 (仅适用于 PostgreSQL)
     dsn: "${DB_DSN:apps_demo:apps_demo@tcp(db_demo:3306)/kf_ai_demo?charset=utf8mb4&parseTime=True&loc=Local}"  # 可选，直接提供完整的 DSN 字符串（优先级高于其他字段）
     max_retries: 5                          # 最大重试次数
-    delay: 15                               # 重试延迟时间 秒
+    delay: 10                               # 重试延迟时间 秒
     logger:                                 # 日志配置
       log_file_path: "logs/db/kf_ai.log"    # 日志文件路径（为空时输出到控制台）
       max_size: 10                          # 单个日志文件的最大大小（单位：MB） , 当日志文件路径不为空时生效
@@ -28,7 +28,7 @@ databases:
     dbname: "${DB_NAME:kf_ai_demo}"
     dsn: "${DB_DSN:apps_demo:apps_demo@tcp(db_demo:3306)/kf_ai_demo?charset=utf8mb4&parseTime=True&loc=Local}"
     max_retries: 5                          # 最大重试次数
-    delay: 15                               # 重试延迟时间 秒
+    delay: 10                               # 重试延迟时间 秒
     logger:                                 # 日志配置
       log_file_path: "logs/db/kf_ai_test.log" # 日志文件路径（为空时输出到控制台）
       max_size: 20                          # 单个日志文件的最大大小（单位：MB） , 当日志文件路径不为空时生效
