@@ -107,7 +107,7 @@ services:
       - redis_data:/data 
     deploy:
       replicas: 1  # 确保只有一个 Redis 实例
-     # 设置redis服务部署到指定节点, 前提是当前节点有redis标签，设置标签方法 docker node update --label-add redis <node_name>
+     # 设置redis服务部署到指定节点, 前提是当前节点有redis标签，设置标签方法 docker node update --label-add mysql=true <node_name>
     placement:
       constraints:
         - node.labels.redis == true
