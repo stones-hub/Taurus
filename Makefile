@@ -211,7 +211,7 @@ docker-image-push: _docker-build
 	@echo -e "$(SEPARATOR)"
 
 # 初始化swarm集群，并部署. 先docker-image-push
-docker-swarm-up: 
+docker-swarm-up: docker-image-push
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
@@ -251,7 +251,7 @@ _docker-swarm-rm-nginx:
 # 2. update app服务，只适用于app副本是vip模式，且docker-compose-swarm.yml 文件并没有修改过, 因为update app 并不是通过docker-compose-swarm.yml 重新部署
 # 3. update app服务，会导致app服务的ip发生变化，如果与app服务的链接是通过ip链接的，需要更新相关的依赖
 # 4. docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量
-docker-update-app: 
+docker-update-app: docker-image-push
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
 	@if [ -z "$(ENV_FILE)" ]; then \
@@ -272,7 +272,7 @@ docker-update-app:
 # 1. 更新之前需要先docker-image-push
 # 2. 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务
 # 3. 适用于app副本是DNSRR模式
-docker-swarm-deploy-app: _docker-swarm-rm-app _docker-swarm-rm-nginx
+docker-swarm-deploy-app: docker-image-push _docker-swarm-rm-app _docker-swarm-rm-nginx
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
