@@ -19,8 +19,8 @@ import (
 
 	_ "Taurus/internal/app/core/crons"          // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/app/core/log_formatter"  // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/app/core/mcps/resource"  // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/app/core/mcps/templates" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/mcps/prompts"   // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/mcps/resources" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/app/core/mcps/tools"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/app/core/ws_handler"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 
