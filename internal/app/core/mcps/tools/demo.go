@@ -4,7 +4,6 @@ import (
 	"Taurus/pkg/mcp"
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
@@ -25,8 +24,6 @@ func CurrentTime(_ context.Context, request *protocol.CallToolRequest) (*protoco
 		return nil, fmt.Errorf("parse timezone with error: %v", err)
 	}
 	text := fmt.Sprintf(`current time is %s`, time.Now().In(loc))
-
-	log.Printf("texti11111: %s", text)
 
 	return &protocol.CallToolResult{
 		Content: []protocol.Content{
