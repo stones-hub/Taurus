@@ -237,6 +237,7 @@ docker-swarm-update-app:
 	fi
 	@ENV_VARS=$$(awk -F= '/^[^#]/ && NF==2 {print "--env-add", $$1"="$$2}' $(ENV_FILE)); \
 	docker service update $$ENV_VARS --image $(REGISTRY_URL)/$(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
+	docker service update $$ENV_VARS --image nginx:latest $(APP_NAME)_nginx || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm updated.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
