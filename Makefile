@@ -248,8 +248,8 @@ _docker-swarm-rm-nginx:
 
 # 注意：
 # 1. 更新之前需要先docker-image-push
-# 2. update app服务，只适用于app副本是vip模式，且docker-compose-swarm.yml 文件并没有修改过, 因为update app 并不是通过docker-compose-swarm.yml 重新部署
-# 3. update app服务，会导致app服务的ip发生变化，如果与app服务的链接是通过ip链接的，需要更新相关的依赖
+# 2. update app服务，只适用于 1. 副本是vip（虚拟ip）模式，2. docker-compose-swarm.yml 文件并没有修改过, 3. nginx 负载均衡模式不使用ip_hash 三者缺一不可
+# 3. update app服务，会导致app服务的ip发生变化，因此如果app服务的上下游是跟IP相关的，用此命令更新app服务，会导致上下游服务不可用，因此慎用
 # 4. docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量
 docker-update-app: docker-image-push
 	@echo -e "$(SEPARATOR)"
@@ -270,8 +270,8 @@ docker-update-app: docker-image-push
 
 # 注意：
 # 1. 更新之前需要先docker-image-push
-# 2. 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务
-# 3. 适用于app副本是DNSRR模式
+# 2. 适用于app或nginx修改了任意配置，都可以使用此命令更新
+# 3. 弊端，整个服务会被删掉重建，所以会出现集群不可用，恢复需要时间切记
 docker-swarm-deploy-app: docker-image-push _docker-swarm-rm-app _docker-swarm-rm-nginx
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
