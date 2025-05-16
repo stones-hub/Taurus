@@ -39,9 +39,9 @@ func NewMCPServer(name, version, transportName string, mode string) *MCPServer {
 		stateMode = transport.Stateful
 	}
 
-	t, handler := getTransport(transportName, stateMode)
+	mcpTransport, mcpHandler := getTransport(transportName, stateMode)
 
-	mcpServer, err := server.NewServer(t, server.WithServerInfo(protocol.Implementation{
+	mcpServer, err := server.NewServer(mcpTransport, server.WithServerInfo(protocol.Implementation{
 		Name:    name,
 		Version: version,
 	}))
@@ -50,7 +50,7 @@ func NewMCPServer(name, version, transportName string, mode string) *MCPServer {
 		log.Fatal(err)
 	}
 
-	switch h := handler.(type) {
+	switch h := mcpHandler.(type) {
 	case *transport.SSEHandler:
 		router.AddRouter(router.Router{
 			Path:       "/sse",
@@ -70,7 +70,7 @@ func NewMCPServer(name, version, transportName string, mode string) *MCPServer {
 			Middleware: nil,
 		})
 	default:
-		log.Fatal(fmt.Errorf("unknown handler type: %T", handler))
+		log.Fatal(fmt.Errorf("unknown handler type: %T", mcpHandler))
 	}
 
 	GlobalMCPServer = &MCPServer{
