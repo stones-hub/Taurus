@@ -50,7 +50,6 @@ services:
       - taurus-network-swarm
     deploy:
       replicas: 5  # 设置为 5 个应用实例
-      endpoint_mode: dnsrr # 设置为 vip 模式, 轮训dnsrr模式, 默认是vip模式（虚拟ip）
       update_config: # 配置服务更新策略的
         parallelism: 2 # 设置并行更新数量
         delay: 10s # 设置更新延迟时间
