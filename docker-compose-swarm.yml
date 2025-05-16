@@ -31,9 +31,7 @@ services:
       - taurus-network-swarm
     deploy:
       replicas: 1  # 确保只有一个 Nginx 实例
-    placement:
-      constraints:
-        - node.labels.nginx == true
+
 
   app:
     image: ${REGISTRY_URL}/${APP_NAME}:${VERSION} # 设置镜像名称
@@ -86,10 +84,7 @@ services:
       - taurus-network-swarm
     deploy:
       replicas: 1  # 确保只有一个 MySQL 实例
-    # 设置mysql服务部署到指定节点, 前提是当前节点有mysql标签，设置标签方法 docker node update --label-add mysql <node_name>
-    placement:
-      constraints:
-        - node.labels.mysql == true
+
 
   redis:
     image: redis:6 
@@ -107,10 +102,6 @@ services:
       - redis_data:/data 
     deploy:
       replicas: 1  # 确保只有一个 Redis 实例
-     # 设置redis服务部署到指定节点, 前提是当前节点有redis标签，设置标签方法 docker node update --label-add mysql=true <node_name>
-    placement:
-      constraints:
-        - node.labels.redis == true
 
 # 定义卷需要创建的所有卷
 volumes:

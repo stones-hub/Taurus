@@ -18,7 +18,6 @@ func main() {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("ok"))
 		}),
-		Middleware: []router.MiddlewareFunc{},
 	})
 
 	router.AddRouterGroup(router.RouteGroup{
