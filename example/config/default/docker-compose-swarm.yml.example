@@ -22,8 +22,6 @@ services:
     image: nginx:latest
     ports:
       - "9527:80"
-    environment:
-      - TZ=Asia/Shanghai # 设置时区
     volumes:
       - ./scripts/config/nginx.conf:/etc/nginx/nginx.conf
       - nginx_logs:/var/log/nginx  # 使用命名卷持久化日志
@@ -37,23 +35,22 @@ services:
     environment: # 给容器设置环境变量
       - MYSQL_DSN=${DB_DSN:-apps:apps@tcp(mysql:3306)/kf_ai?charset=utf8mb4&parseTime=True&loc=Local}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379} # 设置redis连接
-      - TZ=Asia/Shanghai # 设置时区
     env_file: # 设置环境变量文件
       - .env.docker-compose # 设置环境变量文件
-    healthcheck: # 如果健康检查不通过，容器会一直自动重启, app的服务需要支持健康检查的链接请求
+    healthcheck: # 如果健康检查不通过，容器会一直自动重启
       test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT}/health"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s # 延长启动等待时间，确保 mysql 和 redis 已准备好
     volumes: 
-      - log_data:${WORKDIR:-/app}/logs # 设置卷, 将容器生成的日志文件挂载到本地卷
-      - download_data:${WORKDIR:-/app}/downloads # 设置卷, 将容器生成的下载文件挂载到本地卷
+      - taurus_logs:${WORKDIR:-/app}/logs # 设置卷, 将容器生成的日志文件挂载到本地卷
+      - taurus_downloads:${WORKDIR:-/app}/downloads # 设置卷, 将容器生成的下载文件挂载到本地卷
     networks:
       - taurus-network-swarm
     deploy:
       replicas: 5  # 设置为 5 个应用实例
-      # endpoint_mode: dnsrr # 设置为 vip 模式, 轮训dnsrr模式, 默认是vip模式（虚拟ip）
+      endpoint_mode: dnsrr # 设置为 vip 模式, 轮训dnsrr模式, 默认是vip模式（虚拟ip）
       update_config: # 配置服务更新策略的
         parallelism: 2 # 设置并行更新数量
         delay: 10s # 设置更新延迟时间
@@ -67,7 +64,6 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-kf_ai} 
       MYSQL_USER: ${DB_USER:-apps}
       MYSQL_PASSWORD: ${DB_PASSWORD:-apps}
-      TZ: Asia/Shanghai # 设置时区
     healthcheck: # 设置健康检查
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -83,10 +79,6 @@ services:
       - taurus-network-swarm
     deploy:
       replicas: 1  # 确保只有一个 MySQL 实例
-     # 设置mysql服务部署到指定节点, 前提是当前节点有mysql标签，设置标签方法 docker node update --label-add mysql <node_name>
-     # placement:
-     #   constraints:
-     #     - node.labels.mysql == true
 
   redis:
     image: redis:6 
@@ -96,26 +88,20 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    environment:
-      TZ: Asia/Shanghai # 设置时区
     networks:
       - taurus-network-swarm
     volumes:
       - redis_data:/data 
     deploy:
       replicas: 1  # 确保只有一个 Redis 实例
-     # 设置redis服务部署到指定节点, 前提是当前节点有redis标签，设置标签方法 docker node update --label-add redis <node_name>
-     # placement:
-     #   constraints:
-     #     - node.labels.redis == true
 
 # 定义卷需要创建的所有卷
 volumes:
   db_data:
   redis_data:
-  log_data:
-  download_data:
   nginx_logs:  # 定义 Nginx 日志卷
+  taurus_logs:
+  taurus_downloads:
 
 # 使用 overlay 网络，适用于 Swarm 集群
 networks:
