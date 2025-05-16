@@ -31,6 +31,9 @@ services:
       - taurus-network-swarm
     deploy:
       replicas: 1  # 确保只有一个 Nginx 实例
+    placement:
+      constraints:
+        - node.labels.nginx == true
 
   app:
     image: ${REGISTRY_URL}/${APP_NAME}:${VERSION} # 设置镜像名称
