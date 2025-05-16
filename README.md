@@ -53,25 +53,25 @@ wire
 - **初次部署**：
 
   ```shell
-  make  docker-compose-up ENV_FILE=.env.docker-compose 
+  make  docker-compose-up env_file=.env.docker-compose 
   ```
 
 - **清空容器，镜像，重新打包**：
 
   ```shell
-  make  docker-compose-down ENV_FILE=.env.docker-compose  
+  make  docker-compose-down env_file=.env.docker-compose  
   ```
 
 - **启动项目**：
 
   ```shell
-  make docker-compose-start ENV_FILE=.env.docker-compose  
+  make docker-compose-start env_file=.env.docker-compose  
   ```
 
 - **停止项目**：
 
   ```shell
-   make docker-compose-stop ENV_FILE=.env.docker-compose  
+   make docker-compose-stop env_file=.env.docker-compose  
   ```
 
 ---
@@ -83,26 +83,26 @@ wire
 - **推送镜像**
 
   ```shell
-  make docker-image-push ENV_FILE=.env.docker-compose
+  make docker-image-push env_file=.env.docker-compose
   ```
 
 - **启动集群**
   ```shell
-  make docker-swarm-up ENV_FILE=.env.docker-compose
+  make docker-swarm-up env_file=.env.docker-compose
   ```
 
 - **停止集群**
   ```shell
-  make docker-swarm-down ENV_FILE=.env.docker-compose
+  make docker-swarm-down env_file=.env.docker-compose
   ```
 
 - **更新集群中的app服务**
   ```shell
-  make docker-swarm-update-app ENV_FILE=.env.docker-compose
+  make docker-update-app env_file=.env.docker-compose
   ```
 - **重新部署集群中的app服务**
   ```shell
-  make docker-swarm-deploy-app ENV_FILE=.env.docker-compose
+  make docker-swarm-deploy-app env_file=.env.docker-compose
 
   ```
   > 注意：
@@ -110,7 +110,7 @@ wire
 
 #### 注意事项：
 
-- 确保在每个命令中指定正确的`ENV_FILE`以加载相应的环境变量。
+- 确保在每个命令中指定正确的`env_file`以加载相应的环境变量。
 - 在更新镜像时，确保新版本的镜像已经推送到注册表中。
 
 ---
@@ -160,7 +160,7 @@ wire
 - **环境变量文件**：建议通过环境变量文件（`ENV_FILE`）传入配置，而非命令行参数。例如：
 
   ```shell
-  make local-run ENV_FILE=/your_path/your_env_file
+  make local-run env_file=/your_path/your_env_file
   ```
 
 - **集中管理**：建议将配置集中在 `config` 目录和环境变量中进行管理。
