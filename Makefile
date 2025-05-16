@@ -69,7 +69,7 @@ RELEASE_FILE_NAME := $(APP_NAME)-$(VERSION)
 PACKAGE_DIR := $(RELEASE_DIR)/$(RELEASE_FILE_NAME)
 
 # ---------------------------- 构建目标 --------------------------------
-.PHONY: all build clean docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop docker-image-push docker-swarm-up docker-swarm-down docker-swarm-update-app docker-swarm-deploy-app local-release
+.PHONY: all build clean docker-run docker-stop local-run local-stop docker-compose-up docker-compose-down docker-compose-start docker-compose-stop docker-image-push docker-swarm-up docker-swarm-down docker-update-app docker-swarm-deploy-app local-release
 # Default target
 all: build
 
@@ -167,6 +167,8 @@ docker-stop:
 	@echo -e "$(GREEN)Docker container, network and image cleaned up.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
+
+# ---------------------------- 以下所有的命令，都是基于.env.docker-compose 文件 ----------------------------
 # docker-compose.yml
 docker-compose-up:
 	@echo -e "$(SEPARATOR)"
@@ -208,14 +210,14 @@ docker-image-push: _docker-build
 	@echo -e "$(GREEN)Docker image pushed to registry.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# 初始化swarm集群，并部署, 先docker-image-push
+# 初始化swarm集群，并部署. 先docker-image-push
 docker-swarm-up: 
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# 删除swarm集群
+# 删除整个swarm集群
 docker-swarm-down:
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Removing stack from Docker Swarm...$(RESET)"
@@ -223,8 +225,33 @@ docker-swarm-down:
 	@echo -e "$(GREEN)Stack removed from Docker Swarm.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# 更新Docker Swarm服务中的app服务, 先docker-image-push
-docker-swarm-update-app: 
+
+# 删除swarm集群中的app服务
+_docker-swarm-rm-app:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Removing app service from Docker Swarm...$(RESET)"
+	@docker service rm $(APP_NAME)_app || echo -e "$(RED)Failed to remove app service from Docker Swarm.$(RESET)"
+	@echo -e "$(GREEN)App service removed from Docker Swarm.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
+
+# 删除swarm集群中的nginx服务
+_docker-swarm-rm-nginx:
+	@echo -e "$(SEPARATOR)"
+	@echo -e "$(BLUE)Removing nginx service from Docker Swarm...$(RESET)"
+	@docker service rm $(APP_NAME)_nginx || echo -e "$(RED)Failed to remove nginx service from Docker Swarm.$(RESET)"
+	@echo -e "$(GREEN)Nginx service removed from Docker Swarm.$(RESET)"
+	@echo -e "$(SEPARATOR)"
+
+
+
+
+# 注意：
+# 1. 更新之前需要先docker-image-push
+# 2. update app服务，只适用于app副本是vip模式，且docker-compose-swarm.yml 文件并没有修改过, 因为update app 并不是通过docker-compose-swarm.yml 重新部署
+# 3. update app服务，会导致app服务的ip发生变化，如果与app服务的链接是通过ip链接的，需要更新相关的依赖
+# 4. docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量
+docker-update-app: 
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
 	@if [ -z "$(ENV_FILE)" ]; then \
@@ -237,24 +264,15 @@ docker-swarm-update-app:
 	fi
 	@ENV_VARS=$$(awk -F= '/^[^#]/ && NF==2 {print "--env-add", $$1"="$$2}' $(ENV_FILE)); \
 	docker service update $$ENV_VARS --image $(REGISTRY_URL)/$(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
-	docker service update $$ENV_VARS --image nginx:latest $(APP_NAME)_nginx || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm updated.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
-# docker service update 更新服务时，不支持给服务传env-file 所以只能读取环境变量文件，然后构建 --env-add 参数, 否则就是用的原来的环境变量
 
-# 删除swarm集群中的app服务, 由于nginx服务是依赖app服务，所以需要先删除app服务，再删除nginx服务, 否则nginx服务会连不上app服务
-_docker-swarm-rm-app:
-	@echo -e "$(SEPARATOR)"
-	@echo -e "$(BLUE)Removing app service from Docker Swarm...$(RESET)"
-	@docker service rm $(APP_NAME)_nginx || echo -e "$(RED)Failed to remove nginx service from Docker Swarm.$(RESET)"
-	@docker service rm $(APP_NAME)_app || echo -e "$(RED)Failed to remove app service from Docker Swarm.$(RESET)"
-	@echo -e "$(GREEN)App service removed from Docker Swarm.$(RESET)"
-	@echo -e "$(SEPARATOR)"
-
-
-# 删除swarm集群中的app服务，并重新部署app服务（其他的服务不会发生变化, 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务）, 先docker-image-push
-docker-swarm-deploy-app: _docker-swarm-rm-app
+# 注意：
+# 1. 更新之前需要先docker-image-push
+# 2. 适用于修改了docker-compose-swarm.yml文件后，重新部署app服务
+# 3. 适用于app副本是DNSRR模式
+docker-swarm-deploy-app: _docker-swarm-rm-app _docker-swarm-rm-nginx
 	@echo -e "$(BLUE)Deploying to Docker Swarm...$(RESET)"
 	@docker stack deploy -c docker-compose-swarm.yml $(APP_NAME) || echo -e "$(RED)Failed to deploy to Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm deployment complete.$(RESET)"

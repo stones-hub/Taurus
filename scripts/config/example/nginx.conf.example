@@ -35,6 +35,7 @@ http {
                proxy_set_header X-Forwarded-Proto $scheme;
            }
 
+        # 适用于sse 协议开启
         location /sse {
             proxy_pass http://app_cluster;
             

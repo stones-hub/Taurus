@@ -1,5 +1,21 @@
 version: '3.7'
 
+# 如果要使用mcp的sse模式，由于sse协议的特性，同一个客户端需要同一个session，所以swarm集群模式下，需要做如下变更 
+# 1. nginx的配置需要使用ip_hash模式，否则会导致同一个客户端的请求被分配到不同的nginx实例，从而导致sse连接失败
+# 2. app副本的路由模式需要使用dnsrr模式，否则会导致同一个客户端的请求被分配到不同的app实例，从而导致sse连接失败
+# 3. nginx需要支持/see特殊的协议
+# 4. 一旦需要更新app，需要重新部署nginx和app（因为dnssr导致如果只更新, nginx不会自动更新到新的副本IP上）
+
+# 在 Docker Swarm 中，endpoint_mode 有两种模式：
+# VIP (Virtual IP) 模式:
+# 描述: 在 VIP 模式下，Swarm 为服务分配一个虚拟 IP 地址。所有请求都会通过这个虚拟 IP 地址进行负载均衡，然后转发到服务的各个任务实例。
+# 特点: 这种模式提供了一个单一的入口点，适合需要负载均衡的场景。
+# 默认模式: VIP 是 Docker Swarm 的默认 endpoint_mode。
+# DNSRR (DNS Round Robin) 模式:
+# 描述: 在 DNSRR 模式下，Swarm 使用 DNS 轮询的方式来分发请求。每个任务实例都有自己的 IP 地址，客户端通过 DNS 解析获取这些地址，并进行轮询访问。
+# 特点: 这种模式不提供负载均衡功能，适合需要直接访问各个任务实例的场景。
+# 默认情况下，Docker Swarm 使用 VIP 模式来管理服务的网络流量。
+
 services:
 
   nginx:
@@ -24,7 +40,7 @@ services:
       - TZ=Asia/Shanghai # 设置时区
     env_file: # 设置环境变量文件
       - .env.docker-compose # 设置环境变量文件
-    healthcheck: # 如果健康检查不通过，容器会一直自动重启
+    healthcheck: # 如果健康检查不通过，容器会一直自动重启, app的服务需要支持健康检查的链接请求
       test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT}/health"]
       interval: 10s
       timeout: 5s
@@ -107,12 +123,3 @@ networks:
     driver: overlay
 
 
-# 在 Docker Swarm 中，endpoint_mode 有两种模式：
-# VIP (Virtual IP) 模式:
-# 描述: 在 VIP 模式下，Swarm 为服务分配一个虚拟 IP 地址。所有请求都会通过这个虚拟 IP 地址进行负载均衡，然后转发到服务的各个任务实例。
-# 特点: 这种模式提供了一个单一的入口点，适合需要负载均衡的场景。
-# 默认模式: VIP 是 Docker Swarm 的默认 endpoint_mode。
-# DNSRR (DNS Round Robin) 模式:
-# 描述: 在 DNSRR 模式下，Swarm 使用 DNS 轮询的方式来分发请求。每个任务实例都有自己的 IP 地址，客户端通过 DNS 解析获取这些地址，并进行轮询访问。
-# 特点: 这种模式不提供负载均衡功能，适合需要直接访问各个任务实例的场景。
-# 默认情况下，Docker Swarm 使用 VIP 模式来管理服务的网络流量。
