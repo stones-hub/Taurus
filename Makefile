@@ -1,15 +1,15 @@
 # 默认环境变量文件
-ENV_FILE=.env.local
+env_file=.env.local
 
 # 检查环境变量文件是否存在
-ifeq ($(wildcard $(ENV_FILE)),)
-$(error $(RED)Environment file '$(ENV_FILE)' not found. Please create it or specify a different file.$(RESET))
+ifeq ($(wildcard $(env_file)),)
+$(error $(RED)Environment file '$(env_file)' not found. Please create it or specify a different file.$(RESET))
 endif
 
 
 # ---------------------------- 加载环境变量 --------------------------------
-include $(ENV_FILE)
-export $(shell sed 's/=.*//' $(ENV_FILE))
+include $(env_file)
+export $(shell sed 's/=.*//' $(env_file))
 
 # 定义颜色
 RED := \033[31m
@@ -95,7 +95,7 @@ clean:
 local-run: clean build
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Running the application locally...$(RESET)"
-	@$(BUILD_DIR)/$(APP_NAME) -config=$(APP_CONFIG) -env=$(ENV_FILE) || echo -e "$(RED)Failed to run the application locally.$(RESET)"
+	@$(BUILD_DIR)/$(APP_NAME) -config=$(APP_CONFIG) -env=$(env_file) || echo -e "$(RED)Failed to run the application locally.$(RESET)"
 	@echo -e "$(SEPARATOR)"
 
 # Stop the local application (if running in the background)
@@ -112,7 +112,7 @@ local-release: clean build
 	@echo -e "$(BLUE)Packaging the application...$(RESET)"
 	@mkdir -p $(PACKAGE_DIR)
 	@cp $(BUILD_DIR)/$(APP_NAME) $(PACKAGE_DIR)/
-	@cp $(ENV_FILE) $(PACKAGE_DIR)/.env.local
+	@cp $(env_file) $(PACKAGE_DIR)/.env.local
 	@mkdir -p $(PACKAGE_DIR)/logs
 	@mkdir -p $(PACKAGE_DIR)/downloads
 	@cp -r templates $(PACKAGE_DIR)/
@@ -148,7 +148,7 @@ docker-run: _docker-build
 	fi
 	@echo -e "$(BLUE)Running the application in Docker...$(RESET)"
 	@docker run -d --name $(DOCKER_CONTAINER) --network $(DOCKER_NETWORK) -p ${HOST_PORT}:${CONTAINER_PORT} \
-		--env-file $(ENV_FILE) \
+		--env-file $(env_file) \
 		--mount type=volume,source=$(DOCKER_LOG_VOLUME),target=$(WORKDIR)/logs \
 		--mount type=volume,source=$(DOCKER_DOWNLOAD_VOLUME),target=$(WORKDIR)/downloads \
 		$(DOCKER_IMAGE) || echo -e "$(RED)Failed to run the application in Docker.$(RESET)"
@@ -254,15 +254,15 @@ _docker-swarm-rm-nginx:
 docker-update-app: docker-image-push
 	@echo -e "$(SEPARATOR)"
 	@echo -e "$(BLUE)Updating Docker Swarm...$(RESET)"
-	@if [ -z "$(ENV_FILE)" ]; then \
-		echo "ENV_FILE is not set! Please provide the path to the environment file."; \
+	@if [ -z "$(env_file)" ]; then \
+		echo "env_file is not set! Please provide the path to the environment file."; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(ENV_FILE)" ]; then \
-		echo "Environment file $(ENV_FILE) not found!"; \
+	@if [ ! -f "$(env_file)" ]; then \
+		echo "Environment file $(env_file) not found!"; \
 		exit 1; \
 	fi
-	@ENV_VARS=$$(awk -F= '/^[^#]/ && NF==2 {print "--env-add", $$1"="$$2}' $(ENV_FILE)); \
+	@ENV_VARS=$$(awk -F= '/^[^#]/ && NF==2 {print "--env-add", $$1"="$$2}' $(env_file)); \
 	docker service update $$ENV_VARS --image $(REGISTRY_URL)/$(DOCKER_IMAGE) $(APP_NAME)_app || echo -e "$(RED)Failed to update Docker Swarm.$(RESET)"
 	@echo -e "$(GREEN)Docker Swarm updated.$(RESET)"
 	@echo -e "$(SEPARATOR)"
