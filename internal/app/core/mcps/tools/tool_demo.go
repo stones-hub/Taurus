@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"Taurus/pkg/logx"
 	"Taurus/pkg/mcp"
 	"context"
 	"fmt"
@@ -18,6 +19,8 @@ func CurrentTime(_ context.Context, request *protocol.CallToolRequest) (*protoco
 	if err := protocol.VerifyAndUnmarshal(request.RawArguments, &req); err != nil {
 		return nil, err
 	}
+
+	logx.Core.Info("default", "call tool, request: %v", request)
 
 	loc, err := time.LoadLocation(req.Timezone)
 	if err != nil {
