@@ -96,6 +96,20 @@ type Config struct {
 			Zone   string `json:"zone" yaml:"zone" toml:"zone"`       // 服务所在区域
 		} `json:"locality" yaml:"locality" toml:"locality"`
 		Check struct {
+			Server struct {
+				Address   string `json:"address" yaml:"address" toml:"address"` // consul服务端地址
+				Port      int    `json:"port" yaml:"port" toml:"port"`          // consul服务端端口
+				Token     string `json:"token" yaml:"token" toml:"token"`       // consul服务端token
+				UseTLS    bool   `json:"use_tls" yaml:"use_tls" toml:"use_tls"` // 是否使用TLS
+				TLSConfig struct {
+					Address            string `json:"address" yaml:"address" toml:"address"`                                        // 证书地址
+					Port               int    `json:"port" yaml:"port" toml:"port"`                                                 // 证书端口
+					CAFile             string `json:"ca_file" yaml:"ca_file" toml:"ca_file"`                                        // 证书文件
+					CertFile           string `json:"cert_file" yaml:"cert_file" toml:"cert_file"`                                  // 证书文件
+					KeyFile            string `json:"key_file" yaml:"key_file" toml:"key_file"`                                     // 证书文件
+					InsecureSkipVerify bool   `json:"insecure_skip_verify" yaml:"insecure_skip_verify" toml:"insecure_skip_verify"` // 是否忽略证书验证
+				} `json:"tls_config" yaml:"tls_config" toml:"tls_config"`
+			} `json:"server" yaml:"server" toml:"server"`
 			Type                           string `json:"type" yaml:"type" toml:"type"`                                                                                        // 健康检查类型
 			CheckID                        string `json:"check_id" yaml:"check_id" toml:"check_id"`                                                                            // 健康检查ID
 			Name                           string `json:"name" yaml:"name" toml:"name"`                                                                                        // 健康检查名称

@@ -40,10 +40,19 @@ func NewConsulClient(server *ServerConfig) (*ConsulClient, error) {
 		return nil, fmt.Errorf("create consul client failed: %v", err)
 	}
 
-	return &ConsulClient{
+	// 测试连接, 获取所有服务
+	s, _, err := client.Catalog().Services(nil)
+	if err != nil {
+		return nil, fmt.Errorf("test consul connection failed: %v", err)
+	}
+	log.Printf("consul services: %v", s)
+
+	Client = &ConsulClient{
 		client: client,
 		stop:   make(chan struct{}),
-	}, nil
+	}
+
+	return Client, nil
 }
 
 // RegisterService 注册服务，使用配置文件
@@ -157,4 +166,31 @@ func (c *ConsulClient) Close() error {
 	close(c.stop)
 	// 可以添加其他清理逻辑
 	return nil
+}
+
+// 获取consul的leader
+func (c *ConsulClient) GetLeader() (string, error) {
+	leader, err := c.client.Status().Leader()
+	if err != nil {
+		return "", err
+	}
+	return leader, nil
+}
+
+// 获取consul所有节点
+func (c *ConsulClient) GetNodes() ([]*api.Node, error) {
+	nodes, _, err := c.client.Catalog().Nodes(nil)
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
+// 获取consul所有服务
+func (c *ConsulClient) GetServices() (map[string][]string, error) {
+	services, _, err := c.client.Catalog().Services(nil)
+	if err != nil {
+		return nil, err
+	}
+	return services, nil
 }

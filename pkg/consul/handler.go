@@ -121,8 +121,6 @@ func Init(server *ServerConfig, service *ServiceConfig, watcher ConfigWatcher, u
 		close(client.stop)
 	}
 
-	Client = client
-
 	return client, cleanup, nil
 }
 

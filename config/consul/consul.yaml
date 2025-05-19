@@ -1,4 +1,16 @@
 consul:
+  server:
+    address: "127.0.0.1" # consul服务端地址
+    port: 8500 # consul服务端端口
+    token: "your-consul-token" # consul服务端token
+    use_tls: false # 是否使用TLS
+    tls_config:
+      address: "127.0.0.1" # consul服务端地址
+      port: 8500 # consul服务端端口
+      ca_file: "ca.crt" # 证书文件
+      cert_file: "cert.crt" # 证书文件
+      key_file: "key.crt" # 证书文件
+      insecure_skip_verify: false # 是否忽略证书验证
   kind: "taurus-api-gateway"  # 服务的类型: connect-proxy, mesh-gateway, terminating-gateway, ingress-gateway, api-gateway
   id: "" # 服务的ID, 如果不提供, 则自动生成， 唯一
   name: "taurus-api-gateway" # 服务名称
