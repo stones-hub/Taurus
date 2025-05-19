@@ -15,6 +15,7 @@ type Config struct {
 	TemplatesEnable bool `json:"templates_enable" yaml:"templates_enable" toml:"templates_enable"` // 是否启用模板
 	WebsocketEnable bool `json:"websocket_enable" yaml:"websocket_enable" toml:"websocket_enable"` // 是否启用websocket
 	MCPEnable       bool `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
+	ConsulEnable    bool `json:"consul_enable" yaml:"consul_enable" toml:"consul_enable"`          // 是否启用consul
 
 	MCP struct {
 		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式，可选值：sse, streamable_http, stdio
@@ -81,6 +82,65 @@ type Config struct {
 		WriteTimeout int      `json:"write_timeout" yaml:"write_timeout" toml:"write_timeout"`
 		MaxRetries   int      `json:"max_retries" yaml:"max_retries" toml:"max_retries"`
 	} `json:"redis" yaml:"redis" toml:"redis"`
+
+	Consul struct {
+		Kind      string   `json:"kind" yaml:"kind" toml:"kind"`                // 服务类型
+		ID        string   `json:"id" yaml:"id" toml:"id"`                      // 服务ID
+		Name      string   `json:"name" yaml:"name" toml:"name"`                // 服务名称
+		Tags      []string `json:"tags" yaml:"tags" toml:"tags"`                // 服务标签
+		Port      int      `json:"port" yaml:"port" toml:"port"`                // 服务端口
+		Address   string   `json:"address" yaml:"address" toml:"address"`       // 服务地址
+		Namespace string   `json:"namespace" yaml:"namespace" toml:"namespace"` // 服务命名空间
+		Locality  struct {
+			Region string `json:"region" yaml:"region" toml:"region"` // 服务所在区域
+			Zone   string `json:"zone" yaml:"zone" toml:"zone"`       // 服务所在区域
+		} `json:"locality" yaml:"locality" toml:"locality"`
+		Check struct {
+			Type                           string `json:"type" yaml:"type" toml:"type"`                                                                                        // 健康检查类型
+			CheckID                        string `json:"check_id" yaml:"check_id" toml:"check_id"`                                                                            // 健康检查ID
+			Name                           string `json:"name" yaml:"name" toml:"name"`                                                                                        // 健康检查名称
+			Notes                          string `json:"notes" yaml:"notes" toml:"notes"`                                                                                     // 健康检查备注
+			Status                         string `json:"status" yaml:"status" toml:"status"`                                                                                  // 健康检查状态
+			SuccessBeforePassing           int    `json:"success_before_passing" yaml:"success_before_passing" toml:"success_before_passing"`                                  // 连续成功次数
+			FailuresBeforeWarning          int    `json:"failures_before_warning" yaml:"failures_before_warning" toml:"failures_before_warning"`                               // 连续失败次数
+			FailuresBeforeCritical         int    `json:"failures_before_critical" yaml:"failures_before_critical" toml:"failures_before_critical"`                            // 连续失败次数
+			DeregisterCriticalServiceAfter string `json:"deregister_critical_service_after" yaml:"deregister_critical_service_after" toml:"deregister_critical_service_after"` // 连续失败次数
+			CheckTTL                       struct {
+				TTL string `json:"ttl" yaml:"ttl" toml:"ttl"` // 健康检查TTL
+			} `json:"check_ttl" yaml:"check_ttl" toml:"check_ttl"` // 健康检查TTL
+			CheckShell struct {
+				Shell             string   `json:"shell" yaml:"shell" toml:"shell"`                                           // 健康检查shell
+				Args              []string `json:"args" yaml:"args" toml:"args"`                                              // 健康检查args
+				DockerContainerID string   `json:"docker_container_id" yaml:"docker_container_id" toml:"docker_container_id"` // 健康检查docker容器ID
+				Interval          string   `json:"interval" yaml:"interval" toml:"interval"`                                  // 健康检查间隔
+				Timeout           string   `json:"timeout" yaml:"timeout" toml:"timeout"`                                     // 健康检查超时
+			} `json:"check_shell" yaml:"check_shell" toml:"check_shell"` // 健康检查shell
+			CheckHTTP struct {
+				HTTP     string            `json:"http" yaml:"http" toml:"http"`             // 健康检查http
+				Method   string            `json:"method" yaml:"method" toml:"method"`       // 健康检查method
+				Header   map[string]string `json:"header" yaml:"header" toml:"header"`       // 健康检查header
+				Body     string            `json:"body" yaml:"body" toml:"body"`             // 健康检查body
+				Interval string            `json:"interval" yaml:"interval" toml:"interval"` // 健康检查间隔
+				Timeout  string            `json:"timeout" yaml:"timeout" toml:"timeout"`    // 健康检查超时
+			} `json:"check_http" yaml:"check_http" toml:"check_http"` // 健康检查http
+			CheckTCP struct {
+				TCP           string `json:"tcp" yaml:"tcp" toml:"tcp"`                                     // 健康检查tcp
+				TCPUseTLS     bool   `json:"tcp_use_tls" yaml:"tcp_use_tls" toml:"tcp_use_tls"`             // 健康检查是否使用TLS
+				TLSServerName string `json:"tls_server_name" yaml:"tls_server_name" toml:"tls_server_name"` // 健康检查TLS服务器名称
+				TLSSkipVerify bool   `json:"tls_skip_verify" yaml:"tls_skip_verify" toml:"tls_skip_verify"` // 健康检查是否跳过TLS证书验证
+				Interval      string `json:"interval" yaml:"interval" toml:"interval"`                      // 健康检查间隔
+				Timeout       string `json:"timeout" yaml:"timeout" toml:"timeout"`                         // 健康检查超时
+			} `json:"check_tcp" yaml:"check_tcp" toml:"check_tcp"` // 健康检查tcp
+			CheckGRPC struct {
+				GRPC          string `json:"grpc" yaml:"grpc" toml:"grpc"`                                  // 健康检查grpc
+				GRPCUseTLS    bool   `json:"grpc_use_tls" yaml:"grpc_use_tls" toml:"grpc_use_tls"`          // 健康检查是否使用TLS
+				TLSServerName string `json:"tls_server_name" yaml:"tls_server_name" toml:"tls_server_name"` // 健康检查TLS服务器名称
+				TLSSkipVerify bool   `json:"tls_skip_verify" yaml:"tls_skip_verify" toml:"tls_skip_verify"` // 健康检查是否跳过TLS证书验证
+				Interval      string `json:"interval" yaml:"interval" toml:"interval"`                      // 健康检查间隔
+				Timeout       string `json:"timeout" yaml:"timeout" toml:"timeout"`                         // 健康检查超时
+			} `json:"check_grpc" yaml:"check_grpc" toml:"check_grpc"` // 健康检查grpc
+		} `json:"check" yaml:"check" toml:"check"`
+	} `json:"consul" yaml:"consul" toml:"consul"`
 }
 
 // global configuration instance
