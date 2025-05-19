@@ -3,27 +3,14 @@ package consul
 import (
 	"fmt"
 	"log"
+	"math/rand"
+	"time"
 
 	"github.com/hashicorp/consul/api"
 )
 
-// ConfigChangeHandler 配置变更处理接口
-type ConfigChangeHandler interface {
-	Handle(key string, value []byte) error
-}
-
-// TTLUpdater TTL更新处理接口
-type TTLUpdater interface {
-	Update(client *ConsulClient, checkID string) error
-}
-
-// ServiceCaller 服务调用接口
-type ServiceCaller interface {
-	CallService(serviceName string, args interface{}) (interface{}, error)
-}
-
 // ConsulServerConfig Consul服务端配置
-type ConsulServerConfig struct {
+type ServerConfig struct {
 	Address   string
 	Port      int
 	Token     string // 用于认证的Token
@@ -34,15 +21,18 @@ type ConsulServerConfig struct {
 // ConsulClient Consul客户端
 type ConsulClient struct {
 	client *api.Client
+	stop   chan struct{}
 }
 
+var Client *ConsulClient
+
 // NewConsulClient 创建新的Consul客户端
-func NewConsulClient(consulServerConfig *ConsulServerConfig) (*ConsulClient, error) {
+func NewConsulClient(server *ServerConfig) (*ConsulClient, error) {
 	config := api.DefaultConfig()
-	config.Address = fmt.Sprintf("%s:%d", consulServerConfig.Address, consulServerConfig.Port)
-	config.Token = consulServerConfig.Token
-	if consulServerConfig.UseTLS {
-		config.TLSConfig = *consulServerConfig.TLSConfig
+	config.Address = fmt.Sprintf("%s:%d", server.Address, server.Port)
+	config.Token = server.Token
+	if server.UseTLS {
+		config.TLSConfig = *server.TLSConfig
 	}
 
 	client, err := api.NewClient(config)
@@ -52,12 +42,13 @@ func NewConsulClient(consulServerConfig *ConsulServerConfig) (*ConsulClient, err
 
 	return &ConsulClient{
 		client: client,
+		stop:   make(chan struct{}),
 	}, nil
 }
 
 // RegisterService 注册服务，使用配置文件
 // 根据配置文件中的健康检查类型动态创建健康检查
-func (c *ConsulClient) RegisterService(registration *api.AgentServiceRegistration) error {
+func (c *ConsulClient) Register(registration *api.AgentServiceRegistration) error {
 	if err := c.client.Agent().ServiceRegister(registration); err != nil {
 		log.Printf("Failed to register service: %v", err)
 		return err
@@ -66,7 +57,7 @@ func (c *ConsulClient) RegisterService(registration *api.AgentServiceRegistratio
 }
 
 // deregister service 注销服务
-func (c *ConsulClient) DeregisterService(serviceID string) error {
+func (c *ConsulClient) Deregister(serviceID string) error {
 	if err := c.client.Agent().ServiceDeregister(serviceID); err != nil {
 		log.Printf("Failed to deregister service: %v", err)
 		return err
@@ -75,18 +66,27 @@ func (c *ConsulClient) DeregisterService(serviceID string) error {
 }
 
 // discover service 发现服务
-func (c *ConsulClient) DiscoverService(serviceName string) ([]*api.ServiceEntry, error) {
+func (c *ConsulClient) Discover(serviceName string) (*api.ServiceEntry, error) {
 	services, _, err := c.client.Health().Service(serviceName, "", true, nil)
 	if err != nil {
 		log.Printf("Failed to discover service: %v", err)
 		return nil, err
 	}
-	return services, nil
+
+	if len(services) == 0 {
+		return nil, fmt.Errorf("未找到服务: %s", serviceName)
+	}
+	// 随机选择一个服务
+	service := services[rand.Intn(len(services))]
+	return service, nil
+
 }
 
 // 向Consul写入KV配置
-func (c *ConsulClient) Put(key string, config []byte) (*api.WriteMeta, error) {
-	writeMeta, err := c.client.KV().Put(&api.KVPair{Key: key, Value: config}, nil)
+func (c *ConsulClient) Put(serviceName string, key string, config []byte) (*api.WriteMeta, error) {
+	// 构建完整的key，格式：services/{serviceName}/config/{key}
+	fullKey := fmt.Sprintf("services/%s/config/%s", serviceName, key)
+	writeMeta, err := c.client.KV().Put(&api.KVPair{Key: fullKey, Value: config}, nil)
 	if err != nil {
 		log.Printf("Failed to put KV: %v", err)
 		return nil, err
@@ -95,8 +95,10 @@ func (c *ConsulClient) Put(key string, config []byte) (*api.WriteMeta, error) {
 }
 
 // 从Consul获取KV配置
-func (c *ConsulClient) Get(key string) ([]byte, error) {
-	pair, _, err := c.client.KV().Get(key, nil)
+func (c *ConsulClient) Get(serviceName string, key string) ([]byte, error) {
+	// 构建完整的key，格式：services/{serviceName}/config/{key}
+	fullKey := fmt.Sprintf("services/%s/config/%s", serviceName, key)
+	pair, _, err := c.client.KV().Get(fullKey, nil)
 	if err != nil {
 		log.Printf("Failed to get KV: %v", err)
 		return nil, err
@@ -105,4 +107,54 @@ func (c *ConsulClient) Get(key string) ([]byte, error) {
 		return pair.Value, nil
 	}
 	return nil, nil
+}
+
+// 列出服务的所有配置
+func (c *ConsulClient) List(serviceName string, waitIndex uint64) (api.KVPairs, *api.QueryMeta, error) {
+	// 构建前缀，格式：services/{serviceName}/config/
+	prefix := fmt.Sprintf("services/%s/config/", serviceName)
+	opts := &api.QueryOptions{ // 设置opts，为了阻塞， 会等到配置发生变化才会返回
+		WaitIndex: waitIndex,
+		WaitTime:  time.Minute * 5, // 设置 5 分钟超时, 返回
+	}
+	pairs, meta, err := c.client.KV().List(prefix, opts)
+	if err != nil {
+		log.Printf("Failed to list KV: %v", err)
+		return nil, nil, err
+	}
+	return pairs, meta, nil
+}
+
+// 删除服务的配置
+func (c *ConsulClient) Delete(serviceName string, key string) error {
+	// 构建完整的key，格式：services/{serviceName}/config/{key}
+	fullKey := fmt.Sprintf("services/%s/config/%s", serviceName, key)
+	_, err := c.client.KV().Delete(fullKey, nil)
+	if err != nil {
+		log.Printf("Failed to delete KV: %v", err)
+		return err
+	}
+	return nil
+}
+
+// UpdateTTL 更新TTL健康检查状态
+// status : passing, warning, critical
+func (c *ConsulClient) UpdateTTL(checkID, status, note string) error {
+	switch status {
+	case "passing":
+		return c.client.Agent().PassTTL(checkID, note)
+	case "warning":
+		return c.client.Agent().WarnTTL(checkID, note)
+	case "critical":
+		return c.client.Agent().FailTTL(checkID, note)
+	default:
+		return fmt.Errorf("未知的TTL状态: %s", status)
+	}
+}
+
+// Close 方法
+func (c *ConsulClient) Close() error {
+	close(c.stop)
+	// 可以添加其他清理逻辑
+	return nil
 }
