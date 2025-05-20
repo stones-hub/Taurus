@@ -87,8 +87,14 @@ type MiddlewareFunc func(http.Handler) http.Handler
 
 // ChainMiddleware applies a list of middleware functions to an http.Handler
 func ChainMiddleware(handler http.Handler, middlewares ...MiddlewareFunc) http.Handler {
-	for _, middleware := range middlewares {
-		handler = middleware(handler)
+	// 反转一下，调用顺序不对
+	/*
+		for _, middleware := range middlewares {
+			handler = middleware(handler)
+		}
+	*/
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		handler = middlewares[i](handler)
 	}
 	return handler
 }
