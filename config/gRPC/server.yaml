@@ -1,5 +1,5 @@
 # configs/grpc.yaml
-server:
+grpc:
   address: ":50051"
   max_conns: 10000
   keepalive:

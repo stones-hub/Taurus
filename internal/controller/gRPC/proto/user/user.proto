@@ -1,9 +1,9 @@
 
-// internal/controller/gRPC/user/user.proto
+// internal/controller/gRPC/proto/user/user.proto
 syntax = "proto3";
 
 package user;
-option go_package = "Taurus/internal/controller/gRPC/user";
+option go_package = "Taurus/internal/controller/gRPC/proto/user";
 
 // 用户服务定义
 service UserService {

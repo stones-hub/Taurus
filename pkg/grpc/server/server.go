@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 
 	"google.golang.org/grpc"
@@ -61,6 +62,7 @@ func NewServer(opts ...ServerOption) (*Server, func()) {
 
 // Start 启动服务器
 func (s *Server) Start() error {
+	log.Println("Starting gRPC server on", s.opts.Address)
 	lis, err := net.Listen("tcp", s.opts.Address)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)

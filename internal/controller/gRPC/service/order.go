@@ -1,9 +1,10 @@
 package service
 
 import (
-	pb "Taurus/internal/controller/gRPC/order"
+	pb "Taurus/internal/controller/gRPC/proto/order"
 	"Taurus/pkg/grpc/server"
 	"context"
+	"log"
 
 	"google.golang.org/grpc"
 )
@@ -13,6 +14,7 @@ type OrderService struct {
 }
 
 func NewOrderService() *OrderService {
+	log.Printf("创建 OrderService 实例")
 	return &OrderService{}
 }
 
@@ -66,7 +68,9 @@ func (s *OrderService) GetOrderDetail(ctx context.Context, req *pb.GetOrderDetai
 	}, nil
 }
 
-func (s *OrderService) Register(server *grpc.Server) {
+// RegisterService 实现服务注册接口
+func (s *OrderService) RegisterService(server *grpc.Server) {
+	log.Printf("注册 OrderService 到 gRPC 服务器")
 	pb.RegisterOrderServiceServer(server, s)
 }
 

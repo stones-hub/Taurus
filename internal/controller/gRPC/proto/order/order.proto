@@ -1,8 +1,8 @@
-// internal/controller/gRPC/order/order.proto
+// internal/controller/gRPC/proto/order/order.proto
 syntax = "proto3";
 
 package order;
-option go_package = "Taurus/internal/controller/gRPC/order";
+option go_package = "Taurus/internal/controller/gRPC/proto/order";
 
 // 订单服务定义
 service OrderService {

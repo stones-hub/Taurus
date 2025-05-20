@@ -25,6 +25,7 @@ import (
 	_ "Taurus/internal/app/core/mcps/resources" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/app/core/mcps/tools"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/app/core/ws_handler"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/controller/gRPC/service" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 
 	"google.golang.org/grpc/keepalive"
 	"gorm.io/gorm/logger"
@@ -227,19 +228,19 @@ func InitializegRPC() {
 
 		if config.Core.GRPC.Keepalive.Enabled {
 			opts = append(opts, server.WithKeepAlive(&keepalive.ServerParameters{
-				Time:                  time.Duration(config.Core.GRPC.Keepalive.Time),
-				Timeout:               time.Duration(config.Core.GRPC.Keepalive.Timeout),
-				MaxConnectionIdle:     time.Duration(config.Core.GRPC.Keepalive.MaxConnectionIdle),
-				MaxConnectionAge:      time.Duration(config.Core.GRPC.Keepalive.MaxConnectionAge),
-				MaxConnectionAgeGrace: time.Duration(config.Core.GRPC.Keepalive.MaxConnectionAgeGrace),
+				Time:                  time.Duration(config.Core.GRPC.Keepalive.Time) * time.Hour,
+				Timeout:               time.Duration(config.Core.GRPC.Keepalive.Timeout) * time.Second,
+				MaxConnectionIdle:     time.Duration(config.Core.GRPC.Keepalive.MaxConnectionIdle) * time.Minute,
+				MaxConnectionAge:      time.Duration(config.Core.GRPC.Keepalive.MaxConnectionAge) * time.Minute,
+				MaxConnectionAgeGrace: time.Duration(config.Core.GRPC.Keepalive.MaxConnectionAgeGrace) * time.Second,
 			}))
 		}
 
 		s, _ := server.NewServer(opts...)
 
 		// 遍历所有注册的服务注册
-		for _, service := range server.GetServiceRegistry() {
-			service.Register(s.Server())
+		for _, service := range server.GetRegisteredServices() {
+			service.RegisterService(s.Server())
 		}
 
 		go func() {

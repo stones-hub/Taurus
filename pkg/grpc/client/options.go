@@ -41,6 +41,19 @@ func DefaultClientOptions() *ClientOptions {
 	}
 }
 
+// WithKeepAlive 设置KeepAlive配置
+func WithKeepAlive(config *keepalive.ClientParameters) ClientOption {
+	return func(o *ClientOptions) {
+		o.KeepAlive = config
+	}
+}
+
+func WithInsecure() ClientOption {
+	return func(o *ClientOptions) {
+		o.TLSConfig = nil // 设置为 nil 表示使用非安全连接
+	}
+}
+
 // WithAddress 设置服务器地址
 func WithAddress(addr string) ClientOption {
 	return func(o *ClientOptions) {
