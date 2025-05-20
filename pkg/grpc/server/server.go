@@ -15,8 +15,10 @@ type Server struct {
 	opts   *ServerOptions // 服务器配置
 }
 
+var GrpcServer *Server
+
 // NewServer 创建新的gRPC服务器
-func NewServer(opts ...ServerOption) *Server {
+func NewServer(opts ...ServerOption) (*Server, func()) {
 	options := DefaultServerOptions()
 	for _, opt := range opts {
 		opt(options)
@@ -48,9 +50,12 @@ func NewServer(opts ...ServerOption) *Server {
 		serverOpts = append(serverOpts, grpc.StreamInterceptor(chainStreamServer(options.StreamInterceptors...)))
 	}
 	server := grpc.NewServer(serverOpts...)
-	return &Server{
+	GrpcServer = &Server{
 		server: server,
 		opts:   options,
+	}
+	return GrpcServer, func() {
+		GrpcServer.Stop()
 	}
 }
 

@@ -16,6 +16,7 @@ type Config struct {
 	WebsocketEnable bool `json:"websocket_enable" yaml:"websocket_enable" toml:"websocket_enable"` // 是否启用websocket
 	MCPEnable       bool `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
 	ConsulEnable    bool `json:"consul_enable" yaml:"consul_enable" toml:"consul_enable"`          // 是否启用consul
+	GRPCEnable      bool `json:"grpc_enable" yaml:"grpc_enable" toml:"grpc_enable"`                // 是否启用grpc
 
 	MCP struct {
 		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式，可选值：sse, streamable_http, stdio
@@ -155,6 +156,24 @@ type Config struct {
 			} `json:"check_grpc" yaml:"check_grpc" toml:"check_grpc"` // 健康检查grpc
 		} `json:"check" yaml:"check" toml:"check"`
 	} `json:"consul" yaml:"consul" toml:"consul"`
+
+	GRPC struct {
+		Address  string `json:"address" yaml:"address" toml:"address"`       // grpc地址
+		MaxConns int    `json:"max_conns" yaml:"max_conns" toml:"max_conns"` // grpc最大连接数
+		TLS      struct {
+			Enabled bool   `json:"enabled" yaml:"enabled" toml:"enabled"` // 是否启用TLS
+			Cert    string `json:"cert" yaml:"cert" toml:"cert"`          // 证书文件
+			Key     string `json:"key" yaml:"key" toml:"key"`             // 证书密钥文件
+		} `json:"tls" yaml:"tls" toml:"tls"`
+		Keepalive struct {
+			Enabled               bool `json:"enabled" yaml:"enabled" toml:"enabled"`                                                    // 是否启用keepalive
+			MaxConnectionIdle     int  `json:"max_connection_idle" yaml:"max_connection_idle" toml:"max_connection_idle"`                // 空闲连接最长保持时间 单位: 分钟
+			MaxConnectionAge      int  `json:"max_connection_age" yaml:"max_connection_age" toml:"max_connection_age"`                   // 连接在接收到关闭信号，还能保持的时间 单位: 分钟
+			MaxConnectionAgeGrace int  `json:"max_connection_age_grace" yaml:"max_connection_age_grace" toml:"max_connection_age_grace"` // MaxConnectionAgeGrace是MaxConnectionAge之后的一个附加周期, 过了这个周期强制关闭 单位: 秒
+			Time                  int  `json:"time" yaml:"time" toml:"time"`                                                             // 健康检查间隔 单位: 小时
+			Timeout               int  `json:"timeout" yaml:"timeout" toml:"timeout"`                                                    // 健康检查超时 单位: 秒
+		} `json:"keepalive" yaml:"keepalive" toml:"keepalive"`
+	} `json:"grpc" yaml:"grpc" toml:"grpc"`
 }
 
 // global configuration instance

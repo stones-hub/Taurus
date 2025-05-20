@@ -39,6 +39,7 @@ func initialize(configPath string, env string) {
 	InitializeInjector()
 	InitializeWebsocket()
 	InitializeMCP()
+	InitializegRPC()
 }
 
 // loadConfig reads and parses configuration files from a directory or a single file

@@ -5,6 +5,7 @@ import (
 	"Taurus/internal"
 	"Taurus/pkg/cron"
 	"Taurus/pkg/db"
+	"Taurus/pkg/grpc/server"
 	"Taurus/pkg/logx"
 	"Taurus/pkg/mcp"
 	"Taurus/pkg/middleware"
@@ -12,6 +13,7 @@ import (
 	"Taurus/pkg/router"
 	"Taurus/pkg/templates"
 	"Taurus/pkg/wsocket"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,6 +26,7 @@ import (
 	_ "Taurus/internal/app/core/mcps/tools"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/app/core/ws_handler"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 
+	"google.golang.org/grpc/keepalive"
 	"gorm.io/gorm/logger"
 )
 
@@ -200,6 +203,47 @@ func InitializeInjector() {
 	}
 
 	log.Println("\033[1;32m🔗 -> Injector initialized successfully\033[0m")
+}
+
+// InitializegRPC initialize grpc
+func InitializegRPC() {
+	// initialize grpc
+	if config.Core.GRPCEnable {
+		opts := []server.ServerOption{
+			server.WithAddress(config.Core.GRPC.Address),
+			server.WithMaxConns(config.Core.GRPC.MaxConns),
+		}
+
+		if config.Core.GRPC.TLS.Enabled {
+			cert, err := tls.LoadX509KeyPair(config.Core.GRPC.TLS.Cert, config.Core.GRPC.TLS.Key)
+			if err != nil {
+				log.Fatalf("Failed to load TLS certificate: %v", err)
+			}
+			opts = append(opts, server.WithTLS(&tls.Config{
+				Certificates: []tls.Certificate{cert},
+				MinVersion:   tls.VersionTLS12,
+			}))
+		}
+
+		if config.Core.GRPC.Keepalive.Enabled {
+			opts = append(opts, server.WithKeepAlive(&keepalive.ServerParameters{
+				Time:                  time.Duration(config.Core.GRPC.Keepalive.Time),
+				Timeout:               time.Duration(config.Core.GRPC.Keepalive.Timeout),
+				MaxConnectionIdle:     time.Duration(config.Core.GRPC.Keepalive.MaxConnectionIdle),
+				MaxConnectionAge:      time.Duration(config.Core.GRPC.Keepalive.MaxConnectionAge),
+				MaxConnectionAgeGrace: time.Duration(config.Core.GRPC.Keepalive.MaxConnectionAgeGrace),
+			}))
+		}
+
+		s, _ := server.NewServer(opts...)
+		go func() {
+			err := s.Start()
+			if err != nil {
+				log.Fatalf("Failed to start gRPC server: %v", err)
+			}
+		}()
+		log.Println("\033[1;32m🔗 -> gRPC initialized successfully\033[0m")
+	}
 }
 
 // ParseLogLevel converts a string log level to gorm's logger.LogLevel

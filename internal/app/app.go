@@ -2,6 +2,7 @@ package app
 
 import (
 	"Taurus/config"
+	"Taurus/pkg/grpc/server"
 	"Taurus/pkg/mcp"
 	"Taurus/pkg/router"
 	"context"
@@ -81,6 +82,11 @@ func Start(host string, port int) {
 				log.Printf("%sMCP server shutdown failed: %v %s\n", Red, err, Reset)
 			}
 		})
+	}
+
+	if server.GrpcServer != nil {
+		server.GrpcServer.Stop()
+		log.Printf("%sGRPC server stopped successfully. %s\n", Green, Reset)
 	}
 
 	// Attempt graceful shutdown
