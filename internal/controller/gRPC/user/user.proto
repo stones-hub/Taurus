@@ -1,0 +1,25 @@
+
+// internal/controller/gRPC/user/user.proto
+syntax = "proto3";
+
+package user;
+option go_package = "Taurus/internal/controller/gRPC/user";
+
+// 用户服务定义
+service UserService {
+    // 获取用户信息
+    rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse) {}
+}
+
+// 请求消息
+message GetUserInfoRequest {
+    int64 user_id = 1;
+}
+
+// 响应消息
+message GetUserInfoResponse {
+    int64 user_id = 1;
+    string username = 2;
+    string email = 3;
+    int32 age = 4;
+}

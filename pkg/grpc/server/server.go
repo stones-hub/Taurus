@@ -15,7 +15,7 @@ type Server struct {
 	opts   *ServerOptions // 服务器配置
 }
 
-var GrpcServer *Server
+var GlobalgRPCServer *Server
 
 // NewServer 创建新的gRPC服务器
 func NewServer(opts ...ServerOption) (*Server, func()) {
@@ -50,12 +50,12 @@ func NewServer(opts ...ServerOption) (*Server, func()) {
 		serverOpts = append(serverOpts, grpc.StreamInterceptor(chainStreamServer(options.StreamInterceptors...)))
 	}
 	server := grpc.NewServer(serverOpts...)
-	GrpcServer = &Server{
+	GlobalgRPCServer = &Server{
 		server: server,
 		opts:   options,
 	}
-	return GrpcServer, func() {
-		GrpcServer.Stop()
+	return GlobalgRPCServer, func() {
+		GlobalgRPCServer.Stop()
 	}
 }
 
@@ -121,3 +121,13 @@ func chainStreamServerWithMiddleware(mids []StreamMiddleware, interceptors []grp
 		return chain(srv, ss)
 	}
 }
+
+/*
+# 1. 首先确保安装了必要的工具
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+# 2. 生成gRPC代码
+protoc --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+    internal/controller/gRPC/proto/user/user.proto
+*/

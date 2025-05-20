@@ -45,8 +45,9 @@ func LoggingMiddleware() UnaryMiddleware {
 	}
 }
 
-// 中间件链处理
-func chainUnaryMiddleware(middlewares ...UnaryMiddleware) UnaryMiddleware {
+// Notice: This function is EXPERIMENTAL and may be changed or removed in the future.
+// middlewares chain
+func ChainUnaryMiddleware(middlewares ...UnaryMiddleware) UnaryMiddleware {
 	return func(next grpc.UnaryHandler) grpc.UnaryHandler {
 		for i := len(middlewares) - 1; i >= 0; i-- {
 			next = middlewares[i](next)
@@ -55,8 +56,9 @@ func chainUnaryMiddleware(middlewares ...UnaryMiddleware) UnaryMiddleware {
 	}
 }
 
-// 流中间件链处理
-func chainStreamMiddleware(middlewares ...StreamMiddleware) StreamMiddleware {
+// Notice: This function is EXPERIMENTAL and may be changed or removed in the future.
+// middlewares chain
+func ChainStreamMiddleware(middlewares ...StreamMiddleware) StreamMiddleware {
 	return func(next grpc.StreamHandler) grpc.StreamHandler {
 		for i := len(middlewares) - 1; i >= 0; i-- {
 			next = middlewares[i](next)

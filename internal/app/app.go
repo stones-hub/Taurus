@@ -84,8 +84,8 @@ func Start(host string, port int) {
 		})
 	}
 
-	if server.GrpcServer != nil {
-		server.GrpcServer.Stop()
+	if server.GlobalgRPCServer != nil {
+		server.GlobalgRPCServer.Stop()
 		log.Printf("%sGRPC server stopped successfully. %s\n", Green, Reset)
 	}
 

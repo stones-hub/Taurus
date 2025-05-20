@@ -1,0 +1,72 @@
+// internal/controller/gRPC/order/order.proto
+syntax = "proto3";
+
+package order;
+option go_package = "Taurus/internal/controller/gRPC/order";
+
+// 订单服务定义
+service OrderService {
+    // 根据日期区间和订单ID查询订单
+    rpc QueryOrders(QueryOrdersRequest) returns (QueryOrdersResponse) {}
+    
+    // 获取单个订单详情
+    rpc GetOrderDetail(GetOrderDetailRequest) returns (GetOrderDetailResponse) {}
+}
+
+// 请求消息
+message QueryOrdersRequest {
+    string start_date = 1;  // 开始日期，格式：YYYY-MM-DD
+    string end_date = 2;    // 结束日期，格式：YYYY-MM-DD
+    string order_id = 3;    // 订单ID，可选
+    int32 page = 4;         // 页码，从1开始
+    int32 page_size = 5;    // 每页数量
+}
+
+// 获取单个订单详情请求
+message GetOrderDetailRequest {
+    string order_id = 1;    // 订单ID
+}
+
+// 获取单个订单详情响应
+message GetOrderDetailResponse {
+    Order order = 1;        // 订单详情
+    string error = 2;       // 错误信息，如果为空则表示成功
+}
+
+// 响应消息
+message QueryOrdersResponse {
+    repeated OrderDetail orders = 1;  // 订单列表
+    int32 total = 2;           // 总记录数
+    int32 page = 3;            // 当前页码
+    int32 page_size = 4;       // 每页数量
+}
+
+// 订单信息
+message Order {
+    string order_id = 1;       // 订单ID
+    string user_id = 2;        // 用户ID
+    double amount = 3;         // 订单金额
+    string status = 4;         // 订单状态
+    string create_time = 5;    // 创建时间
+    string update_time = 6;    // 更新时间
+    repeated OrderItem items = 7; // 订单项
+}
+
+// 订单项
+message OrderItem {
+    string item_id = 1;        // 商品ID
+    string item_name = 2;      // 商品名称
+    int32 quantity = 3;        // 数量
+    double price = 4;          // 单价
+}
+
+// 订单详情
+message OrderDetail {
+    string order_id = 1;       // 订单ID
+    string user_id = 2;        // 用户ID
+    double amount = 3;         // 订单金额
+    string status = 4;         // 订单状态
+    string create_time = 5;    // 创建时间
+    string update_time = 6;    // 更新时间
+    repeated OrderItem items = 7; // 订单项, repeated定义数组
+}
