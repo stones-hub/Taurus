@@ -19,15 +19,18 @@ import (
 	"net/http"
 	"time"
 
-	_ "Taurus/internal/app/core/crons"          // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/app/core/log_formatter"  // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/app/core/mcps/prompts"   // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/app/core/mcps/resources" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/app/core/mcps/tools"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/app/core/ws_handler"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	_ "Taurus/internal/app/core/crons"         // 引入crons，注册crons包下的所有的定时任务
+	_ "Taurus/internal/app/core/log_formatter" // 引入log_formatter，注册log_formatter包下的所有的日志格式化器
+	_ "Taurus/internal/app/core/ws_handler"    // 引入ws_handler，注册ws_handler包下的所有的websocket处理器
 
-	_ "Taurus/internal/controller/gRPC/mid"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
-	_ "Taurus/internal/controller/gRPC/service" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+	// 引入mcps包下的所有的提示词、资源、工具
+	_ "Taurus/internal/app/core/mcps/prompts"   // 引入prompts，注册prompts包下的所有的提示词
+	_ "Taurus/internal/app/core/mcps/resources" // 引入resources，注册resources包下的所有的资源
+	_ "Taurus/internal/app/core/mcps/tools"     // 引入tools，注册tools包下的所有的工具
+
+	// 引入 gRPC 包下的所有的中间件、服务
+	_ "Taurus/internal/controller/gRPC/mid"     // 引入mid，注册mid包下的所有的中间件
+	_ "Taurus/internal/controller/gRPC/service" // 引入service，注册service包下的所有的服务
 
 	"google.golang.org/grpc/keepalive"
 	"gorm.io/gorm/logger"
