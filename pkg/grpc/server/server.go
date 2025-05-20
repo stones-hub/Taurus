@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -34,17 +35,19 @@ func NewServer(opts ...ServerOption) *Server {
 	}
 
 	// 添加一元拦截器
-	if len(options.UnaryInterceptors) > 0 || len(options.UnaryMiddlewares) > 0 {
-		serverOpts = append(serverOpts, grpc.UnaryInterceptor(chainUnaryServerWithMiddleware(options.UnaryMiddlewares, options.UnaryInterceptors...)))
+	if len(options.UnaryMiddlewares) > 0 {
+		serverOpts = append(serverOpts, grpc.UnaryInterceptor(chainUnaryServerWithMiddleware(options.UnaryMiddlewares, options.UnaryInterceptors)))
+	} else if len(options.UnaryInterceptors) > 0 {
+		serverOpts = append(serverOpts, grpc.UnaryInterceptor(chainUnaryServer(options.UnaryInterceptors...)))
 	}
 
 	// 添加流拦截器
-	if len(options.StreamInterceptors) > 0 || len(options.StreamMiddlewares) > 0 {
-		serverOpts = append(serverOpts, grpc.StreamInterceptor(chainStreamServerWithMiddleware(options.StreamMiddlewares, options.StreamInterceptors...)))
+	if len(options.StreamMiddlewares) > 0 {
+		serverOpts = append(serverOpts, grpc.StreamInterceptor(chainStreamServerWithMiddleware(options.StreamMiddlewares, options.StreamInterceptors)))
+	} else if len(options.StreamInterceptors) > 0 {
+		serverOpts = append(serverOpts, grpc.StreamInterceptor(chainStreamServer(options.StreamInterceptors...)))
 	}
-
 	server := grpc.NewServer(serverOpts...)
-
 	return &Server{
 		server: server,
 		opts:   options,
@@ -69,4 +72,47 @@ func (s *Server) Stop() {
 // Server 获取原始服务器实例
 func (s *Server) Server() *grpc.Server {
 	return s.server
+}
+
+// 同时处理中间件和拦截器
+func chainUnaryServerWithMiddleware(mids []UnaryMiddleware, interceptors []grpc.UnaryServerInterceptor) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+
+		midChain := handler
+
+		for i := len(mids) - 1; i >= 0; i-- {
+			midChain = mids[i](midChain)
+		}
+
+		chain := midChain
+
+		for i := len(interceptors) - 1; i >= 0; i-- {
+			chain = func(next grpc.UnaryHandler, interceptor grpc.UnaryServerInterceptor) grpc.UnaryHandler {
+				return func(ctx context.Context, req interface{}) (interface{}, error) {
+					return interceptor(ctx, req, info, next)
+				}
+			}(chain, interceptors[i])
+		}
+
+		return chain(ctx, req)
+	}
+}
+
+func chainStreamServerWithMiddleware(mids []StreamMiddleware, interceptors []grpc.StreamServerInterceptor) grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		midChain := handler
+		for i := len(mids) - 1; i >= 0; i-- {
+			midChain = mids[i](midChain)
+		}
+
+		chain := midChain
+		for i := len(interceptors) - 1; i >= 0; i-- {
+			chain = func(next grpc.StreamHandler, interceptor grpc.StreamServerInterceptor) grpc.StreamHandler {
+				return func(srv interface{}, ss grpc.ServerStream) error {
+					return interceptor(srv, ss, info, next)
+				}
+			}(chain, interceptors[i])
+		}
+		return chain(srv, ss)
+	}
 }
