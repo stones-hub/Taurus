@@ -236,6 +236,12 @@ func InitializegRPC() {
 		}
 
 		s, _ := server.NewServer(opts...)
+
+		// 遍历所有注册的服务注册
+		for _, service := range server.GetServiceRegistry() {
+			service.Register(s.Server())
+		}
+
 		go func() {
 			err := s.Start()
 			if err != nil {

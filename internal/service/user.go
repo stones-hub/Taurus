@@ -2,7 +2,10 @@ package service
 
 import (
 	pb "Taurus/internal/controller/gRPC/user"
+	"Taurus/pkg/grpc/server"
 	"context"
+
+	"google.golang.org/grpc"
 )
 
 type UserService struct {
@@ -22,4 +25,12 @@ func (s *UserService) GetUserInfo(ctx context.Context, req *pb.GetUserInfoReques
 		Email:    "test@example.com",
 		Age:      25,
 	}, nil
+}
+
+func (s *UserService) Register(server *grpc.Server) {
+	pb.RegisterUserServiceServer(server, s)
+}
+
+func init() {
+	server.RegisterService("user", NewUserService())
 }

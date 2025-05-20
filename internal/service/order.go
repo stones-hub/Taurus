@@ -2,7 +2,10 @@ package service
 
 import (
 	pb "Taurus/internal/controller/gRPC/order"
+	"Taurus/pkg/grpc/server"
 	"context"
+
+	"google.golang.org/grpc"
 )
 
 type OrderService struct {
@@ -61,4 +64,12 @@ func (s *OrderService) GetOrderDetail(ctx context.Context, req *pb.GetOrderDetai
 			},
 		},
 	}, nil
+}
+
+func (s *OrderService) Register(server *grpc.Server) {
+	pb.RegisterOrderServiceServer(server, s)
+}
+
+func init() {
+	server.RegisterService("order", NewOrderService())
 }
