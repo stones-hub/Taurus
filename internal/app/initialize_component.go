@@ -25,6 +25,8 @@ import (
 	_ "Taurus/internal/app/core/mcps/resources" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/app/core/mcps/tools"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/app/core/ws_handler"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
+
+	_ "Taurus/internal/controller/gRPC/mid"     // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 	_ "Taurus/internal/controller/gRPC/service" // 没有依赖的包， 包体内的init是不会被执行的的; 所以导入
 
 	"google.golang.org/grpc/keepalive"
@@ -215,6 +217,22 @@ func InitializegRPC() {
 			server.WithMaxConns(config.Core.GRPC.MaxConns),
 		}
 
+		for _, middleware := range server.GetServiceMiddleware() {
+			opts = append(opts, server.WithUnaryMiddleware(middleware))
+		}
+
+		for _, streamMiddleware := range server.GetServiceStreamMiddleware() {
+			opts = append(opts, server.WithStreamMiddleware(streamMiddleware))
+		}
+
+		for _, interceptor := range server.GetServiceInterceptor() {
+			opts = append(opts, server.WithUnaryInterceptor(interceptor))
+		}
+
+		for _, streamInterceptor := range server.GetServiceStreamInterceptor() {
+			opts = append(opts, server.WithStreamInterceptor(streamInterceptor))
+		}
+
 		if config.Core.GRPC.TLS.Enabled {
 			cert, err := tls.LoadX509KeyPair(config.Core.GRPC.TLS.Cert, config.Core.GRPC.TLS.Key)
 			if err != nil {
@@ -250,6 +268,15 @@ func InitializegRPC() {
 			}
 		}()
 		log.Println("\033[1;32m🔗 -> gRPC initialized successfully\033[0m")
+	}
+}
+
+// InitializeConsul initialize consul
+func InitializeConsul() {
+	if config.Core.ConsulEnable {
+		// TODO
+		// consul.Init(&config.ServerConfig{}, , nil, nil)
+		log.Println("\033[1;32m🔗 -> Consul initialized successfully\033[0m")
 	}
 }
 
