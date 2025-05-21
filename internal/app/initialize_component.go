@@ -194,11 +194,13 @@ func InitializeInjector() {
 	internal.Core, cleanup, err = internal.BuildInjector()
 	if err != nil {
 		log.Fatalf("Failed to build injector: %v", err)
+	} else {
+		log.Printf("%s🔗 -> Injector initialized successfully. %s\n", Green, Reset)
 	}
 
 	Cleanup = append(Cleanup, func() {
 		cleanup()
-		log.Println("\033[1;32m🔗 -> Injector initialized successfully\033[0m")
+		log.Printf("%s🔗 -> Clean up injector components successfully. %s\n", Green, Reset)
 
 		if cron.Core != nil {
 			cron.Core.Stop()
@@ -266,7 +268,10 @@ func InitializegRPC() {
 		if err != nil {
 			log.Fatalf("Failed to initialize gRPC server: %v", err)
 		}
-		Cleanup = append(Cleanup, cleanup)
+		Cleanup = append(Cleanup, func() {
+			cleanup()
+			log.Printf("%s🔗 -> Clean up gRPC components successfully. %s\n", Green, Reset)
+		})
 
 		// 遍历所有注册的服务注册
 		for _, service := range server.GetRegisteredServices() {
@@ -291,7 +296,10 @@ func InitializeConsul() {
 		if err != nil {
 			log.Fatalf("Failed to initialize consul: %v", err)
 		}
-		Cleanup = append(Cleanup, cleanup)
+		Cleanup = append(Cleanup, func() {
+			cleanup()
+			log.Printf("%s🔗 -> Clean up consul components successfully. %s\n", Green, Reset)
+		})
 		log.Println("\033[1;32m🔗 -> Consul initialized successfully\033[0m")
 	}
 }

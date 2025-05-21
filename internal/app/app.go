@@ -80,6 +80,8 @@ func Start(host string, port int) {
 		srv.RegisterOnShutdown(func() {
 			if err := mcp.GlobalMCPServer.Shutdown(ctx); err != nil {
 				log.Printf("%sMCP server shutdown failed: %v %s\n", Red, err, Reset)
+			} else {
+				log.Printf("%s🔗 -> MCP server shutdown successfully. %s\n", Green, Reset)
 			}
 		})
 	}
