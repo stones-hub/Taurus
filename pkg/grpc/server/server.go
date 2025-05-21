@@ -19,7 +19,7 @@ type Server struct {
 var GlobalgRPCServer *Server
 
 // NewServer 创建新的gRPC服务器
-func NewServer(opts ...ServerOption) (*Server, func()) {
+func NewServer(opts ...ServerOption) (*Server, func(), error) {
 	options := DefaultServerOptions()
 	for _, opt := range opts {
 		opt(options)
@@ -57,7 +57,8 @@ func NewServer(opts ...ServerOption) (*Server, func()) {
 	}
 	return GlobalgRPCServer, func() {
 		GlobalgRPCServer.Stop()
-	}
+		log.Println("GRPC server stopped successfully")
+	}, nil
 }
 
 // Start 启动服务器

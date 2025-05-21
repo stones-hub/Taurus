@@ -2,7 +2,6 @@ package app
 
 import (
 	"Taurus/config"
-	"Taurus/pkg/grpc/server"
 	"Taurus/pkg/mcp"
 	"Taurus/pkg/router"
 	"context"
@@ -76,17 +75,13 @@ func Start(host string, port int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// mcp server's closed must be called by srv.RegisterOnShutdown, so can't be called in gracefulCleanup
 	if mcp.GlobalMCPServer != nil {
 		srv.RegisterOnShutdown(func() {
 			if err := mcp.GlobalMCPServer.Shutdown(ctx); err != nil {
 				log.Printf("%sMCP server shutdown failed: %v %s\n", Red, err, Reset)
 			}
 		})
-	}
-
-	if server.GlobalgRPCServer != nil {
-		server.GlobalgRPCServer.Stop()
-		log.Printf("%sGRPC server stopped successfully. %s\n", Green, Reset)
 	}
 
 	// Attempt graceful shutdown
@@ -132,7 +127,9 @@ func gracefulCleanup(ctx context.Context) {
 	done := make(chan struct{})
 
 	go func() {
-		Cleanup()
+		for _, cleanup := range Cleanup {
+			cleanup()
+		}
 		done <- struct{}{}
 	}()
 

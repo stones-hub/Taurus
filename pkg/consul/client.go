@@ -92,7 +92,7 @@ func (c *ConsulClient) Discover(serviceName string) (*api.ServiceEntry, error) {
 }
 
 // 向Consul写入KV配置
-func (c *ConsulClient) Put(serviceName string, key string, config []byte) (*api.WriteMeta, error) {
+func (c *ConsulClient) PutKV(serviceName string, key string, config []byte) (*api.WriteMeta, error) {
 	// 构建完整的key，格式：services/{serviceName}/config/{key}
 	fullKey := fmt.Sprintf("services/%s/config/%s", serviceName, key)
 	writeMeta, err := c.client.KV().Put(&api.KVPair{Key: fullKey, Value: config}, nil)
@@ -104,7 +104,7 @@ func (c *ConsulClient) Put(serviceName string, key string, config []byte) (*api.
 }
 
 // 从Consul获取KV配置
-func (c *ConsulClient) Get(serviceName string, key string) ([]byte, error) {
+func (c *ConsulClient) GetKV(serviceName string, key string) ([]byte, error) {
 	// 构建完整的key，格式：services/{serviceName}/config/{key}
 	fullKey := fmt.Sprintf("services/%s/config/%s", serviceName, key)
 	pair, _, err := c.client.KV().Get(fullKey, nil)
@@ -119,7 +119,7 @@ func (c *ConsulClient) Get(serviceName string, key string) ([]byte, error) {
 }
 
 // 列出服务的所有配置
-func (c *ConsulClient) List(serviceName string, waitIndex uint64) (api.KVPairs, *api.QueryMeta, error) {
+func (c *ConsulClient) ListKV(serviceName string, waitIndex uint64) (api.KVPairs, *api.QueryMeta, error) {
 	// 构建前缀，格式：services/{serviceName}/config/
 	prefix := fmt.Sprintf("services/%s/config/", serviceName)
 	opts := &api.QueryOptions{ // 设置opts，为了阻塞， 会等到配置发生变化才会返回
@@ -135,7 +135,7 @@ func (c *ConsulClient) List(serviceName string, waitIndex uint64) (api.KVPairs, 
 }
 
 // 删除服务的配置
-func (c *ConsulClient) Delete(serviceName string, key string) error {
+func (c *ConsulClient) DeleteKV(serviceName string, key string) error {
 	// 构建完整的key，格式：services/{serviceName}/config/{key}
 	fullKey := fmt.Sprintf("services/%s/config/%s", serviceName, key)
 	_, err := c.client.KV().Delete(fullKey, nil)

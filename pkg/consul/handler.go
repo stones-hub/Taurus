@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"time"
 
+	"Taurus/pkg/util"
+
+	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -71,19 +74,23 @@ type ServiceConfig struct {
 	} `json:"check" yaml:"check" toml:"check"`
 }
 
-// ConfigWatcher 配置变更监听接口
+// ConfigWatcher 监听consul KV的变化, 处理接口
 type ConfigWatcher interface {
 	// 配置文件的 key value
-	OnChange(key string, value []byte) error
+	OnChange(c *ConsulClient, serviceName string, key string, value []byte) error
 }
 
-// TTLUpdater TTL更新接口
+// TTLUpdater 定时处理TTL更新接口
 type TTLUpdater interface {
 	Update(client *ConsulClient, checkID string) error
 }
 
-// Init 初始化Consul服务
-func Init(server *ServerConfig, service *ServiceConfig, watcher ConfigWatcher, updater TTLUpdater) (*ConsulClient, func(), error) {
+type InitKVConfig interface { // 用于consul在初始化的时候，需要将配置文件初始化到kv中
+	Put(c *ConsulClient, serviceName string) error
+}
+
+// Init 初始化Consul服务, server 是consul服务端配置, service 是服务配置, watcher 是配置变更监听, updater 是TTL更新
+func Init(server *ServerConfig, service *ServiceConfig, watcher ConfigWatcher, updater TTLUpdater, initKV InitKVConfig) (*ConsulClient, func(), error) {
 	// 创建客户端
 	client, err := NewConsulClient(server)
 	if err != nil {
@@ -96,10 +103,23 @@ func Init(server *ServerConfig, service *ServiceConfig, watcher ConfigWatcher, u
 		return nil, nil, fmt.Errorf("构建注册信息失败: %v", err)
 	}
 
+	// 保存服务ID
+	serviceID := reg.ID
+
+	log.Println("服务注册信息:", util.ToJsonString(reg))
+
 	// 注册服务
 	err = client.Register(reg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("注册服务失败: %v", err)
+	}
+
+	// 初始化配置到KV
+	if initKV != nil {
+		err = initKV.Put(client, service.Name)
+		if err != nil {
+			return nil, nil, fmt.Errorf("初始化配置到KV失败: %v", err)
+		}
 	}
 
 	// TTL更新
@@ -114,11 +134,13 @@ func Init(server *ServerConfig, service *ServiceConfig, watcher ConfigWatcher, u
 
 	// 返回注销函数
 	cleanup := func() {
-		if err := client.Deregister(service.ID); err != nil {
+		if err := client.Deregister(serviceID); err != nil {
 			log.Printf("注销服务失败: %v", err)
 		}
 
 		close(client.stop)
+
+		log.Println("Clean consul client and service success !")
 	}
 
 	return client, cleanup, nil
@@ -127,13 +149,17 @@ func Init(server *ServerConfig, service *ServiceConfig, watcher ConfigWatcher, u
 // 构建服务注册信息
 func buildRegistration(cfg *ServiceConfig) (*api.AgentServiceRegistration, error) {
 	reg := &api.AgentServiceRegistration{
-		Kind:      api.ServiceKind(cfg.Kind),
-		ID:        cfg.ID,
-		Name:      cfg.Name,
-		Tags:      cfg.Tags,
-		Port:      cfg.Port,
-		Address:   cfg.Address,
-		Namespace: cfg.Namespace,
+		Kind:    api.ServiceKind(cfg.Kind),
+		ID:      cfg.ID,
+		Name:    cfg.Name,
+		Tags:    cfg.Tags,
+		Port:    cfg.Port,
+		Address: cfg.Address,
+		// Namespace: cfg.Namespace, 不支持, 默认使用default
+	}
+
+	if reg.ID == "" {
+		reg.ID = uuid.New().String()
 	}
 
 	// 设置地理位置
@@ -256,7 +282,7 @@ func watchConfig(c *ConsulClient, serviceName string, watcher ConfigWatcher) {
 			return
 		default:
 			// 使用 client 的 List 方法获取配置，注意这里会阻塞
-			pairs, meta, err := c.List(serviceName, lastIndex)
+			pairs, meta, err := c.ListKV(serviceName, lastIndex)
 			if err != nil {
 				log.Printf("监听配置失败: %v", err)
 				// 使用指数退避策略计算重试间隔, 重试间隔按照 2^n 秒递增（1s, 2s, 4s, 8s, 16s, 32s...）
@@ -280,7 +306,7 @@ func watchConfig(c *ConsulClient, serviceName string, watcher ConfigWatcher) {
 
 			// 处理配置变更
 			for _, pair := range pairs {
-				if err := watcher.OnChange(pair.Key, pair.Value); err != nil {
+				if err := watcher.OnChange(c, serviceName, pair.Key, pair.Value); err != nil {
 					log.Printf("处理配置变更失败: %v", err)
 				}
 			}

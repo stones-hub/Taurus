@@ -27,7 +27,7 @@ type MCPServer struct {
 	server *server.Server
 }
 
-func NewMCPServer(name, version, transportName string, mode string) *MCPServer {
+func NewMCPServer(name, version, transportName string, mode string) (*MCPServer, func(), error) {
 
 	var stateMode transport.StateMode
 	switch mode {
@@ -76,7 +76,11 @@ func NewMCPServer(name, version, transportName string, mode string) *MCPServer {
 	GlobalMCPServer = &MCPServer{
 		server: mcpServer,
 	}
-	return GlobalMCPServer
+	return GlobalMCPServer, func() {
+		if err := GlobalMCPServer.Shutdown(context.Background()); err != nil {
+			log.Fatal(fmt.Errorf("failed to shutdown mcp server: %v", err))
+		}
+	}, nil
 }
 
 func (s *MCPServer) Shutdown(ctx context.Context) error {

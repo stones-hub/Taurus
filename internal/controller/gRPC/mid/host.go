@@ -24,6 +24,7 @@ func AuthInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
+// 初始化 gRPC 中间件 or 拦截器
 func init() {
 	server.RegisterMiddleware(HostMiddleware())
 	server.RegisterInterceptor(AuthInterceptor())

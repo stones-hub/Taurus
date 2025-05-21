@@ -3,6 +3,7 @@ package app
 import (
 	"Taurus/config"
 	"Taurus/internal"
+	"Taurus/pkg/consul"
 	"Taurus/pkg/cron"
 	"Taurus/pkg/db"
 	"Taurus/pkg/grpc/server"
@@ -19,6 +20,7 @@ import (
 	"net/http"
 	"time"
 
+	"Taurus/internal/app/core/consuls"
 	_ "Taurus/internal/app/core/crons"         // 引入crons，注册crons包下的所有的定时任务
 	_ "Taurus/internal/app/core/log_formatter" // 引入log_formatter，注册log_formatter包下的所有的日志格式化器
 	_ "Taurus/internal/app/core/ws_handler"    // 引入ws_handler，注册ws_handler包下的所有的websocket处理器
@@ -32,12 +34,13 @@ import (
 	_ "Taurus/internal/controller/gRPC/mid"     // 引入mid，注册mid包下的所有的中间件
 	_ "Taurus/internal/controller/gRPC/service" // 引入service，注册service包下的所有的服务
 
+	"github.com/hashicorp/consul/api"
 	"google.golang.org/grpc/keepalive"
 	"gorm.io/gorm/logger"
 )
 
 var (
-	Cleanup func()
+	Cleanup []func() = make([]func(), 0)
 )
 
 // InitialzeLog initialize logger
@@ -170,7 +173,10 @@ func InitializeWebsocket() {
 func InitializeMCP() {
 	// 注意：stdio 模式下，需要手动启动 server，其他模式下，server 会自动启动， 不建议在http服务器上使用stdio模式，如果需要，可以依据工具函数，自行构建main函数
 	if config.Core.MCPEnable && config.Core.MCP.Transport != mcp.TransportStdio {
-		server := mcp.NewMCPServer(config.Core.AppName, config.Core.Version, config.Core.MCP.Transport, config.Core.MCP.Mode)
+		server, _, err := mcp.NewMCPServer(config.Core.AppName, config.Core.Version, config.Core.MCP.Transport, config.Core.MCP.Mode)
+		if err != nil {
+			log.Fatalf("Failed to initialize mcp server: %v", err)
+		}
 		// register handler for mcp server
 		server.RegisterHandler(mcp.MCPHandler)
 		log.Println("\033[1;32m🔗 -> MCP initialized successfully\033[0m")
@@ -188,13 +194,14 @@ func InitializeInjector() {
 	if err != nil {
 		log.Fatalf("Failed to build injector: %v", err)
 	}
-	Cleanup = func() {
+
+	Cleanup = append(Cleanup, func() {
 		cleanup()
+		log.Println("\033[1;32m🔗 -> Injector initialized successfully\033[0m")
 
 		if cron.Core != nil {
 			cron.Core.Stop()
 		}
-
 		if redisx.Redis != nil {
 			err = redisx.Redis.Close()
 			if err != nil {
@@ -204,11 +211,8 @@ func InitializeInjector() {
 			}
 		}
 		db.CloseDB()
-
-		log.Printf("%s🔗 -> Clean up all components successfully. %s\n", Green, Reset)
-	}
-
-	log.Println("\033[1;32m🔗 -> Injector initialized successfully\033[0m")
+		log.Printf("%s🔗 -> Clean up cron redis db components successfully. %s\n", Green, Reset)
+	})
 }
 
 // InitializegRPC initialize grpc
@@ -257,7 +261,11 @@ func InitializegRPC() {
 			}))
 		}
 
-		s, _ := server.NewServer(opts...)
+		s, cleanup, err := server.NewServer(opts...)
+		if err != nil {
+			log.Fatalf("Failed to initialize gRPC server: %v", err)
+		}
+		Cleanup = append(Cleanup, cleanup)
 
 		// 遍历所有注册的服务注册
 		for _, service := range server.GetRegisteredServices() {
@@ -277,8 +285,12 @@ func InitializegRPC() {
 // InitializeConsul initialize consul
 func InitializeConsul() {
 	if config.Core.ConsulEnable {
-		// TODO
-		// consul.Init(&config.ServerConfig{}, , nil, nil)
+		serverConfig, serviceConfig := buildConsulConfig(config.Core.Consul.Server, config.Core.Consul.Service)
+		_, cleanup, err := consul.Init(serverConfig, serviceConfig, new(consuls.DefaultConfigWatcher), new(consuls.DefaultTTLUpdater), new(consuls.DefaultInitKVConfig))
+		if err != nil {
+			log.Fatalf("Failed to initialize consul: %v", err)
+		}
+		Cleanup = append(Cleanup, cleanup)
 		log.Println("\033[1;32m🔗 -> Consul initialized successfully\033[0m")
 	}
 }
@@ -317,6 +329,160 @@ func parseLevel(level string) logx.LogLevel {
 		log.Printf("Unknown log level '%s', defaulting to 'info'", level)
 		return logx.LEVEL_NONE
 	}
+}
+
+// BuildConfig 构建Consul配置
+func buildConsulConfig(server config.ConsulServer, service config.ConsulService) (*consul.ServerConfig, *consul.ServiceConfig) {
+	serverConfig := &consul.ServerConfig{
+		Address: server.Address,
+		Port:    server.Port,
+		Token:   server.Token,
+		UseTLS:  server.UseTLS,
+		TLSConfig: &api.TLSConfig{
+			Address:            server.TLSConfig.Address,
+			CAFile:             server.TLSConfig.CAFile,
+			CertFile:           server.TLSConfig.CertFile,
+			KeyFile:            server.TLSConfig.KeyFile,
+			InsecureSkipVerify: server.TLSConfig.InsecureSkipVerify,
+		},
+	}
+
+	serviceConfig := &consul.ServiceConfig{
+		Kind:      service.Kind,
+		ID:        service.ID,
+		Name:      service.Name,
+		Tags:      service.Tags,
+		Port:      service.Port,
+		Address:   service.Address,
+		Namespace: service.Namespace,
+		Locality: struct {
+			Region string `json:"region" yaml:"region" toml:"region"`
+			Zone   string `json:"zone" yaml:"zone" toml:"zone"`
+		}{
+			Region: service.Locality.Region,
+			Zone:   service.Locality.Zone,
+		},
+		Check: struct {
+			Type                           string `json:"type" yaml:"type" toml:"type"`
+			CheckID                        string `json:"check_id" yaml:"check_id" toml:"check_id"`
+			Name                           string `json:"name" yaml:"name" toml:"name"`
+			Notes                          string `json:"notes" yaml:"notes" toml:"notes"`
+			Status                         string `json:"status" yaml:"status" toml:"status"`
+			SuccessBeforePassing           int    `json:"success_before_passing" yaml:"success_before_passing" toml:"success_before_passing"`
+			FailuresBeforeWarning          int    `json:"failures_before_warning" yaml:"failures_before_warning" toml:"failures_before_warning"`
+			FailuresBeforeCritical         int    `json:"failures_before_critical" yaml:"failures_before_critical" toml:"failures_before_critical"`
+			DeregisterCriticalServiceAfter string `json:"deregister_critical_service_after" yaml:"deregister_critical_service_after" toml:"deregister_critical_service_after"`
+			CheckTTL                       struct {
+				TTL string `json:"ttl" yaml:"ttl" toml:"ttl"`
+			} `json:"check_ttl" yaml:"check_ttl" toml:"check_ttl"`
+			CheckShell struct {
+				Shell             string   `json:"shell" yaml:"shell" toml:"shell"`
+				Args              []string `json:"args" yaml:"args" toml:"args"`
+				DockerContainerID string   `json:"docker_container_id" yaml:"docker_container_id" toml:"docker_container_id"`
+				Interval          string   `json:"interval" yaml:"interval" toml:"interval"`
+				Timeout           string   `json:"timeout" yaml:"timeout" toml:"timeout"`
+			} `json:"check_shell" yaml:"check_shell" toml:"check_shell"`
+			CheckHTTP struct {
+				HTTP     string            `json:"http" yaml:"http" toml:"http"`
+				Method   string            `json:"method" yaml:"method" toml:"method"`
+				Header   map[string]string `json:"header" yaml:"header" toml:"header"`
+				Body     string            `json:"body" yaml:"body" toml:"body"`
+				Interval string            `json:"interval" yaml:"interval" toml:"interval"`
+				Timeout  string            `json:"timeout" yaml:"timeout" toml:"timeout"`
+			} `json:"check_http" yaml:"check_http" toml:"check_http"`
+			CheckTCP struct {
+				TCP           string `json:"tcp" yaml:"tcp" toml:"tcp"`
+				TCPUseTLS     bool   `json:"tcp_use_tls" yaml:"tcp_use_tls" toml:"tcp_use_tls"`
+				TLSServerName string `json:"tls_server_name" yaml:"tls_server_name" toml:"tls_server_name"`
+				TLSSkipVerify bool   `json:"tls_skip_verify" yaml:"tls_skip_verify" toml:"tls_skip_verify"`
+				Interval      string `json:"interval" yaml:"interval" toml:"interval"`
+				Timeout       string `json:"timeout" yaml:"timeout" toml:"timeout"`
+			} `json:"check_tcp" yaml:"check_tcp" toml:"check_tcp"`
+			CheckGRPC struct {
+				GRPC          string `json:"grpc" yaml:"grpc" toml:"grpc"`
+				GRPCUseTLS    bool   `json:"grpc_use_tls" yaml:"grpc_use_tls" toml:"grpc_use_tls"`
+				TLSServerName string `json:"tls_server_name" yaml:"tls_server_name" toml:"tls_server_name"`
+				TLSSkipVerify bool   `json:"tls_skip_verify" yaml:"tls_skip_verify" toml:"tls_skip_verify"`
+				Interval      string `json:"interval" yaml:"interval" toml:"interval"`
+				Timeout       string `json:"timeout" yaml:"timeout" toml:"timeout"`
+			} `json:"check_grpc" yaml:"check_grpc" toml:"check_grpc"`
+		}{
+			Type:                           service.Check.Type,
+			CheckID:                        service.Check.CheckID,
+			Name:                           service.Check.Name,
+			Notes:                          service.Check.Notes,
+			Status:                         service.Check.Status,
+			SuccessBeforePassing:           service.Check.SuccessBeforePassing,
+			FailuresBeforeWarning:          service.Check.FailuresBeforeWarning,
+			FailuresBeforeCritical:         service.Check.FailuresBeforeCritical,
+			DeregisterCriticalServiceAfter: service.Check.DeregisterCriticalServiceAfter,
+			CheckTTL: struct {
+				TTL string `json:"ttl" yaml:"ttl" toml:"ttl"`
+			}{
+				TTL: service.Check.CheckTTL.TTL,
+			},
+			CheckShell: struct {
+				Shell             string   `json:"shell" yaml:"shell" toml:"shell"`
+				Args              []string `json:"args" yaml:"args" toml:"args"`
+				DockerContainerID string   `json:"docker_container_id" yaml:"docker_container_id" toml:"docker_container_id"`
+				Interval          string   `json:"interval" yaml:"interval" toml:"interval"`
+				Timeout           string   `json:"timeout" yaml:"timeout" toml:"timeout"`
+			}{
+				Shell:             service.Check.CheckShell.Shell,
+				Args:              service.Check.CheckShell.Args,
+				DockerContainerID: service.Check.CheckShell.DockerContainerID,
+				Interval:          service.Check.CheckShell.Interval,
+				Timeout:           service.Check.CheckShell.Timeout,
+			},
+			CheckHTTP: struct {
+				HTTP     string            `json:"http" yaml:"http" toml:"http"`
+				Method   string            `json:"method" yaml:"method" toml:"method"`
+				Header   map[string]string `json:"header" yaml:"header" toml:"header"`
+				Body     string            `json:"body" yaml:"body" toml:"body"`
+				Interval string            `json:"interval" yaml:"interval" toml:"interval"`
+				Timeout  string            `json:"timeout" yaml:"timeout" toml:"timeout"`
+			}{
+				HTTP:     service.Check.CheckHTTP.HTTP,
+				Method:   service.Check.CheckHTTP.Method,
+				Header:   service.Check.CheckHTTP.Header,
+				Body:     service.Check.CheckHTTP.Body,
+				Interval: service.Check.CheckHTTP.Interval,
+				Timeout:  service.Check.CheckHTTP.Timeout,
+			},
+			CheckTCP: struct {
+				TCP           string `json:"tcp" yaml:"tcp" toml:"tcp"`
+				TCPUseTLS     bool   `json:"tcp_use_tls" yaml:"tcp_use_tls" toml:"tcp_use_tls"`
+				TLSServerName string `json:"tls_server_name" yaml:"tls_server_name" toml:"tls_server_name"`
+				TLSSkipVerify bool   `json:"tls_skip_verify" yaml:"tls_skip_verify" toml:"tls_skip_verify"`
+				Interval      string `json:"interval" yaml:"interval" toml:"interval"`
+				Timeout       string `json:"timeout" yaml:"timeout" toml:"timeout"`
+			}{
+				TCP:           service.Check.CheckTCP.TCP,
+				TCPUseTLS:     service.Check.CheckTCP.TCPUseTLS,
+				TLSServerName: service.Check.CheckTCP.TLSServerName,
+				TLSSkipVerify: service.Check.CheckTCP.TLSSkipVerify,
+				Interval:      service.Check.CheckTCP.Interval,
+				Timeout:       service.Check.CheckTCP.Timeout,
+			},
+			CheckGRPC: struct {
+				GRPC          string `json:"grpc" yaml:"grpc" toml:"grpc"`
+				GRPCUseTLS    bool   `json:"grpc_use_tls" yaml:"grpc_use_tls" toml:"grpc_use_tls"`
+				TLSServerName string `json:"tls_server_name" yaml:"tls_server_name" toml:"tls_server_name"`
+				TLSSkipVerify bool   `json:"tls_skip_verify" yaml:"tls_skip_verify" toml:"tls_skip_verify"`
+				Interval      string `json:"interval" yaml:"interval" toml:"interval"`
+				Timeout       string `json:"timeout" yaml:"timeout" toml:"timeout"`
+			}{
+				GRPC:          service.Check.CheckGRPC.GRPC,
+				GRPCUseTLS:    service.Check.CheckGRPC.GRPCUseTLS,
+				TLSServerName: service.Check.CheckGRPC.TLSServerName,
+				TLSSkipVerify: service.Check.CheckGRPC.TLSSkipVerify,
+				Interval:      service.Check.CheckGRPC.Interval,
+				Timeout:       service.Check.CheckGRPC.Timeout,
+			},
+		},
+	}
+
+	return serverConfig, serviceConfig
 }
 
 /*
