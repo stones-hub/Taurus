@@ -10,7 +10,6 @@ import (
 
 	"Taurus/pkg/util"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -103,15 +102,29 @@ func Init(server *ServerConfig, service *ServiceConfig, watcher ConfigWatcher, u
 		return nil, nil, fmt.Errorf("构建注册信息失败: %v", err)
 	}
 
-	// 保存服务ID
-	serviceID := reg.ID
-
 	log.Println("服务注册信息:", util.ToJsonString(reg))
 
 	// 注册服务
 	err = client.Register(reg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("注册服务失败: %v", err)
+	}
+
+	// 验证服务是否成功注册
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		services, err := client.GetServices()
+		if err != nil {
+			log.Printf("获取服务列表失败: %v", err)
+			continue
+		}
+		if _, ok := services[service.Name]; ok {
+			break
+		}
+		if i == maxRetries-1 {
+			return nil, nil, fmt.Errorf("服务注册验证失败: 服务 %s 未在 Consul 中注册", service.Name)
+		}
+		time.Sleep(time.Second)
 	}
 
 	// 初始化配置到KV
@@ -134,12 +147,31 @@ func Init(server *ServerConfig, service *ServiceConfig, watcher ConfigWatcher, u
 
 	// 返回注销函数
 	cleanup := func() {
-		if err := client.Deregister(serviceID); err != nil {
-			log.Printf("注销服务失败: %v", err)
+		// 验证服务是否存在
+		services, err := client.GetServices()
+		if err != nil {
+			log.Printf("获取服务列表失败: %v", err)
+		} else if _, ok := services[service.Name]; !ok {
+			log.Printf("服务 %s 未在 Consul 中注册，无需注销", service.Name)
+			close(client.stop)
+			return
+		}
+
+		// 尝试注销服务
+		maxRetries := 3
+		for i := 0; i < maxRetries; i++ {
+			err := client.Deregister(service.ID)
+			if err == nil {
+				log.Printf("服务 %s 注销成功", service.Name)
+				break
+			}
+			log.Printf("注销服务失败(尝试 %d/%d): %v", i+1, maxRetries, err)
+			if i < maxRetries-1 {
+				time.Sleep(time.Second)
+			}
 		}
 
 		close(client.stop)
-
 		log.Println("Clean consul client and service success !")
 	}
 
@@ -156,10 +188,6 @@ func buildRegistration(cfg *ServiceConfig) (*api.AgentServiceRegistration, error
 		Port:    cfg.Port,
 		Address: cfg.Address,
 		// Namespace: cfg.Namespace, 不支持, 默认使用default
-	}
-
-	if reg.ID == "" {
-		reg.ID = uuid.New().String()
 	}
 
 	// 设置地理位置
@@ -281,7 +309,7 @@ func watchConfig(c *ConsulClient, serviceName string, watcher ConfigWatcher) {
 			log.Printf("配置监听已停止")
 			return
 		default:
-			// 使用 client 的 List 方法获取配置，注意这里会阻塞
+			// 使用 client 的 List 方法获取配置，注意这里会阻塞, 除非配置index跟lastIndex不一致
 			pairs, meta, err := c.ListKV(serviceName, lastIndex)
 			if err != nil {
 				log.Printf("监听配置失败: %v", err)

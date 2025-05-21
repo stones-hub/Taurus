@@ -34,6 +34,7 @@ import (
 	_ "Taurus/internal/controller/gRPC/mid"     // 引入mid，注册mid包下的所有的中间件
 	_ "Taurus/internal/controller/gRPC/service" // 引入service，注册service包下的所有的服务
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
 	"google.golang.org/grpc/keepalive"
 	"gorm.io/gorm/logger"
@@ -331,7 +332,7 @@ func parseLevel(level string) logx.LogLevel {
 	}
 }
 
-// BuildConfig 构建Consul配置
+// BuildConfig 构建Consul配置, 注意参数配置的完整性
 func buildConsulConfig(server config.ConsulServer, service config.ConsulService) (*consul.ServerConfig, *consul.ServiceConfig) {
 	serverConfig := &consul.ServerConfig{
 		Address: server.Address,
@@ -345,6 +346,14 @@ func buildConsulConfig(server config.ConsulServer, service config.ConsulService)
 			KeyFile:            server.TLSConfig.KeyFile,
 			InsecureSkipVerify: server.TLSConfig.InsecureSkipVerify,
 		},
+	}
+
+	if service.ID == "" {
+		service.ID = uuid.New().String()
+	}
+
+	if service.Check.CheckID == "" {
+		service.Check.CheckID = uuid.New().String()
 	}
 
 	serviceConfig := &consul.ServiceConfig{
