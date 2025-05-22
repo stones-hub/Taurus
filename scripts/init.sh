@@ -325,6 +325,7 @@ update_framework() {
   rsync -aq --delete update_temp/example/ "$project_path/example/"
   # rsync -aq --delete update_temp/downloads/ "$project_path/downloads/"
   # rsync -aq --delete update_temp/docs/ "$project_path/docs/"
+  rsync -aq --delete update_temp/benchmark/ "$project_path/benchmark/"
 
 
   # 更新 internal 目录下的 injector.go 和 wire.go 文件
