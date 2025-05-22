@@ -63,6 +63,20 @@ func TestOrderService(t *testing.T) {
 		}
 
 		t.Logf("查询结果: %+v", resp)
+
+		invalidReq := &ordpb.QueryOrdersRequest{
+			StartDate: "2024-01-01 00:00:00",
+			EndDate:   "2024-01-31 23:59:59",
+			Page:      1,
+			PageSize:  -1,
+		}
+
+		resp, err = orderClient.QueryOrders(ctx, invalidReq)
+		if err != nil {
+			t.Logf("err: %v", err)
+		}
+		t.Logf("查询结果: %+v", resp)
+
 	})
 
 	// 测试获取订单详情

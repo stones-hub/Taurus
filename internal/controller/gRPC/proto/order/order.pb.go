@@ -28,11 +28,11 @@ type QueryOrdersRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StartDate string `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"` // 开始日期，格式：YYYY-MM-DD
-	EndDate   string `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`       // 结束日期，格式：YYYY-MM-DD
-	OrderId   string `protobuf:"bytes,3,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`       // 订单ID，可选
-	Page      int32  `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`                           // 页码，从1开始
-	PageSize  int32  `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`   // 每页数量
+	StartDate string `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty" validate:"required,datetime=2006-01-02"` // 开始日期，格式：YYYY-MM-DD
+	EndDate   string `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty" validate:"required,datetime=2006-01-02"`       // 结束日期，格式：YYYY-MM-DD
+	OrderId   string `protobuf:"bytes,3,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty" validate:"omitempty,uuid"`       // 订单ID，可选
+	Page      int32  `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty" validate:"required,min=1"`                           // 页码，从1开始
+	PageSize  int32  `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" validate:"required,min=1"`   // 每页数量
 }
 
 func (x *QueryOrdersRequest) Reset() {

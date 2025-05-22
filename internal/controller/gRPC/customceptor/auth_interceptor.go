@@ -31,4 +31,10 @@ func init() {
 	// RateLimitServerInterceptor
 	server.RegisterInterceptor(interceptor.RateLimitServerInterceptor(10))
 
+	// 验证器
+	// ValidatorServerInterceptor
+	server.RegisterInterceptor(interceptor.UnaryServerValidationInterceptor())
+	// ValidatorStreamServerInterceptor
+	server.RegisterStreamInterceptor(interceptor.StreamServerValidationInterceptor())
+
 }
