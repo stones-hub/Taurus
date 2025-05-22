@@ -1,6 +1,7 @@
 package gRPC
 
 import (
+	"Taurus/pkg/grpc/attributes"
 	"Taurus/pkg/grpc/server"
 	"context"
 	"log"
@@ -9,7 +10,7 @@ import (
 )
 
 // gRPC host 中间件
-func HostMiddleware() server.UnaryMiddleware {
+func HostMiddleware() attributes.UnaryMiddleware {
 	return func(handler grpc.UnaryHandler) grpc.UnaryHandler {
 		log.Println("HostMiddleware")
 		return handler

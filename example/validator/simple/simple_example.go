@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Taurus/pkg/validators"
+	"Taurus/pkg/validate"
 	"fmt"
 
 	"github.com/go-playground/validator/v10"
@@ -59,7 +59,7 @@ func validateStructExample() {
 	}
 
 	// 验证有效用户
-	if err := validators.ValidateStruct(validUser); err != nil {
+	if err := validate.ValidateStruct(validUser); err != nil {
 		fmt.Printf("有效用户验证失败: %v\n", err)
 	} else {
 		fmt.Println("有效用户验证通过")
@@ -76,11 +76,11 @@ func validateStructExample() {
 	}
 
 	// 验证无效用户
-	if err := validators.ValidateStruct(invalidUser); err != nil {
+	if err := validate.ValidateStruct(invalidUser); err != nil {
 		fmt.Printf("无效用户验证失败: %v\n", err)
 
 		// 获取验证错误详情
-		if valErrs, ok := err.(validators.ValidationErrors); ok {
+		if valErrs, ok := err.(validate.ValidationErrors); ok {
 			fmt.Println("\n详细错误信息:")
 			for _, e := range valErrs {
 				fmt.Printf("字段: %s, 标签: %s, 值: %v, 错误: %s\n",
@@ -88,7 +88,7 @@ func validateStructExample() {
 			}
 
 			// 获取字段错误映射
-			fieldErrors := validators.GetFieldErrors(valErrs)
+			fieldErrors := validate.GetFieldErrors(valErrs)
 			fmt.Println("\n字段错误映射:")
 			for field, msg := range fieldErrors {
 				fmt.Printf("%s: %s\n", field, msg)
@@ -101,13 +101,13 @@ func validateStructExample() {
 func validateSingleVarExample() {
 	// 验证电子邮件
 	email := "invalid-email"
-	if err := validators.ValidateVar(email, "email"); err != nil {
+	if err := validate.ValidateVar(email, "email"); err != nil {
 		fmt.Printf("无效的电子邮件: %v\n", err)
 	}
 
 	// 验证有效的电子邮件
 	validEmail := "test@example.com"
-	if err := validators.ValidateVar(validEmail, "email"); err != nil {
+	if err := validate.ValidateVar(validEmail, "email"); err != nil {
 		fmt.Printf("电子邮件验证失败: %v\n", err)
 	} else {
 		fmt.Printf("有效的电子邮件: %s\n", validEmail)
@@ -115,20 +115,20 @@ func validateSingleVarExample() {
 
 	// 验证长度
 	password := "123"
-	if err := validators.ValidateVar(password, "min=8"); err != nil {
+	if err := validate.ValidateVar(password, "min=8"); err != nil {
 		fmt.Printf("密码太短: %v\n", err)
 	}
 
 	// 验证数字范围
 	age := 15
-	if err := validators.ValidateVar(age, "gte=18,lte=120"); err != nil {
+	if err := validate.ValidateVar(age, "gte=18,lte=120"); err != nil {
 		fmt.Printf("年龄不在有效范围内: %v\n", err)
 	}
 
 	// 验证变量之间的关系
 	min := 10
 	max := 5
-	if err := validators.ValidateVarWithValue(max, min, "gtefield"); err != nil {
+	if err := validate.ValidateVarWithValue(max, min, "gtefield"); err != nil {
 		fmt.Printf("最大值必须大于等于最小值: %v\n", err)
 	}
 }
@@ -153,9 +153,9 @@ func validateMapExample() {
 		},
 	}
 
-	if err := validators.ValidateMap(userMap); err != nil {
+	if err := validate.ValidateMap(userMap); err != nil {
 		fmt.Printf("映射验证失败: %v\n", err)
-		if valErrs, ok := err.(validators.ValidationErrors); ok {
+		if valErrs, ok := err.(validate.ValidationErrors); ok {
 			for _, e := range valErrs {
 				fmt.Printf("字段: %s, 错误: %s\n", e.Field, e.Message)
 			}
@@ -178,7 +178,7 @@ func validateMapExample() {
 		},
 	}
 
-	if err := validators.ValidateMap(productMap); err != nil {
+	if err := validate.ValidateMap(productMap); err != nil {
 		fmt.Printf("产品映射验证失败: %v\n", err)
 	}
 }
@@ -203,9 +203,9 @@ func validateSliceExample() {
 		},
 	}
 
-	if err := validators.ValidateSlice(users); err != nil {
+	if err := validate.ValidateSlice(users); err != nil {
 		fmt.Printf("切片验证失败: %v\n", err)
-		if valErrs, ok := err.(validators.ValidationErrors); ok {
+		if valErrs, ok := err.(validate.ValidationErrors); ok {
 			for _, e := range valErrs {
 				fmt.Printf("字段: %s, 错误: %s\n", e.Field, e.Message)
 			}
@@ -228,7 +228,7 @@ func validateSliceExample() {
 		},
 	}
 
-	if err := validators.ValidateSlice(products); err != nil {
+	if err := validate.ValidateSlice(products); err != nil {
 		fmt.Printf("产品切片验证失败: %v\n", err)
 	}
 }
@@ -236,7 +236,7 @@ func validateSliceExample() {
 // customValidationExample 自定义验证规则示例
 func customValidationExample() {
 	// 创建验证器
-	v := validators.New()
+	v := validate.New()
 
 	// 注册自定义验证规则：中国手机号
 	if err := v.RegisterCustomValidation("validate_mobile", func(fl validator.FieldLevel) bool {

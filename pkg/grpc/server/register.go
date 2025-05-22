@@ -1,6 +1,8 @@
 package server
 
 import (
+	"Taurus/pkg/grpc/attributes"
+
 	"google.golang.org/grpc"
 )
 
@@ -12,8 +14,8 @@ type ServiceRegistrar interface {
 // 服务注册表
 var (
 	serviceRegistry          = make(map[string]ServiceRegistrar)
-	serviceMiddleware        = make([]UnaryMiddleware, 0)
-	serviceStreamMiddleware  = make([]StreamMiddleware, 0)
+	serviceMiddleware        = make([]attributes.UnaryMiddleware, 0)
+	serviceStreamMiddleware  = make([]attributes.StreamMiddleware, 0)
 	serviceInterceptor       = make([]grpc.UnaryServerInterceptor, 0)
 	serviceStreamInterceptor = make([]grpc.StreamServerInterceptor, 0)
 )
@@ -28,11 +30,11 @@ func GetRegisteredServices() map[string]ServiceRegistrar {
 	return serviceRegistry
 }
 
-func RegisterMiddleware(middleware UnaryMiddleware) {
+func RegisterMiddleware(middleware attributes.UnaryMiddleware) {
 	serviceMiddleware = append(serviceMiddleware, middleware)
 }
 
-func RegisterStreamMiddleware(middleware StreamMiddleware) {
+func RegisterStreamMiddleware(middleware attributes.StreamMiddleware) {
 	serviceStreamMiddleware = append(serviceStreamMiddleware, middleware)
 }
 
@@ -44,11 +46,11 @@ func RegisterStreamInterceptor(interceptor grpc.StreamServerInterceptor) {
 	serviceStreamInterceptor = append(serviceStreamInterceptor, interceptor)
 }
 
-func GetServiceMiddleware() []UnaryMiddleware {
+func GetServiceMiddleware() []attributes.UnaryMiddleware {
 	return serviceMiddleware
 }
 
-func GetServiceStreamMiddleware() []StreamMiddleware {
+func GetServiceStreamMiddleware() []attributes.StreamMiddleware {
 	return serviceStreamMiddleware
 }
 

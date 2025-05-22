@@ -1,4 +1,4 @@
-package server
+package interceptor
 
 import (
 	"context"
@@ -67,38 +67,5 @@ func RateLimitServerInterceptor(limit int) grpc.UnaryServerInterceptor {
 			return nil, status.Error(codes.ResourceExhausted, "rate limit exceeded")
 		}
 		return handler(ctx, req)
-	}
-}
-
-// 拦截器链 处理一元请求
-func chainUnaryServer(interceptors ...grpc.UnaryServerInterceptor) grpc.UnaryServerInterceptor {
-	// interceptors = [] func(ctx context.Context, req any, info *UnaryServerInfo, handler UnaryHandler) (resp any, err error)
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		// handler =  func(ctx context.Context, req any) (any, error)
-		chain := handler
-		for i := len(interceptors) - 1; i >= 0; i-- {
-			chain = func(next grpc.UnaryHandler, interceptor grpc.UnaryServerInterceptor) grpc.UnaryHandler {
-				return func(ctx context.Context, req interface{}) (interface{}, error) {
-					return interceptor(ctx, req, info, next)
-				}
-			}(chain, interceptors[i])
-		}
-
-		return chain(ctx, req)
-	}
-}
-
-// 拦截器链 处理流请求
-func chainStreamServer(interceptors ...grpc.StreamServerInterceptor) grpc.StreamServerInterceptor {
-	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		chain := handler
-		for i := len(interceptors) - 1; i >= 0; i-- {
-			chain = func(next grpc.StreamHandler, interceptor grpc.StreamServerInterceptor) grpc.StreamHandler {
-				return func(srv interface{}, ss grpc.ServerStream) error {
-					return interceptor(srv, ss, info, next)
-				}
-			}(chain, interceptors[i])
-		}
-		return chain(srv, ss)
 	}
 }

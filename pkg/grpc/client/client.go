@@ -1,6 +1,7 @@
 package client
 
 import (
+	"Taurus/pkg/grpc/attributes"
 	"context"
 	"fmt"
 
@@ -39,10 +40,10 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 
 	// 添加拦截器
 	if len(options.UnaryInterceptors) > 0 {
-		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(chainUnaryClient(options.UnaryInterceptors...)))
+		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(attributes.ChainUnaryClient(options.UnaryInterceptors...)))
 	}
 	if len(options.StreamInterceptors) > 0 {
-		dialOpts = append(dialOpts, grpc.WithStreamInterceptor(chainStreamClient(options.StreamInterceptors...)))
+		dialOpts = append(dialOpts, grpc.WithStreamInterceptor(attributes.ChainStreamClient(options.StreamInterceptors...)))
 	}
 
 	// 添加KeepAlive配置

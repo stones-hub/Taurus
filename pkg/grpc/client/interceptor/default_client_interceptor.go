@@ -1,4 +1,4 @@
-package client
+package interceptor
 
 import (
 	"context"
@@ -47,34 +47,5 @@ func TimeoutClientInterceptor(timeout time.Duration) grpc.UnaryClientInterceptor
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 		return invoker(ctx, method, req, reply, cc, opts...)
-	}
-}
-
-// 拦截器链
-func chainUnaryClient(interceptors ...grpc.UnaryClientInterceptor) grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		chain := invoker
-		for i := len(interceptors) - 1; i >= 0; i-- {
-			chain = func(next grpc.UnaryInvoker, interceptor grpc.UnaryClientInterceptor) grpc.UnaryInvoker {
-				return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
-					return interceptor(ctx, method, req, reply, cc, next, opts...)
-				}
-			}(chain, interceptors[i])
-		}
-		return chain(ctx, method, req, reply, cc, opts...)
-	}
-}
-
-func chainStreamClient(interceptors ...grpc.StreamClientInterceptor) grpc.StreamClientInterceptor {
-	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-		chain := streamer
-		for i := len(interceptors) - 1; i >= 0; i-- {
-			chain = func(next grpc.Streamer, interceptor grpc.StreamClientInterceptor) grpc.Streamer {
-				return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-					return interceptor(ctx, desc, cc, method, next, opts...)
-				}
-			}(chain, interceptors[i])
-		}
-		return chain(ctx, desc, cc, method, opts...)
 	}
 }

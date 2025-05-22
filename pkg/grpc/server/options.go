@@ -1,6 +1,7 @@
 package server
 
 import (
+	"Taurus/pkg/grpc/attributes"
 	"crypto/tls"
 	"time"
 
@@ -24,8 +25,8 @@ type ServerOptions struct {
 	StreamInterceptors []grpc.StreamServerInterceptor // 流拦截器
 
 	// 自定义配置中间件
-	UnaryMiddlewares  []UnaryMiddleware  // 一元中间件
-	StreamMiddlewares []StreamMiddleware // 流中间件
+	UnaryMiddlewares  []attributes.UnaryMiddleware  // 一元中间件
+	StreamMiddlewares []attributes.StreamMiddleware // 流中间件
 }
 
 // DefaultServerOptions 返回默认配置
@@ -41,8 +42,8 @@ func DefaultServerOptions() *ServerOptions {
 		},
 		UnaryInterceptors:  make([]grpc.UnaryServerInterceptor, 0),
 		StreamInterceptors: make([]grpc.StreamServerInterceptor, 0),
-		UnaryMiddlewares:   make([]UnaryMiddleware, 0),
-		StreamMiddlewares:  make([]StreamMiddleware, 0),
+		UnaryMiddlewares:   make([]attributes.UnaryMiddleware, 0),
+		StreamMiddlewares:  make([]attributes.StreamMiddleware, 0),
 	}
 }
 
@@ -89,14 +90,14 @@ func WithStreamInterceptor(interceptor grpc.StreamServerInterceptor) ServerOptio
 }
 
 // WithUnaryMiddleware 添加一元中间件
-func WithUnaryMiddleware(middleware UnaryMiddleware) ServerOption {
+func WithUnaryMiddleware(middleware attributes.UnaryMiddleware) ServerOption {
 	return func(o *ServerOptions) {
 		o.UnaryMiddlewares = append(o.UnaryMiddlewares, middleware)
 	}
 }
 
 // WithStreamMiddleware 添加流中间件
-func WithStreamMiddleware(middleware StreamMiddleware) ServerOption {
+func WithStreamMiddleware(middleware attributes.StreamMiddleware) ServerOption {
 	return func(o *ServerOptions) {
 		o.StreamMiddlewares = append(o.StreamMiddlewares, middleware)
 	}

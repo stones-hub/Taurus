@@ -1,0 +1,64 @@
+package interceptor
+
+import (
+	"Taurus/pkg/validate"
+	"context"
+	"fmt"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+// UnaryServerValidationInterceptor 创建一个gRPC一元服务验证拦截器
+func UnaryServerValidationInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		// 验证请求参数
+		if err := validate.ValidateStruct(req); err != nil {
+			// 如果是验证错误，返回InvalidArgument状态
+			if valErrs, ok := err.(validate.ValidationErrors); ok {
+				errMsg := fmt.Sprintf("请求参数验证失败: %s", valErrs.Error())
+				return nil, status.Error(codes.InvalidArgument, errMsg)
+			}
+			// 其他错误
+			return nil, status.Error(codes.Internal, "请求验证出现内部错误")
+		}
+
+		// 验证通过，继续处理请求
+		return handler(ctx, req)
+	}
+}
+
+// StreamServerValidationInterceptor 创建一个gRPC流服务验证拦截器
+func StreamServerValidationInterceptor() grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		wrapper := &recvWrapper{
+			ServerStream: ss,
+		}
+		return handler(srv, wrapper)
+	}
+}
+
+// recvWrapper 包装流服务器，用于验证每个接收到的消息
+type recvWrapper struct {
+	grpc.ServerStream
+}
+
+// RecvMsg 拦截并验证接收到的消息
+func (s *recvWrapper) RecvMsg(m interface{}) error {
+	// 首先调用原始的RecvMsg
+	if err := s.ServerStream.RecvMsg(m); err != nil {
+		return err
+	}
+
+	// 验证接收到的消息
+	if err := validate.ValidateStruct(m); err != nil {
+		if valErrs, ok := err.(validate.ValidationErrors); ok {
+			errMsg := fmt.Sprintf("请求参数验证失败: %s", valErrs.Error())
+			return status.Error(codes.InvalidArgument, errMsg)
+		}
+		return status.Error(codes.Internal, "请求验证出现内部错误")
+	}
+
+	return nil
+}
