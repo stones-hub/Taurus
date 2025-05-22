@@ -1,47 +1,59 @@
 package main
 
 import (
+	"Taurus/pkg/grpc/server"
 	"context"
+	"fmt"
 	"log"
-	"net"
 
-	pb "Taurus/example/grpc/proto"
-
-	"google.golang.org/grpc"
+	pb "Taurus/example/grpc/proto/user"
 )
 
-// CalculatorServer 实现 Calculator 服务
-type CalculatorServer struct {
-	pb.UnimplementedCalculatorServer
+// UserServer 实现用户服务
+type UserServer struct {
+	pb.UnimplementedUserServiceServer
 }
 
-// Add 实现加法运算
-func (s *CalculatorServer) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, error) {
-	result := req.A + req.B
-	return &pb.AddResponse{Result: result}, nil
+// GetUser 获取用户信息
+func (s *UserServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
+	// 模拟从数据库获取用户
+	user := &pb.GetUserResponse{
+		Id:    req.Id,
+		Name:  "张三",
+		Email: "zhangsan@example.com",
+		Age:   25,
+	}
+	return user, nil
 }
 
-// Subtract 实现减法运算
-func (s *CalculatorServer) Subtract(ctx context.Context, req *pb.SubtractRequest) (*pb.SubtractResponse, error) {
-	result := req.A - req.B
-	return &pb.SubtractResponse{Result: result}, nil
+// CreateUser 创建用户
+func (s *UserServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+	// 模拟创建用户
+	user := &pb.CreateUserResponse{
+		Id:    1,
+		Name:  req.Name,
+		Email: req.Email,
+		Age:   req.Age,
+	}
+	return user, nil
 }
 
 func main() {
-	// 创建 gRPC 服务器
-	server := grpc.NewServer()
+	// 创建gRPC服务器
+	srv, cleanup, err := server.NewServer(
+		server.WithAddress(":50051"),
+	)
+	if err != nil {
+		log.Fatalf("failed to create server: %v", err)
+	}
+	defer cleanup()
 
 	// 注册服务
-	pb.RegisterCalculatorServer(server, &CalculatorServer{})
+	pb.RegisterUserServiceServer(srv.Server(), &UserServer{})
 
 	// 启动服务器
-	lis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-
-	log.Println("Server is running on :50051")
-	if err := server.Serve(lis); err != nil {
+	fmt.Println("Starting gRPC server on :50051")
+	if err := srv.Start(); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

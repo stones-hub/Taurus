@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package user;
+option go_package = "Taurus/example/grpc/proto/user";
+
+// 用户服务
+service UserService {
+  // 获取用户信息
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+  // 创建用户
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+}
+
+// 获取用户请求
+message GetUserRequest {
+  int64 id = 1;
+}
+
+// 获取用户响应
+message GetUserResponse {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  int32 age = 4;
+}
+
+// 创建用户请求
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+  int32 age = 3;
+}
+
+// 创建用户响应
+message CreateUserResponse {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  int32 age = 4;
+} 

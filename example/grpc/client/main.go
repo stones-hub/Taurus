@@ -1,42 +1,56 @@
 package main
 
 import (
+	"Taurus/pkg/grpc/client"
 	"context"
+	"fmt"
 	"log"
 	"time"
 
-	pb "Taurus/example/grpc/proto"
+	pb "Taurus/example/grpc/proto/user"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 )
 
 func main() {
-	// 连接到服务器
-	conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 创建gRPC客户端
+	c, err := client.NewClient(
+		client.WithAddress("localhost:50051"),
+		client.WithTimeout(5*time.Second),
+		client.WithInsecure(),
+		client.WithToken("123456"),
+		client.WithKeepAlive(&keepalive.ClientParameters{
+			Time:                10 * time.Second, // 发送 keepalive 的时间间隔
+			Timeout:             5 * time.Second,  // keepalive 超时时间
+			PermitWithoutStream: true,             // 允许在没有活跃流的情况下发送 keepalive
+		}),
+	)
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("failed to create client: %v", err)
 	}
-	defer conn.Close()
+	defer c.Close()
 
-	// 创建客户端
-	client := pb.NewCalculatorClient(conn)
+	// 创建用户服务客户端
+	userClient := pb.NewUserServiceClient(c.Conn())
 
-	// 设置超时上下文
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	// 创建上下文
+	ctx := context.Background()
 
-	// 调用加法服务
-	addResp, err := client.Add(ctx, &pb.AddRequest{A: 10, B: 20})
+	// 调用GetUser方法
+	getUserResp, err := userClient.GetUser(ctx, &pb.GetUserRequest{Id: 1})
 	if err != nil {
-		log.Fatalf("could not add: %v", err)
+		log.Fatalf("failed to get user: %v", err)
 	}
-	log.Printf("Add result: %d", addResp.Result)
+	fmt.Printf("GetUser response: %+v\n", getUserResp)
 
-	// 调用减法服务
-	subtractResp, err := client.Subtract(ctx, &pb.SubtractRequest{A: 30, B: 15})
+	// 调用CreateUser方法
+	createUserResp, err := userClient.CreateUser(ctx, &pb.CreateUserRequest{
+		Name:  "李四",
+		Email: "lisi@example.com",
+		Age:   30,
+	})
 	if err != nil {
-		log.Fatalf("could not subtract: %v", err)
+		log.Fatalf("failed to create user: %v", err)
 	}
-	log.Printf("Subtract result: %d", subtractResp.Result)
+	fmt.Printf("CreateUser response: %+v\n", createUserResp)
 }
