@@ -15,14 +15,6 @@ import (
 	"Taurus/pkg/validate"
 )
 
-// ValidationError 用于HTTP响应的验证错误
-type ValidationErrorResponse struct {
-	Code    int                    `json:"code"`
-	Message string                 `json:"message"`
-	Errors  map[string]string      `json:"errors,omitempty"`
-	Data    map[string]interface{} `json:"data,omitempty"`
-}
-
 // ValidationMiddleware 创建一个HTTP请求验证中间件
 func ValidationMiddleware(reqStruct interface{}) func(http.Handler) http.Handler {
 	t := reflect.TypeOf(reqStruct)
