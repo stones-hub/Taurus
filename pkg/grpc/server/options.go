@@ -54,13 +54,6 @@ func WithAddress(addr string) ServerOption {
 	}
 }
 
-// WithMaxConns 设置最大连接数
-func WithMaxConns(maxConns int) ServerOption {
-	return func(o *ServerOptions) {
-		o.MaxConns = maxConns
-	}
-}
-
 // WithTLS 设置TLS配置
 func WithTLS(config *tls.Config) ServerOption {
 	return func(o *ServerOptions) {
@@ -72,6 +65,13 @@ func WithTLS(config *tls.Config) ServerOption {
 func WithKeepAlive(config *keepalive.ServerParameters) ServerOption {
 	return func(o *ServerOptions) {
 		o.KeepAlive = config
+	}
+}
+
+// WithMaxConns 设置最大连接数
+func WithMaxConns(maxConns int) ServerOption {
+	return func(o *ServerOptions) {
+		o.MaxConns = maxConns
 	}
 }
 

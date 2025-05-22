@@ -10,7 +10,20 @@ import (
 	"Taurus/pkg/grpc/client"
 
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 )
+
+func setToken(ctx context.Context, token string) context.Context {
+
+	// 方案一：
+	// metadata.AppendToOutgoingContext(metadata.AppendToOutgoingContext(ctx, "authorization", token), "sign", "s-123456")
+
+	// 方案二：
+	md := metadata.New(map[string]string{
+		"authorization": token,
+	})
+	return metadata.NewOutgoingContext(ctx, md)
+}
 
 func TestOrderService(t *testing.T) {
 	// 创建客户端，添加更多配置选项
@@ -18,6 +31,7 @@ func TestOrderService(t *testing.T) {
 		client.WithAddress("localhost:50051"),
 		client.WithTimeout(5*time.Second),
 		client.WithInsecure(),
+		client.WithToken("123456"),
 		client.WithKeepAlive(&keepalive.ClientParameters{
 			Time:                10 * time.Second, // 发送 keepalive 的时间间隔
 			Timeout:             5 * time.Second,  // keepalive 超时时间
@@ -35,8 +49,9 @@ func TestOrderService(t *testing.T) {
 	// 测试查询订单列表
 	t.Run("QueryOrders", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 
+		ctx = setToken(ctx, c.Token())
+		defer cancel()
 		resp, err := orderClient.QueryOrders(ctx, &ordpb.QueryOrdersRequest{
 			StartDate: "2024-01-01",
 			EndDate:   "2024-01-31",
@@ -53,8 +68,8 @@ func TestOrderService(t *testing.T) {
 	// 测试获取订单详情
 	t.Run("GetOrderDetail", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx = setToken(ctx, c.Token())
 		defer cancel()
-
 		resp, err := orderClient.GetOrderDetail(ctx, &ordpb.GetOrderDetailRequest{
 			OrderId: "123",
 		})
@@ -71,6 +86,7 @@ func TestUserService(t *testing.T) {
 	c, err := client.NewClient(
 		client.WithAddress("localhost:50051"),
 		client.WithTimeout(5*time.Second),
+		client.WithToken("123456"),
 		client.WithInsecure(),
 		client.WithKeepAlive(&keepalive.ClientParameters{
 			Time:                10 * time.Second,
@@ -89,8 +105,8 @@ func TestUserService(t *testing.T) {
 	// 测试获取用户信息
 	t.Run("GetUserInfo", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx = setToken(ctx, c.Token())
 		defer cancel()
-
 		resp, err := userClient.GetUserInfo(ctx, &userpb.GetUserInfoRequest{
 			UserId: 1,
 		})

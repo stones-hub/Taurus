@@ -4,8 +4,7 @@ import (
 	"Taurus/internal"
 	"Taurus/internal/app"
 	"Taurus/internal/controller"
-	"Taurus/internal/mid"
-
+	"Taurus/internal/customware"
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/router"
 	"net/http"
@@ -33,7 +32,8 @@ func main() {
 				Handler: http.HandlerFunc(internal.Core.DemoCtrl.Get),
 				Middleware: []router.MiddlewareFunc{
 					// middleware.ApiKeyAuthMiddleware,
-					mid.HostMiddleware,
+					customware.HostMiddleware,
+					middleware.ValidationMiddleware(&controller.DemoRequest{}),
 				},
 			},
 		},
@@ -60,7 +60,7 @@ func main() {
 		Path:    "/",
 		Handler: http.HandlerFunc(controller.ServeMarkdownDoc),
 		Middleware: []router.MiddlewareFunc{
-			mid.HostMiddleware,
+			customware.HostMiddleware,
 		},
 	})
 

@@ -31,8 +31,9 @@ import (
 	_ "Taurus/internal/app/core/mcps/tools"     // 引入tools，注册tools包下的所有的工具
 
 	// 引入 gRPC 包下的所有的中间件、服务
-	_ "Taurus/internal/controller/gRPC/mid"     // 引入mid，注册mid包下的所有的中间件
-	_ "Taurus/internal/controller/gRPC/service" // 引入service，注册service包下的所有的服务
+	_ "Taurus/internal/controller/gRPC/customceptor" // 引入customceptor，注册customceptor包下的所有的拦截器
+	_ "Taurus/internal/controller/gRPC/customware"   // 引入customware，注册customware包下的所有的中间件
+	_ "Taurus/internal/controller/gRPC/service"      // 引入service，注册service包下的所有的服务
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"

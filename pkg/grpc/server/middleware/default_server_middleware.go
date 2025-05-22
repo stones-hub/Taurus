@@ -1,9 +1,10 @@
-package interceptor
+package middleware
 
 import (
 	"Taurus/pkg/grpc/attributes"
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"google.golang.org/grpc"
@@ -20,7 +21,8 @@ func MetricsMiddleware() attributes.UnaryMiddleware {
 
 			// 记录处理时间
 			duration := time.Since(start)
-			fmt.Printf("处理时间: %v\n", duration)
+
+			log.Printf("Duration: %s, Error: %v", duration, err)
 
 			return resp, err
 		}
@@ -31,11 +33,11 @@ func MetricsMiddleware() attributes.UnaryMiddleware {
 func LoggingMiddleware() attributes.UnaryMiddleware {
 	return func(next grpc.UnaryHandler) grpc.UnaryHandler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
-			fmt.Printf("请求开始: %v\n", req)
+			fmt.Printf("Request: %v\n", req)
 
 			resp, err := next(ctx, req)
 
-			fmt.Printf("请求结束: %v, 错误: %v\n", resp, err)
+			log.Printf("Response: %v, Error: %v", resp, err)
 			return resp, err
 		}
 	}

@@ -3,7 +3,9 @@ package client
 import (
 	"Taurus/pkg/grpc/attributes"
 	"context"
+	"crypto/tls"
 	"fmt"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -25,6 +27,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 		opt(options)
 	}
 
+	// 这个是client的context， 并不是 每次请求各种服务的context， 每次请求各种服务的context需要自己创建
 	ctx, cancel := context.WithTimeout(context.Background(), options.Timeout)
 
 	dialOpts := []grpc.DialOption{
@@ -65,6 +68,10 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	}, nil
 }
 
+func (c *Client) Options() *ClientOptions {
+	return c.opts
+}
+
 // Conn 获取原始连接
 func (c *Client) Conn() *grpc.ClientConn {
 	return c.conn
@@ -74,4 +81,20 @@ func (c *Client) Conn() *grpc.ClientConn {
 func (c *Client) Close() error {
 	c.cancel()
 	return c.conn.Close()
+}
+
+func (c *Client) Token() string {
+	return c.opts.Token
+}
+
+func (c *Client) Address() string {
+	return c.opts.Address
+}
+
+func (c *Client) Timeout() time.Duration {
+	return c.opts.Timeout
+}
+
+func (c *Client) TLSConfig() *tls.Config {
+	return c.opts.TLSConfig
 }

@@ -21,7 +21,6 @@ type ClientOptions struct {
 
 	// 高级配置
 	KeepAlive          *keepalive.ClientParameters
-	DialOptions        []grpc.DialOption
 	UnaryInterceptors  []grpc.UnaryClientInterceptor
 	StreamInterceptors []grpc.StreamClientInterceptor
 }
@@ -41,19 +40,6 @@ func DefaultClientOptions() *ClientOptions {
 	}
 }
 
-// WithKeepAlive 设置KeepAlive配置
-func WithKeepAlive(config *keepalive.ClientParameters) ClientOption {
-	return func(o *ClientOptions) {
-		o.KeepAlive = config
-	}
-}
-
-func WithInsecure() ClientOption {
-	return func(o *ClientOptions) {
-		o.TLSConfig = nil // 设置为 nil 表示使用非安全连接
-	}
-}
-
 // WithAddress 设置服务器地址
 func WithAddress(addr string) ClientOption {
 	return func(o *ClientOptions) {
@@ -68,6 +54,13 @@ func WithTimeout(timeout time.Duration) ClientOption {
 	}
 }
 
+// WithInsecure set no use tls
+func WithInsecure() ClientOption {
+	return func(o *ClientOptions) {
+		o.TLSConfig = nil // 设置为 nil 表示使用非安全连接
+	}
+}
+
 // WithTLS 设置TLS配置
 func WithTLS(config *tls.Config) ClientOption {
 	return func(o *ClientOptions) {
@@ -79,6 +72,13 @@ func WithTLS(config *tls.Config) ClientOption {
 func WithToken(token string) ClientOption {
 	return func(o *ClientOptions) {
 		o.Token = token
+	}
+}
+
+// WithKeepAlive 设置KeepAlive配置
+func WithKeepAlive(config *keepalive.ClientParameters) ClientOption {
+	return func(o *ClientOptions) {
+		o.KeepAlive = config
 	}
 }
 

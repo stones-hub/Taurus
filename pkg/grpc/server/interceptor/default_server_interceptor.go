@@ -19,7 +19,7 @@ func LoggingServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		start := time.Now()
 		resp, err := handler(ctx, req)
-		log.Printf("Server - Method:%s\tDuration:%s\tError:%v\n", info.FullMethod, time.Since(start), err)
+		log.Printf("Method: %s, Duration: %s, Error: %v", info.FullMethod, time.Since(start), err)
 		return resp, err
 	}
 }
@@ -42,6 +42,7 @@ func AuthServerInterceptor(token string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		// 从metadata中获取token
 		md, ok := metadata.FromIncomingContext(ctx)
+
 		if !ok {
 			return nil, status.Error(codes.Unauthenticated, "missing metadata")
 		}
