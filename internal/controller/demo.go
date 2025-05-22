@@ -2,8 +2,10 @@ package controller
 
 import (
 	"Taurus/pkg/contextx"
+	"Taurus/pkg/db"
 	"Taurus/pkg/httpx"
 	"Taurus/pkg/logx"
+	"log"
 	"net/http"
 
 	"github.com/google/wire"
@@ -37,7 +39,16 @@ func (c *DemoCtrl) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logx.Core.Info("default", "Welcome to Taurus")
+	var question Question
+	if err := db.Find("kf_ai", &question, "id = ?", 1); err != nil {
+		httpx.SendResponse(w, http.StatusInternalServerError, "find question failed", nil)
+		return
+	}
+
+	log.Printf("question: %v", question)
+
+	logx.Core.Info("default", "question: %v", question)
+
 	httpx.SendResponse(w, http.StatusOK, struct {
 		Req  *DemoRequest           `json:"req"`
 		Data map[string]interface{} `json:"data"`
@@ -45,4 +56,13 @@ func (c *DemoCtrl) Get(w http.ResponseWriter, r *http.Request) {
 		Req:  req,
 		Data: data,
 	}, nil)
+}
+
+type Question struct {
+	Id          int    `json:"id" gorm:"column:id"`
+	WorkOrderId string `json:"work_order_id" gorm:"column:work_order_id"`
+}
+
+func (question *Question) TableName() string {
+	return "questions"
 }
