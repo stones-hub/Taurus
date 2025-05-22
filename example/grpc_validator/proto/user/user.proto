@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package user;
+option go_package = "Taurus/example/grpc_validator/proto/user";
+
+// 用户服务
+service UserService {
+  // 创建用户
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+  // 更新用户
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+}
+
+// 创建用户请求
+message CreateUserRequest {
+  string name = 1;  // 用户名
+  string email = 2; // 邮箱
+  int32 age = 3;    // 年龄
+  string password = 4; // 密码
+}
+
+// 创建用户响应
+message CreateUserResponse {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  int32 age = 4;
+}
+
+// 更新用户请求
+message UpdateUserRequest {
+  int64 id = 1;     // 用户ID
+  string name = 2;  // 用户名
+  string email = 3; // 邮箱
+  int32 age = 4;    // 年龄
+}
+
+// 更新用户响应
+message UpdateUserResponse {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  int32 age = 4;
+} 
