@@ -27,9 +27,9 @@ func init() {
 	// RecoveryServerInterceptor
 	server.RegisterInterceptor(interceptor.RecoveryServerInterceptor())
 	// AuthServerInterceptor
-	server.RegisterInterceptor(interceptor.AuthServerInterceptor("123456"))
+	server.RegisterInterceptor(interceptor.AuthServerInterceptor("Bearer 123456"))
 	// RateLimitServerInterceptor
-	server.RegisterInterceptor(interceptor.RateLimitServerInterceptor(10))
+	// server.RegisterInterceptor(interceptor.RateLimitServerInterceptor(10))
 
 	// 验证器
 	// ValidatorServerInterceptor

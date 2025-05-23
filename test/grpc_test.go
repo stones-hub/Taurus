@@ -31,7 +31,7 @@ func TestOrderService(t *testing.T) {
 		client.WithAddress("localhost:50051"),
 		client.WithTimeout(5*time.Second),
 		client.WithInsecure(),
-		client.WithToken("123456"),
+		client.WithToken("Bearer 123456"),
 		client.WithKeepAlive(&keepalive.ClientParameters{
 			Time:                10 * time.Second, // 发送 keepalive 的时间间隔
 			Timeout:             5 * time.Second,  // keepalive 超时时间
@@ -100,7 +100,7 @@ func TestUserService(t *testing.T) {
 	c, err := client.NewClient(
 		client.WithAddress("localhost:50051"),
 		client.WithTimeout(5*time.Second),
-		client.WithToken("123456"),
+		client.WithToken("Bearer 123456"),
 		client.WithInsecure(),
 		client.WithKeepAlive(&keepalive.ClientParameters{
 			Time:                10 * time.Second,
