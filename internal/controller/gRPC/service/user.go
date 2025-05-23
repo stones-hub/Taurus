@@ -20,6 +20,7 @@ func NewUserService() *UserService {
 
 // GetUserInfo 实现获取用户信息
 func (s *UserService) GetUserInfo(ctx context.Context, req *pb.GetUserInfoRequest) (*pb.GetUserInfoResponse, error) {
+	log.Printf("GetUserInfo 请求: %v", req)
 	// TODO: 实现查询逻辑
 	return &pb.GetUserInfoResponse{
 		UserId:   req.UserId,
