@@ -54,7 +54,12 @@ export default function () {
     try {
         client.connect(CONFIG.grpc.baseUrl, {
             plaintext: true,
-            timeout: '5s'  // 连接超时时间
+            timeout: '5s',  // 连接超时时间
+            keepalive: {
+                time: 10000,        // 10秒发送一次keepalive
+                timeout: 5000,      // 5秒超时
+                permitWithoutStream: true  // 允许无流时发送keepalive
+            }
         });
 
         // 记录连接成功

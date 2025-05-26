@@ -8,21 +8,45 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-// ClientOption 定义客户端配置选项
-type ClientOption func(*ClientOptions)
+// 一元模式和流式模式区别
+// 一元模式:
+// 1. 同一个链接被多个协程同时复用，是排队执行的， 前提是你没有关闭链接
+// 流模式:
+// 1. 同一个链接被多个协程同时复用，是并发执行的， 前提是你没有关闭链接
+
+// PoolOptions 连接池配置
+type PoolOptions struct {
+	MaxIdleConns    int           // 最大空闲连接数
+	MaxOpenConns    int           // 最大打开连接数
+	ConnMaxLifetime time.Duration // 连接最大生命周期
+	ConnMaxIdleTime time.Duration // 连接最大空闲时间
+	MaxLoadPerConn  int32         // 每个连接的最大负载
+}
+
+// DefaultPoolOptions 返回默认连接池配置
+func DefaultPoolOptions() *PoolOptions {
+	return &PoolOptions{
+		MaxIdleConns:    10,
+		MaxOpenConns:    100,
+		ConnMaxLifetime: 30 * time.Minute,
+		ConnMaxIdleTime: 10 * time.Minute,
+		MaxLoadPerConn:  1000,
+	}
+}
 
 // ClientOptions 包含所有客户端配置
 type ClientOptions struct {
 	// 基础配置
-	Address   string
-	Timeout   time.Duration
-	TLSConfig *tls.Config
-	Token     string
+	Timeout   time.Duration // 连接超时时间
+	TLSConfig *tls.Config   // TLS配置
 
-	// 高级配置
-	KeepAlive          *keepalive.ClientParameters
-	UnaryInterceptors  []grpc.UnaryClientInterceptor
-	StreamInterceptors []grpc.StreamClientInterceptor
+	// 连接池配置
+	Pool *PoolOptions
+
+	// 通用配置
+	KeepAlive          *keepalive.ClientParameters    // 保活配置
+	UnaryInterceptors  []grpc.UnaryClientInterceptor  // 一元拦截器
+	StreamInterceptors []grpc.StreamClientInterceptor // 流式拦截器
 }
 
 // DefaultClientOptions 返回默认配置
@@ -32,6 +56,7 @@ func DefaultClientOptions() *ClientOptions {
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12,
 		},
+		Pool: DefaultPoolOptions(),
 		KeepAlive: &keepalive.ClientParameters{
 			Time:                10 * time.Second,
 			Timeout:             5 * time.Second,
@@ -40,24 +65,13 @@ func DefaultClientOptions() *ClientOptions {
 	}
 }
 
-// WithAddress 设置服务器地址
-func WithAddress(addr string) ClientOption {
-	return func(o *ClientOptions) {
-		o.Address = addr
-	}
-}
+// ClientOption 定义配置选项函数
+type ClientOption func(*ClientOptions)
 
 // WithTimeout 设置超时时间
 func WithTimeout(timeout time.Duration) ClientOption {
 	return func(o *ClientOptions) {
 		o.Timeout = timeout
-	}
-}
-
-// WithInsecure set no use tls
-func WithInsecure() ClientOption {
-	return func(o *ClientOptions) {
-		o.TLSConfig = nil // 设置为 nil 表示使用非安全连接
 	}
 }
 
@@ -68,17 +82,37 @@ func WithTLS(config *tls.Config) ClientOption {
 	}
 }
 
-// WithToken 设置认证Token
-func WithToken(token string) ClientOption {
+// WithInsecure 设置非安全连接
+func WithInsecure() ClientOption {
 	return func(o *ClientOptions) {
-		o.Token = token
+		o.TLSConfig = nil
 	}
 }
 
-// WithKeepAlive 设置KeepAlive配置
+// WithKeepAlive 设置保活配置
 func WithKeepAlive(config *keepalive.ClientParameters) ClientOption {
 	return func(o *ClientOptions) {
 		o.KeepAlive = config
+	}
+}
+
+// WithPool 设置连接池配置
+func WithPool(pool *PoolOptions) ClientOption {
+	return func(o *ClientOptions) {
+		o.Pool = pool
+	}
+}
+
+// WithPoolConfig 设置连接池详细配置
+func WithPoolConfig(maxIdle, maxOpen int, maxLifetime, maxIdleTime time.Duration, maxLoad int32) ClientOption {
+	return func(o *ClientOptions) {
+		o.Pool = &PoolOptions{
+			MaxIdleConns:    maxIdle,
+			MaxOpenConns:    maxOpen,
+			ConnMaxLifetime: maxLifetime,
+			ConnMaxIdleTime: maxIdleTime,
+			MaxLoadPerConn:  maxLoad,
+		}
 	}
 }
 
@@ -89,7 +123,7 @@ func WithUnaryInterceptor(interceptor grpc.UnaryClientInterceptor) ClientOption 
 	}
 }
 
-// WithStreamInterceptor 添加流拦截器
+// WithStreamInterceptor 添加流式拦截器
 func WithStreamInterceptor(interceptor grpc.StreamClientInterceptor) ClientOption {
 	return func(o *ClientOptions) {
 		o.StreamInterceptors = append(o.StreamInterceptors, interceptor)

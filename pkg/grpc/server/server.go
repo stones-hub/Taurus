@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 )
 
 // Server gRPC服务器封装
@@ -25,40 +29,93 @@ func NewServer(opts ...ServerOption) (*Server, func(), error) {
 		opt(options)
 	}
 
-	serverOpts := []grpc.ServerOption{}
+	serverOpts := []grpc.ServerOption{
+		// 基础资源限制
+		// MaxRecvMsgSize 限制服务器接收的最大消息大小，默认值为10MB
+		// 如果客户端发送的消息超过此大小，请求会被拒绝
+		// 根据业务需求调整，比如文件上传场景可能需要更大的值
+		grpc.MaxRecvMsgSize(1024 * 1024 * 10),
 
-	// 添加TLS配置
+		// MaxSendMsgSize 限制服务器发送的最大消息大小，默认值为10MB
+		// 如果服务器响应的消息超过此大小，响应会被拒绝
+		// 通常与 MaxRecvMsgSize 设置相同的值保持一致性
+		grpc.MaxSendMsgSize(1024 * 1024 * 10),
+
+		// MaxConcurrentStreams 限制每个HTTP2连接上的最大并发流数量
+		// 即一个客户端连接能同时处理的最大请求数
+		// 默认值1000适用于大多数场景，可根据服务器资源情况调整
+		grpc.MaxConcurrentStreams(1000),
+
+		// 连接保活策略配置
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			// MinTime 指定客户端发送keepalive ping的最小间隔时间
+			// 如果客户端发送过于频繁的ping，服务器会关闭连接
+			// 5秒的间隔可以在保持连接活跃和避免资源浪费之间取得平衡
+			MinTime: time.Second * 5,
+
+			// PermitWithoutStream 允许客户端在没有活动流的情况下发送keepalive ping
+			// true: 即使没有正在进行的请求也保持连接
+			// false: 只有在有活动请求时才允许发送keepalive ping
+			// 建议设置为true以维持长连接，特别是在微服务架构中
+			PermitWithoutStream: true,
+		}),
+	}
+
+	// TLS配置
 	if options.TLSConfig != nil {
 		serverOpts = append(serverOpts, grpc.Creds(credentials.NewTLS(options.TLSConfig)))
 	}
 
-	// 添加KeepAlive配置
+	// KeepAlive配置
 	if options.KeepAlive != nil {
 		serverOpts = append(serverOpts, grpc.KeepaliveParams(*options.KeepAlive))
 	}
 
-	// 添加一元拦截器
+	// 用户自定义拦截器配置
 	if len(options.UnaryMiddlewares) > 0 {
-		serverOpts = append(serverOpts, grpc.UnaryInterceptor(attributes.ChainUnaryInterceptorWithMiddlewareServer(options.UnaryMiddlewares, options.UnaryInterceptors)))
+		serverOpts = append(serverOpts, grpc.UnaryInterceptor(
+			attributes.ChainUnaryInterceptorWithMiddlewareServer(
+				options.UnaryMiddlewares,
+				options.UnaryInterceptors,
+			),
+		))
 	} else if len(options.UnaryInterceptors) > 0 {
-		serverOpts = append(serverOpts, grpc.UnaryInterceptor(attributes.ChainUnaryServer(options.UnaryInterceptors...)))
+		serverOpts = append(serverOpts, grpc.UnaryInterceptor(
+			attributes.ChainUnaryServer(options.UnaryInterceptors...),
+		))
 	}
 
-	// 添加流拦截器
 	if len(options.StreamMiddlewares) > 0 {
-		serverOpts = append(serverOpts, grpc.StreamInterceptor(attributes.ChainStreamInterceptorWithMiddlewareServer(options.StreamMiddlewares, options.StreamInterceptors)))
+		serverOpts = append(serverOpts, grpc.StreamInterceptor(
+			attributes.ChainStreamInterceptorWithMiddlewareServer(
+				options.StreamMiddlewares,
+				options.StreamInterceptors,
+			),
+		))
 	} else if len(options.StreamInterceptors) > 0 {
-		serverOpts = append(serverOpts, grpc.StreamInterceptor(attributes.ChainStreamServer(options.StreamInterceptors...)))
+		serverOpts = append(serverOpts, grpc.StreamInterceptor(
+			attributes.ChainStreamServer(options.StreamInterceptors...),
+		))
 	}
+
+	// 创建服务器实例
 	server := grpc.NewServer(serverOpts...)
+
+	// 注册健康检查服务
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(server, healthServer)
+
 	GlobalgRPCServer = &Server{
 		server: server,
 		opts:   options,
 	}
-	return GlobalgRPCServer, func() {
-		GlobalgRPCServer.Stop()
-		log.Println("GRPC server stopped successfully")
-	}, nil
+
+	cleanup := func() {
+		GlobalgRPCServer.server.GracefulStop()
+		log.Println("gRPC server stopped successfully")
+	}
+
+	return GlobalgRPCServer, cleanup, nil
 }
 
 // Start 启动服务器

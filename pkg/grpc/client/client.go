@@ -2,99 +2,108 @@ package client
 
 import (
 	"Taurus/pkg/grpc/attributes"
-	"context"
-	"crypto/tls"
-	"fmt"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// Client gRPC客户端封装
-type Client struct {
-	conn   *grpc.ClientConn
-	opts   *ClientOptions
-	ctx    context.Context
-	cancel context.CancelFunc
+// Client 定义客户端接口
+type Client interface {
+	// GetConn 获取连接，isStream 参数指定是否为流式连接
+	GetConn(address string, isStream bool) (*grpc.ClientConn, error)
+	// ReleaseConn 释放连接
+	ReleaseConn(*grpc.ClientConn)
+	// CloseAddress 关闭指定地址的所有连接
+	CloseAddress(address string) error
+	// Close 关闭客户端
+	Close() error
+	// Options 获取配置
+	Options() *ClientOptions
 }
 
-// NewClient 创建新的gRPC客户端
-func NewClient(opts ...ClientOption) (*Client, error) {
+// GrpcClient 统一的gRPC客户端实现
+type GrpcClient struct {
+	opts *ClientOptions
+	pool *ConnPool
+}
+
+// NewClient 创建新的客户端
+func NewClient(opts ...ClientOption) (Client, error) {
 	options := DefaultClientOptions()
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	// 这个是client的context， 并不是 每次请求各种服务的context， 每次请求各种服务的context需要自己创建
-	ctx, cancel := context.WithTimeout(context.Background(), options.Timeout)
+	// 创建连接池时使用新的配置结构
+	pool := NewConnPool(&PoolConfig{
+		// 连接数量控制
+		MinConnsPerAddr: 2, // 默认每个地址保持2个连接
+		MaxConnsPerAddr: options.Pool.MaxOpenConns,
+		MaxIdleConns:    options.Pool.MaxIdleConns,
+		MaxLoadPerConn:  options.Pool.MaxLoadPerConn,
 
-	dialOpts := []grpc.DialOption{
-		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
-	}
+		// 连接生命周期
+		ConnMaxLifetime: options.Pool.ConnMaxLifetime,
+		ConnMaxIdleTime: options.Pool.ConnMaxIdleTime,
+		DialTimeout:     options.Timeout,
+	})
 
-	// 添加TLS配置
-	if options.TLSConfig != nil {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(options.TLSConfig)))
-	} else {
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	}
-
-	// 添加拦截器
-	if len(options.UnaryInterceptors) > 0 {
-		dialOpts = append(dialOpts, grpc.WithUnaryInterceptor(attributes.ChainUnaryClient(options.UnaryInterceptors...)))
-	}
-	if len(options.StreamInterceptors) > 0 {
-		dialOpts = append(dialOpts, grpc.WithStreamInterceptor(attributes.ChainStreamClient(options.StreamInterceptors...)))
-	}
-
-	// 添加KeepAlive配置
-	if options.KeepAlive != nil {
-		dialOpts = append(dialOpts, grpc.WithKeepaliveParams(*options.KeepAlive))
-	}
-
-	conn, err := grpc.Dial(options.Address, dialOpts...)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to dial: %v", err)
-	}
-
-	return &Client{
-		conn:   conn,
-		opts:   options,
-		ctx:    ctx,
-		cancel: cancel,
+	return &GrpcClient{
+		opts: options,
+		pool: pool,
 	}, nil
 }
 
-func (c *Client) Options() *ClientOptions {
+func (c *GrpcClient) getDialOptions() []grpc.DialOption {
+	opts := []grpc.DialOption{}
+
+	// TLS配置
+	if c.opts.TLSConfig != nil {
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(c.opts.TLSConfig)))
+	} else {
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
+
+	// KeepAlive配置
+	if c.opts.KeepAlive != nil {
+		opts = append(opts, grpc.WithKeepaliveParams(*c.opts.KeepAlive))
+	}
+
+	// 一元拦截器
+	if len(c.opts.UnaryInterceptors) > 0 {
+		opts = append(opts, grpc.WithUnaryInterceptor(attributes.ChainUnaryClient(c.opts.UnaryInterceptors...)))
+	}
+
+	// 流式拦截器
+	if len(c.opts.StreamInterceptors) > 0 {
+		opts = append(opts, grpc.WithStreamInterceptor(attributes.ChainStreamClient(c.opts.StreamInterceptors...)))
+	}
+
+	return opts
+}
+
+// GetConn 获取连接，由调用者指定是否为流式连接
+func (c *GrpcClient) GetConn(address string, isStream bool) (*grpc.ClientConn, error) {
+	return c.pool.GetConn(address, isStream, c.getDialOptions()...)
+}
+
+// ReleaseConn 释放连接
+func (c *GrpcClient) ReleaseConn(conn *grpc.ClientConn) {
+	c.pool.ReleaseConn(conn)
+}
+
+// CloseAddress 关闭指定地址的所有连接
+func (c *GrpcClient) CloseAddress(address string) error {
+	return c.pool.CloseAddress(address)
+}
+
+// Close 关闭客户端
+func (c *GrpcClient) Close() error {
+	return c.pool.Close()
+}
+
+// Options 获取配置
+func (c *GrpcClient) Options() *ClientOptions {
 	return c.opts
-}
-
-// Conn 获取原始连接
-func (c *Client) Conn() *grpc.ClientConn {
-	return c.conn
-}
-
-// Close 关闭连接
-func (c *Client) Close() error {
-	c.cancel()
-	return c.conn.Close()
-}
-
-func (c *Client) Token() string {
-	return c.opts.Token
-}
-
-func (c *Client) Address() string {
-	return c.opts.Address
-}
-
-func (c *Client) Timeout() time.Duration {
-	return c.opts.Timeout
-}
-
-func (c *Client) TLSConfig() *tls.Config {
-	return c.opts.TLSConfig
 }

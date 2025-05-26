@@ -13,20 +13,37 @@ import (
 func main() {
 	// 创建gRPC客户端
 	c, err := client.NewClient(
-		client.WithAddress("localhost:50051"),
+		// 基础配置
 		client.WithTimeout(5*time.Second),
 		client.WithInsecure(),
+
+		// 连接池配置
+		client.WithPoolConfig(
+			5,              // maxIdle
+			50,             // maxOpen
+			30*time.Minute, // maxLifetime
+			10*time.Minute, // maxIdleTime
+			1000,           // maxLoad
+		),
 	)
 	if err != nil {
-		log.Fatalf("failed to create client: %v", err)
+		log.Fatalf("创建客户端失败: %v", err)
 	}
 	defer c.Close()
 
+	// 获取连接（非流式）
+	conn, err := c.GetConn("localhost:50051", false)
+	if err != nil {
+		log.Fatalf("获取连接失败: %v", err)
+	}
+	defer c.ReleaseConn(conn)
+
 	// 创建用户服务客户端
-	userClient := pb.NewUserServiceClient(c.Conn())
+	userClient := pb.NewUserServiceClient(conn)
 
 	// 创建上下文
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	// 测试创建用户 - 有效请求
 	createUserResp, err := userClient.CreateUser(ctx, &pb.CreateUserRequest{
@@ -36,7 +53,7 @@ func main() {
 		Password: "123456",
 	})
 	if err != nil {
-		log.Printf("failed to create user: %v", err)
+		log.Printf("创建用户失败: %v", err)
 	} else {
 		fmt.Printf("CreateUser response: %+v\n", createUserResp)
 	}
@@ -49,7 +66,7 @@ func main() {
 		Password: "123",
 	})
 	if err != nil {
-		log.Printf("expected error for invalid request: %v", err)
+		log.Printf("预期的无效请求错误: %v", err)
 	} else {
 		fmt.Printf("CreateUser response: %+v\n", createUserResp)
 	}
@@ -62,7 +79,7 @@ func main() {
 		Age:   26,
 	})
 	if err != nil {
-		log.Printf("failed to update user: %v", err)
+		log.Printf("更新用户失败: %v", err)
 	} else {
 		fmt.Printf("UpdateUser response: %+v\n", updateUserResp)
 	}
@@ -75,7 +92,7 @@ func main() {
 		Age:   -1,
 	})
 	if err != nil {
-		log.Printf("expected error for invalid request: %v", err)
+		log.Printf("预期的无效请求错误: %v", err)
 	} else {
 		fmt.Printf("UpdateUser response: %+v\n", updateUserResp)
 	}
