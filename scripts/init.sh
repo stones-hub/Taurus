@@ -316,6 +316,7 @@ update_framework() {
   echo -e "${BLUE}更新 pkg、script、example、internal/app 目录...${RESET}"
 
   # 使用 --delete 选项同步内容而不是复制整个目录
+  rsync -aq --delete update_temp/test/ "$project_path/test/"
   # rsync -aq --delete update_temp/templates/ "$project_path/templates/"
   # rsync -aq --delete update_temp/static/ "$project_path/static/"
   rsync -aq --delete update_temp/scripts/ "$project_path/scripts/"
