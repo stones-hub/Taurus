@@ -60,6 +60,28 @@ func AuthServerInterceptor(token string) grpc.UnaryServerInterceptor {
 	}
 }
 
+func AuthStreamServerInterceptor(token string) grpc.StreamServerInterceptor {
+	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		// 从metadata中获取token
+		md, ok := metadata.FromIncomingContext(stream.Context())
+
+		if !ok {
+			return status.Error(codes.Unauthenticated, "missing metadata")
+		}
+
+		tokens := md.Get("authorization")
+		if len(tokens) == 0 {
+			return status.Error(codes.Unauthenticated, "missing token")
+		}
+
+		if tokens[0] != token {
+			return status.Error(codes.Unauthenticated, "invalid token")
+		}
+
+		return handler(srv, stream)
+	}
+}
+
 // RateLimitServerInterceptor 限流拦截器
 func RateLimitServerInterceptor(limit int) grpc.UnaryServerInterceptor {
 	limiter := rate.NewLimiter(rate.Limit(limit), limit)

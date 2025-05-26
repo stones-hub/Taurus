@@ -12,13 +12,26 @@ export const CONFIG = {
         baseUrl: 'localhost:50051',
         protoDir: '/Users/yelei/data/code/projects/go/Taurus/benchmark/proto/',
         protoFile: 'user.proto',
-        method: '/user.UserService/GetUserInfo',
-        methodParams: {
-            user_id: 123
+        // 一元调用配置
+        unaryMethod: 'user.UserService/GetUserInfo',
+        unaryParams: {
+            user_id: 1
         },
+        // 一元鉴权
         methodMetadata: {
-            'authorization': 'Bearer 123456',  // Bearer token认证
-            'x-api-key': '123456'
+            'authorization': 'Bearer 123456'
+        },
+        // 流式调用配置
+        streamMethod: 'user.UserService/GetUserList',
+        streamRequestCount: 5, // 每次流式调用发送的请求数
+        streamParams: {
+            user_ids: [1, 2, 3, 4, 5],
+            page_size: 10,
+            page_num: 1
+        },
+        // 流式鉴权
+        streamMetadata: {
+            'authorization': 'Bearer 123456'
         }
     },
     
@@ -29,9 +42,9 @@ export const CONFIG = {
     
     // 测试阶段配置
     stages: [
-        { duration: '1m', target: 100 },   // 爬坡阶段
+        { duration: '1m', target: 200 },   // 爬坡阶段
         { duration: '2m', target: 300 },   // 稳定阶段
         { duration: '1m', target: 500 },   // 压力阶段
-        { duration: '1m', target: 100 },   // 缓慢降低
+        { duration: '1m', target: 300 },   // 缓慢降低
     ]
 }; 

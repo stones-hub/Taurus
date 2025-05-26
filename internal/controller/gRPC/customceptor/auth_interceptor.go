@@ -28,6 +28,7 @@ func init() {
 	server.RegisterInterceptor(interceptor.RecoveryServerInterceptor())
 	// AuthServerInterceptor
 	server.RegisterInterceptor(interceptor.AuthServerInterceptor("Bearer 123456"))
+	server.RegisterStreamInterceptor(interceptor.AuthStreamServerInterceptor("Bearer 123456"))
 	// RateLimitServerInterceptor
 	// server.RegisterInterceptor(interceptor.RateLimitServerInterceptor(10))
 

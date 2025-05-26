@@ -22,8 +22,14 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserServiceClient interface {
-	// 获取用户信息
+	// 一元调用 - 获取单个用户信息
 	GetUserInfo(ctx context.Context, in *GetUserInfoRequest, opts ...grpc.CallOption) (*GetUserInfoResponse, error)
+	// 服务端流式调用 - 批量获取用户信息
+	GetUserList(ctx context.Context, in *GetUserListRequest, opts ...grpc.CallOption) (UserService_GetUserListClient, error)
+	// 客户端流式调用 - 批量创建用户
+	BatchCreateUsers(ctx context.Context, opts ...grpc.CallOption) (UserService_BatchCreateUsersClient, error)
+	// 双向流式调用 - 实时用户信息同步
+	SyncUserInfo(ctx context.Context, opts ...grpc.CallOption) (UserService_SyncUserInfoClient, error)
 }
 
 type userServiceClient struct {
@@ -43,12 +49,115 @@ func (c *userServiceClient) GetUserInfo(ctx context.Context, in *GetUserInfoRequ
 	return out, nil
 }
 
+func (c *userServiceClient) GetUserList(ctx context.Context, in *GetUserListRequest, opts ...grpc.CallOption) (UserService_GetUserListClient, error) {
+	stream, err := c.cc.NewStream(ctx, &UserService_ServiceDesc.Streams[0], "/user.UserService/GetUserList", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &userServiceGetUserListClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type UserService_GetUserListClient interface {
+	Recv() (*GetUserInfoResponse, error)
+	grpc.ClientStream
+}
+
+type userServiceGetUserListClient struct {
+	grpc.ClientStream
+}
+
+func (x *userServiceGetUserListClient) Recv() (*GetUserInfoResponse, error) {
+	m := new(GetUserInfoResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *userServiceClient) BatchCreateUsers(ctx context.Context, opts ...grpc.CallOption) (UserService_BatchCreateUsersClient, error) {
+	stream, err := c.cc.NewStream(ctx, &UserService_ServiceDesc.Streams[1], "/user.UserService/BatchCreateUsers", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &userServiceBatchCreateUsersClient{stream}
+	return x, nil
+}
+
+type UserService_BatchCreateUsersClient interface {
+	Send(*CreateUserRequest) error
+	CloseAndRecv() (*BatchCreateUsersResponse, error)
+	grpc.ClientStream
+}
+
+type userServiceBatchCreateUsersClient struct {
+	grpc.ClientStream
+}
+
+func (x *userServiceBatchCreateUsersClient) Send(m *CreateUserRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *userServiceBatchCreateUsersClient) CloseAndRecv() (*BatchCreateUsersResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(BatchCreateUsersResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *userServiceClient) SyncUserInfo(ctx context.Context, opts ...grpc.CallOption) (UserService_SyncUserInfoClient, error) {
+	stream, err := c.cc.NewStream(ctx, &UserService_ServiceDesc.Streams[2], "/user.UserService/SyncUserInfo", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &userServiceSyncUserInfoClient{stream}
+	return x, nil
+}
+
+type UserService_SyncUserInfoClient interface {
+	Send(*UserInfoSync) error
+	Recv() (*UserInfoSync, error)
+	grpc.ClientStream
+}
+
+type userServiceSyncUserInfoClient struct {
+	grpc.ClientStream
+}
+
+func (x *userServiceSyncUserInfoClient) Send(m *UserInfoSync) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *userServiceSyncUserInfoClient) Recv() (*UserInfoSync, error) {
+	m := new(UserInfoSync)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility
 type UserServiceServer interface {
-	// 获取用户信息
+	// 一元调用 - 获取单个用户信息
 	GetUserInfo(context.Context, *GetUserInfoRequest) (*GetUserInfoResponse, error)
+	// 服务端流式调用 - 批量获取用户信息
+	GetUserList(*GetUserListRequest, UserService_GetUserListServer) error
+	// 客户端流式调用 - 批量创建用户
+	BatchCreateUsers(UserService_BatchCreateUsersServer) error
+	// 双向流式调用 - 实时用户信息同步
+	SyncUserInfo(UserService_SyncUserInfoServer) error
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -58,6 +167,15 @@ type UnimplementedUserServiceServer struct {
 
 func (UnimplementedUserServiceServer) GetUserInfo(context.Context, *GetUserInfoRequest) (*GetUserInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserInfo not implemented")
+}
+func (UnimplementedUserServiceServer) GetUserList(*GetUserListRequest, UserService_GetUserListServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetUserList not implemented")
+}
+func (UnimplementedUserServiceServer) BatchCreateUsers(UserService_BatchCreateUsersServer) error {
+	return status.Errorf(codes.Unimplemented, "method BatchCreateUsers not implemented")
+}
+func (UnimplementedUserServiceServer) SyncUserInfo(UserService_SyncUserInfoServer) error {
+	return status.Errorf(codes.Unimplemented, "method SyncUserInfo not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 
@@ -90,6 +208,79 @@ func _UserService_GetUserInfo_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_GetUserList_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetUserListRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(UserServiceServer).GetUserList(m, &userServiceGetUserListServer{stream})
+}
+
+type UserService_GetUserListServer interface {
+	Send(*GetUserInfoResponse) error
+	grpc.ServerStream
+}
+
+type userServiceGetUserListServer struct {
+	grpc.ServerStream
+}
+
+func (x *userServiceGetUserListServer) Send(m *GetUserInfoResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _UserService_BatchCreateUsers_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(UserServiceServer).BatchCreateUsers(&userServiceBatchCreateUsersServer{stream})
+}
+
+type UserService_BatchCreateUsersServer interface {
+	SendAndClose(*BatchCreateUsersResponse) error
+	Recv() (*CreateUserRequest, error)
+	grpc.ServerStream
+}
+
+type userServiceBatchCreateUsersServer struct {
+	grpc.ServerStream
+}
+
+func (x *userServiceBatchCreateUsersServer) SendAndClose(m *BatchCreateUsersResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *userServiceBatchCreateUsersServer) Recv() (*CreateUserRequest, error) {
+	m := new(CreateUserRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _UserService_SyncUserInfo_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(UserServiceServer).SyncUserInfo(&userServiceSyncUserInfoServer{stream})
+}
+
+type UserService_SyncUserInfoServer interface {
+	Send(*UserInfoSync) error
+	Recv() (*UserInfoSync, error)
+	grpc.ServerStream
+}
+
+type userServiceSyncUserInfoServer struct {
+	grpc.ServerStream
+}
+
+func (x *userServiceSyncUserInfoServer) Send(m *UserInfoSync) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *userServiceSyncUserInfoServer) Recv() (*UserInfoSync, error) {
+	m := new(UserInfoSync)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +293,23 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_GetUserInfo_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetUserList",
+			Handler:       _UserService_GetUserList_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "BatchCreateUsers",
+			Handler:       _UserService_BatchCreateUsers_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "SyncUserInfo",
+			Handler:       _UserService_SyncUserInfo_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "internal/controller/gRPC/proto/user/user.proto",
 }

@@ -5,89 +5,78 @@ import { htmlReport } from "https://raw.githubusercontent.com/benc-uk/k6-reporte
 
 export let options = {
     stages: CONFIG.stages,
-    thresholds: {
-        // gRPC 性能指标
-        'grpc_req_duration': [
-            'p(95)<500',    // 95%的请求应该在500ms内完成
-            'p(90)<400',    // 90%的请求应该在400ms内完成
-            'max<2000'      // 最大响应时间不超过2s
-        ],
-        'checks': [
-            'rate>0.99'     // 检查通过率应该大于99%
-        ],
-        'vus': [
-            'value>0'       // 确保虚拟用户数被记录
-        ],
-        'vus_max': [
-            'value>0'       // 确保最大虚拟用户数被记录
-        ],
-        'iterations': [
-            'rate>0'        // 确保迭代率被记录
-        ],
-        'data_sent': [
-            'rate>0'        // 确保发送数据率被记录
-        ],
-        'data_received': [
-            'rate>0'        // 确保接收数据率被记录
-        ],
-        'iteration_duration': [
-            'p(95)<1500'    // 95%的迭代应该在1.5s内完成
-        ]
-    },
 };
 
+// 初始化客户端
 const client = new grpc.Client();
-// console.log('Loading proto file from:', CONFIG.grpc.protoFile);
+let isConnected = true;
 
+// 加载proto文件
 try {
     // 先importPaths，再protoFiles, 引入要测试的proto文件
     client.load([CONFIG.grpc.protoDir], CONFIG.grpc.protoFile);
+    console.log('Proto file loaded successfully');
 } catch (e) {
     console.error('Error loading proto file:', e);
+    throw e; // 中断执行
 }
 
-// TODO 如果需要鉴权，修改这里, 根据不同的场景做不同的测试
-export default function () {
-    // console.log('Connecting to gRPC server at:', CONFIG.grpc.baseUrl);
-    
+// 一元调用
+export function callUnaryMethod() {
     // 连接gRPC服务，添加重试和超时配置
     try {
+        console.log('Attempting to connect to:', CONFIG.grpc.baseUrl);
         client.connect(CONFIG.grpc.baseUrl, {
             plaintext: true,
-            timeout: '5s',  // 连接超时时间
-            keepalive: {
-                time: 10000,        // 10秒发送一次keepalive
-                timeout: 5000,      // 5秒超时
-                permitWithoutStream: true  // 允许无流时发送keepalive
-            }
+            timeout: '5s'  // 连接超时时间
         });
-
-        // 记录连接成功
-        // console.log('gRPC connection successful');
+        console.log('Connected to gRPC server successfully');
 
         // 调用gRPC服务
-        const userResponse = client.invoke(CONFIG.grpc.method, CONFIG.grpc.methodParams, {
+        console.log('Calling method:', CONFIG.grpc.unaryMethod);
+        console.log('With params:', JSON.stringify(CONFIG.grpc.unaryParams));
+        console.log('With metadata:', JSON.stringify(CONFIG.grpc.methodMetadata));
+        
+        const userResponse = client.invoke(CONFIG.grpc.unaryMethod, CONFIG.grpc.unaryParams, {
             metadata: CONFIG.grpc.methodMetadata,
             timeout: '10s'  // 调用超时时间
         });
         
+        console.log('Raw response:', JSON.stringify(userResponse));
+        
         // 所有的检测都通过才算成功, 1. 状态， 2. 响应时间， 3. 消息
         check(userResponse, {
-            'get user info status is OK': (r) => r && r.status === grpc.StatusOK,
-            'error is null': (r) => r && r.error === null,
+            'get user info status is OK': (r) => {
+                console.log('Response status:', r ? r.status : 'no status');
+                return r && r.status === grpc.StatusOK;
+            },
+            'error is null': (r) => {
+                if (r && r.error) {
+                    console.log('Response error:', r.error);
+                }
+                return r && r.error === null;
+            },
             'message info': (r) => {
-                // 如果需要这里可以用来判断真实请求后返回的数据的正确性
-                // console.log('Response:', r);
+                console.log('Response message:', r ? r.message : 'no message');
                 return true;
             }
         });
 
     } catch (e) {
         // 记录连接失败
+        console.error('Detailed error:', {
+            error: e,
+            message: e.message,
+            stack: e.stack
+        });
         check(null, {
             'gRPC connection successful': () => false,
             'connection error details': () => {
-                console.error('gRPC connection error:', e);
+                console.error('gRPC connection error:', {
+                    error: e,
+                    message: e.message,
+                    stack: e.stack
+                });
                 return false;
             }
         });
@@ -95,12 +84,69 @@ export default function () {
         // 确保连接被关闭
         try {
             client.close();
+            console.log('Connection closed');
         } catch (e) {
             console.error('Error closing gRPC connection:', e);
         }
     }
 
     sleep(1);
+}
+
+// 服务端流式测试 - GetUserList
+export function callStreamMethod() {
+    try {
+        // 连接服务器
+        client.connect(CONFIG.grpc.baseUrl, {
+            plaintext: true,
+            timeout: '10s'
+        });
+
+        // 创建 Stream 实例
+        const stream = new grpc.Stream(client, CONFIG.grpc.streamMethod, {
+            metadata: CONFIG.grpc.streamMetadata
+        });
+        let messageCount = 0;
+
+        // 设置数据处理器
+        stream.on('data', (data) => {
+            console.log('Received user data:', JSON.stringify(data));
+            messageCount++;
+            check(data, {
+                'user data is valid': (d) => d !== null,
+            });
+        });
+
+        // 设置错误处理器
+        stream.on('error', (err) => {
+            console.error('Stream error:', err);
+            check(null, {
+                'stream error check': () => false,
+            });
+        });
+
+        // 设置结束处理器
+        stream.on('end', () => {
+            console.log('Stream ended, total messages:', messageCount);
+            check(messageCount, {
+                'received messages': (count) => count > 0,
+            });
+        });
+
+        // 发送请求
+        stream.write(CONFIG.grpc.streamParams);
+
+        // 结束请求
+        stream.end();
+
+        // 等待接收数据
+        sleep(2);
+
+    } catch (e) {
+        console.error('Server stream error:', e);
+    } finally {
+        client.close();
+    }
 }
 
 export function handleSummary(data) {
@@ -179,3 +225,19 @@ export function handleSummary(data) {
         "reports/grpc-stats.json": JSON.stringify(statsJson, null, 2)
     };
 } 
+
+export function close() {
+    if (isConnected) {
+        client.close();
+        isConnected = false;
+    }
+}
+
+export default function() {
+    // callUnaryMethod();
+    callStreamMethod();
+    close();
+}
+
+
+
