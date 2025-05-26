@@ -38,3 +38,5 @@ logs/*
 internal/wire_gen.go
 
 release/*
+
+reports/*
