@@ -28,7 +28,7 @@ type GetUserInfoRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	UserId int64 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserId int64 `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty" validate:"required"`
 }
 
 func (x *GetUserInfoRequest) Reset() {
@@ -75,9 +75,9 @@ type GetUserListRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	UserIds  []int64 `protobuf:"varint,1,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"` // 批量查询的用户ID列表
-	PageSize int32   `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`     // 分页大小
-	PageNum  int32   `protobuf:"varint,3,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`        // 页码
+	UserIds  []int64 `protobuf:"varint,1,rep,packed,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty" validate:"required"` // 批量查询的用户ID列表
+	PageSize int32   `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" validate:"required,min=1,max=100"`     // 分页大小
+	PageNum  int32   `protobuf:"varint,3,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty" validate:"required,min=1"`        // 页码
 }
 
 func (x *GetUserListRequest) Reset() {
@@ -138,10 +138,10 @@ type CreateUserRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Username string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Email    string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	Age      int32  `protobuf:"varint,3,opt,name=age,proto3" json:"age,omitempty"`
-	Password string `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"` // 创建用户时的密码
+	Username string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty" validate:"required"`
+	Email    string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty" validate:"required,email"`
+	Age      int32  `protobuf:"varint,3,opt,name=age,proto3" json:"age,omitempty" validate:"required,min=0,max=120"`
+	Password string `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty" validate:"required"` // 创建用户时的密码
 }
 
 func (x *CreateUserRequest) Reset() {
