@@ -39,4 +39,4 @@ internal/wire_gen.go
 
 release/*
 
-benchmark/reports
+benchmark/reports/*
