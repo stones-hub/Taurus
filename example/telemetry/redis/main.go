@@ -4,44 +4,46 @@ import (
 	"context"
 	"log"
 
+	"Taurus/pkg/redisx"
 	"Taurus/pkg/telemetry"
-
-	"github.com/go-redis/redis/v8"
 )
 
 func main() {
-	// 初始化 provider
+	// 1. 初始化追踪器提供者
 	provider, err := telemetry.NewOTelProvider(
 		telemetry.WithServiceName("redis-demo"),
+		telemetry.WithServiceVersion("v0.1.0"),
 		telemetry.WithEnvironment("dev"),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("init telemetry provider failed: %v", err)
 	}
 	defer provider.Shutdown(context.Background())
 
-	// 创建 Redis 客户端
-	opts := &redis.Options{
-		Addr: "localhost:6379",
-	}
-	client := telemetry.WrapRedis(opts)
+	// 2. 初始化 Redis
+	redisTracer := provider.Tracer("redis-client")
+	redisClient := redisx.InitRedis(redisx.RedisConfig{
+		Addrs:    []string{"localhost:6379"},
+		Password: "",
+		DB:       0,
+	})
 
-	// 测试 Redis 连接
+	// 添加追踪 Hook
+	redisClient.AddHook(&telemetry.RedisHook{
+		Tracer: redisTracer,
+	})
+
+	// 3. 执行一些 Redis 操作
 	ctx := context.Background()
-	if err := client.Ping(ctx).Err(); err != nil {
-		log.Fatal(err)
+	if err := redisClient.Set(ctx, "test_key", "test_value", 0); err != nil {
+		log.Printf("set key failed: %v", err)
 	}
 
-	// 设置一个值
-	if err := client.Set(ctx, "hello", "world", 0).Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	// 获取值
-	val, err := client.Get(ctx, "hello").Result()
+	value, err := redisClient.Get(ctx, "test_key")
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("get key failed: %v", err)
 	}
+	log.Printf("get value: %v", value)
 
-	log.Printf("Value from Redis: %s", val)
+	log.Printf("Redis demo completed")
 }

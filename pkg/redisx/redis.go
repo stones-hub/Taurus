@@ -153,3 +153,7 @@ func (r *RedisClient) Unlock(ctx context.Context, lockKey string, currentProcess
 
 	return err
 }
+
+func (r *RedisClient) AddHook(hook redis.Hook) {
+	r.client.AddHook(hook)
+}

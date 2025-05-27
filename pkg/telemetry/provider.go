@@ -27,14 +27,9 @@ type OTelProvider struct {
 	once           sync.Once
 }
 
-// OTelTracer 追踪器, 通过OTelProvider.tracerProvider.Tracer(name) 创建追终器后封装到OTelTracer中
-type OTelTracer struct {
-	tracer trace.Tracer // 实际的追踪器实例
-}
-
 // NewOTelProvider 创建新的 OpenTelemetry 追踪提供者
 // 该函数会初始化所有必要的组件，包括导出器、资源属性和采样器
-func NewOTelProvider(opts ...Option) (TracerProvider, error) {
+func NewOTelProvider(opts ...Option) (*OTelProvider, error) {
 	options := defaultOptions()
 	for _, opt := range opts {
 		opt(options)
@@ -192,10 +187,8 @@ func (p *OTelProvider) createTracerProvider(exp sdktrace.SpanExporter, res *reso
 }
 
 // Tracer 返回指定名称的追踪器
-func (p *OTelProvider) Tracer(name string) Tracer {
-	return &OTelTracer{
-		tracer: p.tracerProvider.Tracer(name),
-	}
+func (p *OTelProvider) Tracer(name string) trace.Tracer {
+	return p.tracerProvider.Tracer(name)
 }
 
 // Shutdown 关闭追踪提供者 p.tracerProvider 会被关闭
@@ -204,26 +197,4 @@ func (p *OTelProvider) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	return p.tracerProvider.Shutdown(ctx)
-}
-
-// Start 开始一个新的span, 返回一个上下文和span, span用来记录追踪信息
-func (t *OTelTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return t.tracer.Start(ctx, name, opts...)
-}
-
-// Extract 从载体中提取上下文
-func (t *OTelTracer) Extract(ctx context.Context, carrier interface{}) context.Context {
-	propagator := otel.GetTextMapPropagator()
-	if c, ok := carrier.(propagation.TextMapCarrier); ok {
-		return propagator.Extract(ctx, c)
-	}
-	return ctx
-}
-
-// Inject 将上下文注入到载体中
-func (t *OTelTracer) Inject(ctx context.Context, carrier interface{}) {
-	propagator := otel.GetTextMapPropagator()
-	if c, ok := carrier.(propagation.TextMapCarrier); ok {
-		propagator.Inject(ctx, c)
-	}
 }

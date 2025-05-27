@@ -4,60 +4,51 @@ import (
 	"context"
 	"log"
 
+	"Taurus/pkg/db"
 	"Taurus/pkg/telemetry"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
+// User 用户模型
+type User struct {
+	ID   uint   `gorm:"primarykey"`
+	Name string `gorm:"type:varchar(32)"`
+	Age  int    `gorm:"type:int"`
+}
+
 func main() {
-	// 初始化 provider
+	// 1. 初始化追踪器提供者
 	provider, err := telemetry.NewOTelProvider(
 		telemetry.WithServiceName("mysql-demo"),
+		telemetry.WithServiceVersion("v0.1.0"),
 		telemetry.WithEnvironment("dev"),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("init telemetry provider failed: %v", err)
 	}
 	defer provider.Shutdown(context.Background())
 
-	// 创建带追踪的数据库连接
-	dsn := "root:password@tcp(localhost:3306)/test?parseTime=true"
-	db, err := telemetry.WrapMySQL(dsn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+	// 2. 初始化 MySQL
+	mysqlTracer := provider.Tracer("mysql-client")
+	db.InitDB("default", "mysql", "root:password@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local",
+		db.NewDBCustomLogger(db.DBLoggerConfig{
+			LogLevel: 4,
+		}), 3, 5)
+	defer db.CloseDB()
 
-	// 创建带追踪的数据库操作包装器
-	tracedDB := telemetry.NewTracedDB(db)
-
-	// 测试数据库连接
-	ctx := context.Background()
-	if err := db.PingContext(ctx); err != nil {
-		log.Fatal(err)
-	}
-
-	// 执行查询
-	var name string
-	rows, err := tracedDB.QueryContext(ctx,
-		"SELECT name FROM users WHERE id = ?",
-		1,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
-	if rows.Next() {
-		if err := rows.Scan(&name); err != nil {
-			log.Fatal(err)
+	// 为默认数据库添加追踪
+	for _, db := range db.DbList() {
+		if err := db.Use(&telemetry.GormTracingHook{
+			Tracer: mysqlTracer,
+		}); err != nil {
+			log.Fatalf("use tracing hook failed: %v", err)
 		}
-		log.Printf("User name: %s", name)
-	} else {
-		log.Println("User not found")
 	}
 
-	if err := rows.Err(); err != nil {
-		log.Fatal(err)
+	// 3. 执行一些数据库操作
+	var user User
+	if err := db.Find("default", &user, 1).Error; err != nil {
+		log.Printf("query user failed: %v", err)
 	}
+
+	log.Printf("MySQL demo completed")
 }

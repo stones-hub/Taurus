@@ -95,6 +95,10 @@ func getDB(dbName string) *gorm.DB {
 	return db
 }
 
+func DbList() map[string]*gorm.DB {
+	return dbConnections
+}
+
 // Create inserts a new record into the specified database
 func Create(dbName string, value interface{}) error {
 	db := getDB(dbName)
