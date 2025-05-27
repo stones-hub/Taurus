@@ -164,7 +164,6 @@ func InitializeWebsocket() {
 			}),
 			Middleware: []router.MiddlewareFunc{
 				middleware.ErrorHandlerMiddleware,
-				middleware.TraceMiddleware,
 			},
 		})
 		log.Println("\033[1;32m🔗 -> Websocket initialized successfully\033[0m")

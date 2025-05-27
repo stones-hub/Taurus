@@ -9,8 +9,11 @@ import (
 var Core *Injector
 
 type Injector struct {
-	DemoCtrl *controller.DemoCtrl
+	ValidateCtrl *controller.ValidateCtrl
+	TraceCtrl    *controller.TraceCtrl
 }
 
 // Injector is the injector for the internal package
-var InjectorSet = wire.NewSet(wire.Struct(new(Injector), "*"), controller.DemoCtrlSet)
+var InjectorSet = wire.NewSet(wire.Struct(new(Injector), "*"),
+	controller.ValidateCtrlSet,
+	controller.TraceCtrlSet)

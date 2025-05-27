@@ -41,6 +41,7 @@ func NewOTelProvider(opts ...Option) (*OTelProvider, error) {
 
 	var err error
 	p.once.Do(func() {
+		fmt.Println("-------------------------------- create tracer provider --------------------------------")
 		// 1. 创建 OTLP 导出器（决定数据导出/发送到哪里）
 		var exporter sdktrace.SpanExporter
 		exporter, err = p.createExporter()
@@ -166,6 +167,10 @@ func (p *OTelProvider) createTracerProvider(exp sdktrace.SpanExporter, res *reso
 			// 最多能缓存多少条待导出的数据
 			// 比如设置为 2048，超过后新的数据就会被丢弃
 			sdktrace.WithMaxQueueSize(p.opts.maxQueueSize),
+
+			// 导出超时时间
+			// 比如设置为 10s，如果导出超时，数据就会被丢弃
+			sdktrace.WithExportTimeout(p.opts.exportTimeout),
 		),
 
 		// 2. 设置资源属性

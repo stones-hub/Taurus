@@ -13,9 +13,11 @@ import (
 // Injectors from wire.go:
 
 func BuildInjector() (*Injector, func(), error) {
-	demoCtrl := &controller.DemoCtrl{}
+	validateCtrl := &controller.ValidateCtrl{}
+	traceCtrl := &controller.TraceCtrl{}
 	injector := &Injector{
-		DemoCtrl: demoCtrl,
+		ValidateCtrl: validateCtrl,
+		TraceCtrl:    traceCtrl,
 	}
 	return injector, func() {
 	}, nil
