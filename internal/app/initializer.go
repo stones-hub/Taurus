@@ -31,6 +31,7 @@ func initialize(configPath string, env string) {
 		log.Println("Configuration:", util.ToJsonString(config.Core))
 	}
 
+	InitializeTelemetry()
 	InitialzeLog()
 	InitializeDB()
 	InitializeRedis()

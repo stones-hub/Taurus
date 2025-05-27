@@ -143,7 +143,7 @@ func streamType(info *grpc.StreamServerInfo) string {
 
 func main() {
 	// 1. 初始化追踪器提供者
-	provider, err := telemetry.NewOTelProvider(
+	provider, _, err := telemetry.NewOTelProvider(
 		telemetry.WithServiceName("grpc-demo"),
 		telemetry.WithServiceVersion("v0.1.0"),
 		telemetry.WithEnvironment("dev"),

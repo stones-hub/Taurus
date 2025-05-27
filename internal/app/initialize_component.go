@@ -12,6 +12,7 @@ import (
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/redisx"
 	"Taurus/pkg/router"
+	"Taurus/pkg/telemetry"
 	"Taurus/pkg/templates"
 	"Taurus/pkg/wsocket"
 	"crypto/tls"
@@ -301,6 +302,56 @@ func InitializeConsul() {
 			log.Printf("%s🔗 -> Clean up consul components successfully. %s\n", Green, Reset)
 		})
 		log.Println("\033[1;32m🔗 -> Consul initialized successfully\033[0m")
+	}
+}
+
+// InitializeTelemetry initialize telemetry
+func InitializeTelemetry() {
+
+	if config.Core.TracingEnable {
+
+		exportTimeout, err := time.ParseDuration(config.Core.Telemetry.Export.Timeout)
+		if err != nil {
+			exportTimeout = 10 * time.Second
+		}
+
+		batchTimeout, err := time.ParseDuration(config.Core.Telemetry.Batch.Timeout)
+		if err != nil {
+			batchTimeout = 10 * time.Second
+		}
+
+		timeout, err := time.ParseDuration(config.Core.Telemetry.Export.Timeout)
+		if err != nil {
+			timeout = 10 * time.Second
+		}
+
+		// 初始化trace组件
+		provider, cleanup, err := telemetry.NewOTelProvider(
+			telemetry.WithServiceName(config.Core.Telemetry.Service.Name),
+			telemetry.WithServiceVersion(config.Core.Telemetry.Service.Version),
+			telemetry.WithEnvironment(config.Core.Telemetry.Service.Environment),
+			telemetry.WithExportProtocol(telemetry.ExportProtocol(config.Core.Telemetry.Export.Protocol)),
+			telemetry.WithInsecure(config.Core.Telemetry.Export.Insecure),
+			telemetry.WithEndpoint(config.Core.Telemetry.Export.Endpoint),
+			telemetry.WithSamplingRatio(config.Core.Telemetry.Sampling.Ratio),
+			telemetry.WithTimeout(timeout),
+			telemetry.WithBatchTimeout(batchTimeout),
+			telemetry.WithExportTimeout(exportTimeout),
+			telemetry.WithMaxExportBatchSize(config.Core.Telemetry.Batch.MaxSize),
+			telemetry.WithMaxQueueSize(config.Core.Telemetry.Batch.MaxQueueSize),
+		)
+		if err != nil {
+			log.Fatalf("init telemetry provider failed: %v", err)
+		}
+
+		telemetry.Provider = provider
+
+		Cleanup = append(Cleanup, func() {
+			cleanup()
+			log.Printf("%s🔗 -> Clean up tracing components successfully. %s\n", Green, Reset)
+		})
+
+		log.Printf("%s🔗 -> Tracing initialized successfully. %s\n", Green, Reset)
 	}
 }
 

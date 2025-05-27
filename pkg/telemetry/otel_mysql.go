@@ -9,6 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// contextKey 是上下文键的类型
+type contextKey string
+
+// 定义上下文键常量
+const dbSpanKey = contextKey("db_span")
+
 // GormTracingHook GORM 的调用链监控钩子
 type GormTracingHook struct {
 	Tracer trace.Tracer
@@ -41,9 +47,9 @@ func (h *GormTracingHook) Initialize(db *gorm.DB) error {
 
 // before 在数据库操作之前创建 span
 func (h *GormTracingHook) before(db *gorm.DB) {
-	spanName := "gorm." + db.Statement.Schema.Table
-	if db.Statement.Schema == nil {
-		spanName = "gorm.raw"
+	spanName := "gorm"
+	if db.Statement.Schema != nil {
+		spanName = "gorm." + db.Statement.Schema.Table
 	}
 
 	ctx, span := h.Tracer.Start(db.Statement.Context, spanName,
@@ -52,12 +58,12 @@ func (h *GormTracingHook) before(db *gorm.DB) {
 			attribute.String("db.operation", db.Statement.Schema.Table),
 			attribute.String("db.statement", db.Statement.SQL.String()),
 		))
-	db.Statement.Context = context.WithValue(ctx, "span", span)
+	db.Statement.Context = context.WithValue(ctx, dbSpanKey, span)
 }
 
 // after 在数据库操作之后结束 span
 func (h *GormTracingHook) after(db *gorm.DB) {
-	if span, ok := db.Statement.Context.Value("span").(trace.Span); ok {
+	if span, ok := db.Statement.Context.Value(dbSpanKey).(trace.Span); ok {
 		defer span.End()
 		if db.Error != nil {
 			span.RecordError(db.Error)

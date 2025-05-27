@@ -12,4 +12,5 @@ websocket_enable: true # 是否启用websocket
 mcp_enable: true # 是否启用mcp
 consul_enable: false # 是否启用consul
 grpc_enable: true # 是否启用grpc
+tracing_enable: true # 是否启用tracing
 print_enable: true # 是否打印配置信息

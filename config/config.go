@@ -17,6 +17,7 @@ type Config struct {
 	MCPEnable       bool `json:"mcp_enable" yaml:"mcp_enable" toml:"mcp_enable"`                   // 是否启用mcp
 	ConsulEnable    bool `json:"consul_enable" yaml:"consul_enable" toml:"consul_enable"`          // 是否启用consul
 	GRPCEnable      bool `json:"grpc_enable" yaml:"grpc_enable" toml:"grpc_enable"`                // 是否启用grpc
+	TracingEnable   bool `json:"tracing_enable" yaml:"tracing_enable" toml:"tracing_enable"`       // 是否启用tracing
 
 	MCP struct {
 		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式，可选值：sse, streamable_http, stdio
@@ -106,6 +107,29 @@ type Config struct {
 			Timeout               int  `json:"timeout" yaml:"timeout" toml:"timeout"`                                                    // 健康检查超时 单位: 秒
 		} `json:"keepalive" yaml:"keepalive" toml:"keepalive"`
 	} `json:"grpc" yaml:"grpc" toml:"grpc"`
+
+	Telemetry struct {
+		Service struct {
+			Name        string `json:"name" yaml:"name" toml:"name"`
+			Version     string `json:"version" yaml:"version" toml:"version"`
+			Environment string `json:"environment" yaml:"environment" toml:"environment"`
+		} `json:"service" yaml:"service" toml:"service"`
+		Export struct {
+			Protocol string `json:"protocol" yaml:"protocol" toml:"protocol"`
+			Endpoint string `json:"endpoint" yaml:"endpoint" toml:"endpoint"`
+			Insecure bool   `json:"insecure" yaml:"insecure" toml:"insecure"`
+			Timeout  string `json:"timeout" yaml:"timeout" toml:"timeout"`
+		} `json:"export" yaml:"export" toml:"export"`
+		Sampling struct {
+			Ratio float64 `json:"ratio" yaml:"ratio" toml:"ratio"`
+		} `json:"sampling" yaml:"sampling" toml:"sampling"`
+		Batch struct {
+			Timeout       string `json:"timeout" yaml:"timeout" toml:"timeout"`
+			MaxSize       int    `json:"max_size" yaml:"max_size" toml:"max_size"`
+			MaxQueueSize  int    `json:"max_queue_size" yaml:"max_queue_size" toml:"max_queue_size"`
+			ExportTimeout string `json:"export_timeout" yaml:"export_timeout" toml:"export_timeout"`
+		} `json:"batch" yaml:"batch" toml:"batch"`
+	} `json:"telemetry" yaml:"telemetry" toml:"telemetry"`
 }
 
 type ConsulServer struct {

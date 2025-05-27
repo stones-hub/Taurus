@@ -104,7 +104,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	// 1. 初始化追踪器提供者
-	provider, err := telemetry.NewOTelProvider(
+	provider, _, err := telemetry.NewOTelProvider(
 		telemetry.WithServiceName("http-demo"),
 		telemetry.WithServiceVersion("v0.1.0"),
 		telemetry.WithEnvironment("dev"),

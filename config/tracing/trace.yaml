@@ -1,0 +1,17 @@
+telemetry:
+  service:
+    name: http-demo
+    version: v0.1.0
+    environment: dev
+  export:
+    protocol: http  # 可选值: grpc, http
+    endpoint: 192.168.3.240:4318
+    insecure: true
+    timeout: 10s
+  sampling:
+    ratio: 1.0  # 1.0 表示全采样 范围 0.0-1.0
+  batch:
+    timeout: 10s
+    max_size: 10
+    max_queue_size: 10
+    export_timeout: 10s

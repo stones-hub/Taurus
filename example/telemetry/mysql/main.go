@@ -17,7 +17,7 @@ type User struct {
 
 func main() {
 	// 1. 初始化追踪器提供者
-	provider, err := telemetry.NewOTelProvider(
+	provider, _, err := telemetry.NewOTelProvider(
 		telemetry.WithServiceName("mysql-demo"),
 		telemetry.WithServiceVersion("v0.1.0"),
 		telemetry.WithEnvironment("dev"),
@@ -46,7 +46,7 @@ func main() {
 
 	// 3. 执行一些数据库操作
 	var user User
-	if err := db.Find("default", &user, 1).Error; err != nil {
+	if err := db.Find("default", &user, 1); err != nil {
 		log.Printf("query user failed: %v", err)
 	}
 

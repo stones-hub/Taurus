@@ -27,9 +27,13 @@ type OTelProvider struct {
 	once           sync.Once
 }
 
+var (
+	Provider *OTelProvider
+)
+
 // NewOTelProvider 创建新的 OpenTelemetry 追踪提供者
 // 该函数会初始化所有必要的组件，包括导出器、资源属性和采样器
-func NewOTelProvider(opts ...Option) (*OTelProvider, error) {
+func NewOTelProvider(opts ...Option) (*OTelProvider, func(), error) {
 	options := defaultOptions()
 	for _, opt := range opts {
 		opt(options)
@@ -75,9 +79,11 @@ func NewOTelProvider(opts ...Option) (*OTelProvider, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("setup provider failed: %w", err)
+		return nil, nil, fmt.Errorf("setup provider failed: %w", err)
 	}
-	return p, nil
+	return p, func() {
+		p.Shutdown(context.Background())
+	}, nil
 }
 
 // createExporter 创建 OTLP 导出器

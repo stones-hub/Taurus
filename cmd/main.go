@@ -8,10 +8,7 @@ import (
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/router"
 	"Taurus/pkg/telemetry"
-	"context"
-	"log"
 	"net/http"
-	"time"
 )
 
 func main() {
@@ -35,31 +32,7 @@ func main() {
 		},
 	})
 
-	// 初始化trace组件
-	provider, err := telemetry.NewOTelProvider(
-		telemetry.WithServiceName("http-demo"),
-		telemetry.WithServiceVersion("v0.1.0"),
-		telemetry.WithEnvironment("dev"),
-		telemetry.WithExportProtocol(telemetry.ProtocolHTTP),
-		telemetry.WithInsecure(true),
-		telemetry.WithEndpoint("192.168.3.240:4318"),
-		telemetry.WithTimeout(10*time.Second),
-		telemetry.WithSamplingRatio(1.0),
-		telemetry.WithBatchTimeout(10*time.Second),
-		telemetry.WithExportTimeout(10*time.Second),
-		telemetry.WithMaxExportBatchSize(10),
-		telemetry.WithMaxQueueSize(10),
-	)
-	if err != nil {
-		log.Fatalf("init telemetry provider failed: %v", err)
-	}
-	defer func() {
-		log.Printf("shutdown telemetry provider")
-		provider.Shutdown(context.Background())
-	}()
-
-	// 获取追踪器
-	tracer := provider.Tracer("http-server")
+	tracer := telemetry.Provider.Tracer("http-server")
 
 	// 测试trace中间件
 	router.AddRouter(router.Router{

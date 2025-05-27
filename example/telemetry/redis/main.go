@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// 1. 初始化追踪器提供者
-	provider, err := telemetry.NewOTelProvider(
+	provider, _, err := telemetry.NewOTelProvider(
 		telemetry.WithServiceName("redis-demo"),
 		telemetry.WithServiceVersion("v0.1.0"),
 		telemetry.WithEnvironment("dev"),
