@@ -1,6 +1,6 @@
 telemetry:
   service:
-    name: http-demo
+    name: Taurus-server
     version: v0.1.0
     environment: dev
   export:

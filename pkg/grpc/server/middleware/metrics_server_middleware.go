@@ -4,8 +4,6 @@ import (
 	"Taurus/pkg/grpc/attributes"
 	"context"
 	"crypto/md5"
-	"fmt"
-	"log"
 	"path"
 	"time"
 
@@ -62,7 +60,7 @@ func MetricsMiddleware(tracer trace.Tracer) attributes.UnaryMiddleware {
 			)
 			defer span.End()
 
-			// 调用下一个处理函数
+			// 使用新的带有追踪信息的上下文调用下一个处理函数
 			resp, err := next(ctx, req)
 
 			// 记录处理时间和响应状态
@@ -78,20 +76,6 @@ func MetricsMiddleware(tracer trace.Tracer) attributes.UnaryMiddleware {
 				attribute.Int64("rpc.duration_ms", duration.Milliseconds()),
 			)
 
-			return resp, err
-		}
-	}
-}
-
-// 日志中间件
-func LoggingMiddleware() attributes.UnaryMiddleware {
-	return func(next grpc.UnaryHandler) grpc.UnaryHandler {
-		return func(ctx context.Context, req interface{}) (interface{}, error) {
-			fmt.Printf("Request: %v\n", req)
-
-			resp, err := next(ctx, req)
-
-			log.Printf("Response: %v, Error: %v", resp, err)
 			return resp, err
 		}
 	}
