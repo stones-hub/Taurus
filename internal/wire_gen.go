@@ -16,10 +16,12 @@ func BuildInjector() (*Injector, func(), error) {
 	validateCtrl := &controller.ValidateCtrl{}
 	traceCtrl := &controller.TraceCtrl{}
 	midCtrl := &controller.MidCtrl{}
+	consulCtrl := &controller.ConsulCtrl{}
 	injector := &Injector{
 		ValidateCtrl: validateCtrl,
 		TraceCtrl:    traceCtrl,
 		MidCtrl:      midCtrl,
+		ConsulCtrl:   consulCtrl,
 	}
 	return injector, func() {
 	}, nil

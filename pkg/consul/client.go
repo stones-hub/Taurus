@@ -187,6 +187,7 @@ func (c *ConsulClient) GetNodes() ([]*api.Node, error) {
 }
 
 // 获取consul所有服务
+// 返回值: map[服务名称] -> 服务标签
 func (c *ConsulClient) GetServices() (map[string][]string, error) {
 	services, _, err := c.client.Catalog().Services(nil)
 	if err != nil {

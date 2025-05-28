@@ -4,7 +4,7 @@ import (
 	"Taurus/internal"
 	"Taurus/internal/app"
 	"Taurus/internal/controller"
-	"Taurus/internal/customware"
+	"Taurus/internal/hook"
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/router"
 	"Taurus/pkg/telemetry"
@@ -27,7 +27,7 @@ func main() {
 				Path:    "/",
 				Handler: http.HandlerFunc(internal.Core.ValidateCtrl.TestValidateMiddleware),
 				Middleware: []router.MiddlewareFunc{
-					customware.HostMiddleware,
+					hook.HostMiddleware,
 					middleware.ValidationMiddleware(&controller.ValidateRequest{}), // 验证请求是否符合ValidateRequest结构体
 				},
 			},
@@ -54,12 +54,18 @@ func main() {
 			middleware.TraceMiddleware(tracer),                             // 追踪
 			middleware.RateLimitMiddleware(limiter),                        // 限流
 			middleware.ErrorHandlerMiddleware,                              // 错误处理
-			customware.HostMiddleware,                                      // 主机限制
+			hook.HostMiddleware,                                            // 主机限制
 			middleware.ApiKeyAuthMiddleware,                                // api key认证
 			middleware.CorsMiddleware,                                      // cors跨域
 			middleware.ValidationMiddleware(&controller.ValidateRequest{}), // 验证请求是否符合ValidateRequest结构体
 			middleware.JwtMiddleware,                                       // jwt认证
 		},
+	})
+
+	// 测试获取consul注册的服务
+	router.AddRouter(router.Router{
+		Path:    "/consul/services",
+		Handler: http.HandlerFunc(internal.Core.ConsulCtrl.TestConsul),
 	})
 
 	// 设置健康检查
@@ -93,7 +99,7 @@ func main() {
 		Path:    "/",
 		Handler: http.HandlerFunc(controller.ServeMarkdownDoc),
 		Middleware: []router.MiddlewareFunc{
-			customware.HostMiddleware,
+			hook.HostMiddleware,
 		},
 	})
 
