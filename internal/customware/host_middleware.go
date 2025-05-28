@@ -3,12 +3,18 @@ package customware
 import (
 	"Taurus/pkg/httpx"
 	"Taurus/pkg/util"
+	"fmt"
+	"log"
 	"net/http"
+	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func HostMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
+		log.Println("-------------------------------- HostMiddleware --------------------------------")
 		ips := util.GetRemoteIP(r)
 
 		// 检查主机是否在允许列表中
@@ -25,6 +31,8 @@ func HostMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
+		setHostToTrace(r, allowed, ips, allowedHosts)
+
 		if !allowed {
 			httpx.SendResponse(w, http.StatusForbidden, "访问被拒绝：未授权的主机", nil)
 			return
@@ -32,6 +40,12 @@ func HostMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func setHostToTrace(r *http.Request, allowed bool, remoteIP []string, allowedHosts []string) {
+	if span := trace.SpanFromContext(r.Context()); span.SpanContext().IsValid() {
+		span.SetAttributes(attribute.String("host", fmt.Sprintf("allowed: %v, remoteIP: %v, allowedHosts: %v", allowed, strings.Join(remoteIP, ","), strings.Join(allowedHosts, ","))))
+	}
 }
 
 func getAllowedHosts() []string {

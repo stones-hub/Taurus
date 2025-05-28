@@ -8,7 +8,9 @@ import (
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/router"
 	"Taurus/pkg/telemetry"
+	"Taurus/pkg/util"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -33,6 +35,7 @@ func main() {
 	})
 
 	tracer := telemetry.Provider.Tracer("http-server")
+	limiter := util.NewCompositeRateLimiter(100, 1000, 10*time.Second)
 
 	// 测试trace中间件
 	router.AddRouter(router.Router{
@@ -40,7 +43,22 @@ func main() {
 		Handler: http.HandlerFunc(internal.Core.TraceCtrl.TestTraceMiddleware),
 		Middleware: []router.MiddlewareFunc{
 			middleware.TraceMiddleware(tracer),
-			customware.HostMiddleware,
+		},
+	})
+
+	// 测试所有的中间件
+	router.AddRouter(router.Router{
+		Path:    "/mid",
+		Handler: http.HandlerFunc(internal.Core.MidCtrl.TestMid),
+		Middleware: []router.MiddlewareFunc{
+			middleware.TraceMiddleware(tracer),                             // 追踪
+			middleware.RateLimitMiddleware(limiter),                        // 限流
+			middleware.ErrorHandlerMiddleware,                              // 错误处理
+			customware.HostMiddleware,                                      // 主机限制
+			middleware.ApiKeyAuthMiddleware,                                // api key认证
+			middleware.CorsMiddleware,                                      // cors跨域
+			middleware.ValidationMiddleware(&controller.ValidateRequest{}), // 验证请求是否符合ValidateRequest结构体
+			middleware.JwtMiddleware,                                       // jwt认证
 		},
 	})
 

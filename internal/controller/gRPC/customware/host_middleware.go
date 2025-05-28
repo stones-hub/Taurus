@@ -22,7 +22,7 @@ func init() {
 
 	// System default middleware
 	// MetricsMiddleware
-	server.RegisterMiddleware(middleware.MetricsMiddleware())
+	server.RegisterMiddleware(middleware.MetricsMiddleware(tracer))
 	// LoggingMiddleware
 	server.RegisterMiddleware(middleware.LoggingMiddleware())
 }

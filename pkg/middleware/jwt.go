@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -8,13 +9,17 @@ import (
 	"Taurus/pkg/httpx"
 	"Taurus/pkg/redisx"
 	"Taurus/pkg/util"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func JwtMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
+		log.Println("-------------------------------- JwtMiddleware --------------------------------")
 		// 通过http header中的token解析来认证
 		token := r.Header.Get("token")
+		setJwtToTrace(r, token)
 		if token == "" {
 			httpx.SendResponse(w, http.StatusUnauthorized, "Jwt Token is empty", nil)
 			return
@@ -47,6 +52,12 @@ func JwtMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func setJwtToTrace(r *http.Request, token string) {
+	if span := trace.SpanFromContext(r.Context()); span.SpanContext().IsValid() {
+		span.SetAttributes(attribute.String("Jwt", token))
+	}
 }
 
 // ------------------  例子 ------------------

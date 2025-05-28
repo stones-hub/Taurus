@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -13,6 +14,9 @@ import (
 	"Taurus/pkg/contextx"
 	"Taurus/pkg/httpx"
 	"Taurus/pkg/validate"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // ValidationMiddleware 创建一个HTTP请求验证中间件
@@ -24,6 +28,7 @@ func ValidationMiddleware(reqStruct interface{}) func(http.Handler) http.Handler
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Println("-------------------------------- ValidationMiddleware --------------------------------")
 			// 1. 收集所有请求数据到一个map
 			data := make(map[string]interface{})
 
@@ -106,9 +111,11 @@ func ValidationMiddleware(reqStruct interface{}) func(http.Handler) http.Handler
 			if err := validate.ValidateStruct(req); err != nil {
 				if valErrs, ok := err.(validate.ValidationErrors); ok {
 					fieldErrors := validate.GetFieldErrors(valErrs)
+					setValidateToTrace(r, fieldErrors)
 					httpx.SendResponse(w, http.StatusBadRequest, fieldErrors, nil)
 					return
 				}
+				setValidateToTrace(r, err)
 				httpx.SendResponse(w, http.StatusInternalServerError, err.Error(), nil)
 				return
 			}
@@ -222,4 +229,10 @@ func GetValidatedRequest(r *http.Request, reqStruct interface{}) bool {
 
 	dstVal.Elem().Set(srcVal.Elem())
 	return true
+}
+
+func setValidateToTrace(r *http.Request, err interface{}) {
+	if span := trace.SpanFromContext(r.Context()); span.SpanContext().IsValid() {
+		span.SetAttributes(attribute.String("Validate", fmt.Sprintf("%v", err)))
+	}
 }

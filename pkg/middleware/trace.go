@@ -34,7 +34,7 @@ func wrapResponseWriter(w http.ResponseWriter) *responseWriter {
 func TraceMiddleware(tracer trace.Tracer) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
+			log.Println("-------------------------------- TraceMiddleware --------------------------------")
 			// 用x-request-id作为traceID
 			requestID := r.Header.Get("X-Request-ID")
 			if requestID == "" {

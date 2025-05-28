@@ -130,7 +130,9 @@ func gracefulCleanup(ctx context.Context) {
 
 	go func() {
 		for _, cleanup := range Cleanup {
-			cleanup()
+			if cleanup != nil {
+				cleanup()
+			}
 		}
 		done <- struct{}{}
 	}()
