@@ -154,8 +154,8 @@ func InitializeCron() {
 
 // InitializeWebsocket initialize websocket
 func InitializeWebsocket() {
-	// initialize websocket
 	if config.Core.WebsocketEnable {
+
 		wsocket.Initialize()
 
 		router.AddRouter(router.Router{

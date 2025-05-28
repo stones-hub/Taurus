@@ -36,13 +36,13 @@ func TraceMiddleware(tracer trace.Tracer) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.Println("-------------------------------- TraceMiddleware --------------------------------")
 			// 用x-request-id作为traceID
-			requestID := r.Header.Get("X-Request-ID")
-			if requestID == "" {
-				requestID = uuid.New().String()
+			requestid := r.Header.Get("X-Request-ID")
+			if requestid == "" {
+				requestid = uuid.New().String()
 			}
 
 			// 使用 MD5 生成 16 字节的 TraceID, 因为调用链监控只支持16进制
-			hash := md5.Sum([]byte(requestID))
+			hash := md5.Sum([]byte(requestid))
 			var traceID trace.TraceID
 			copy(traceID[:], hash[:])
 
