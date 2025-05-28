@@ -24,6 +24,6 @@ func (traceCtrl *TraceCtrl) TestTraceMiddleware(w http.ResponseWriter, r *http.R
 	span := trace.SpanFromContext(r.Context())
 	span.SetAttributes(attribute.String("user.id", "123"))
 
-	httpx.SendResponse(w, 200001, "trace middleware test", nil)
+	httpx.SendResponse(w, http.StatusOK, "trace middleware test", nil)
 
 }
