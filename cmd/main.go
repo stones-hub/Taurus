@@ -15,6 +15,9 @@ import (
 
 func main() {
 
+	t := telemetry.Provider.Tracer("taurus-http-server")
+	rateLimiter := util.NewCompositeRateLimiter(100, 1000, 1*time.Second)
+
 	// 测试validate
 	router.AddRouterGroup(router.RouteGroup{
 		Prefix: "/v1/api",
@@ -34,15 +37,12 @@ func main() {
 		},
 	})
 
-	tracer := telemetry.Provider.Tracer("http-server")
-	limiter := util.NewCompositeRateLimiter(100, 1000, 10*time.Second)
-
 	// 测试trace中间件
 	router.AddRouter(router.Router{
 		Path:    "/trace",
 		Handler: http.HandlerFunc(internal.Core.TraceCtrl.TestTraceMiddleware),
 		Middleware: []router.MiddlewareFunc{
-			middleware.TraceMiddleware(tracer),
+			middleware.TraceMiddleware(t),
 		},
 	})
 
@@ -51,8 +51,8 @@ func main() {
 		Path:    "/mid",
 		Handler: http.HandlerFunc(internal.Core.MidCtrl.TestMid),
 		Middleware: []router.MiddlewareFunc{
-			middleware.TraceMiddleware(tracer),                             // 追踪
-			middleware.RateLimitMiddleware(limiter),                        // 限流
+			middleware.TraceMiddleware(t),                                  // 追踪
+			middleware.RateLimitMiddleware(rateLimiter),                    // 限流
 			middleware.ErrorHandlerMiddleware,                              // 错误处理
 			hook.HostMiddleware,                                            // 主机限制
 			middleware.ApiKeyAuthMiddleware,                                // api key认证
