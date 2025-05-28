@@ -26,7 +26,7 @@ type MessageHandler func(conn *websocket.Conn, messageType int, message []byte) 
 func Initialize() {
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
-			// Allow all origins for simplicity; customize as needed
+			// TODO Allow all origins for simplicity; customize as needed
 			return true
 		},
 	}
