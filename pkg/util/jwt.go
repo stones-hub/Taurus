@@ -72,7 +72,7 @@ if err != nil {
 // 签发token后，存储到redis中（为了保证token唯一有效）
 ua := r.Header.Get("User-Agent") // key用户user-agent可以保证换了浏览器token失效
 m := map[string]string{ua: token}
-redisx.Redis.HSet(r.Context(), strconv.FormatUint(uint64(user.ID), 10), m)
+redisx.Redis.HSet(r.Context(), strconv.FormatUint(uint64(user.ID), 10), ua, m)
 return response.Response{
 	Status: http.StatusOK,
 	Msg:    "登录成功！",

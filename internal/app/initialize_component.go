@@ -25,6 +25,7 @@ import (
 	_ "Taurus/internal/app/core/crons"         // 引入crons，注册crons包下的所有的定时任务
 	_ "Taurus/internal/app/core/log_formatter" // 引入log_formatter，注册log_formatter包下的所有的日志格式化器
 	_ "Taurus/internal/app/core/ws_handler"    // 引入ws_handler，注册ws_handler包下的所有的websocket处理器
+	http_hooks "Taurus/internal/hooks"
 
 	// 引入mcps包下的所有的提示词、资源、工具
 	_ "Taurus/internal/app/core/mcps/prompts"   // 引入prompts，注册prompts包下的所有的提示词
@@ -32,7 +33,6 @@ import (
 	_ "Taurus/internal/app/core/mcps/tools"     // 引入tools，注册tools包下的所有的工具
 
 	// 引入 gRPC 包下的所有的中间件、服务
-
 	"Taurus/internal/controller/gRPC/hooks"
 	_ "Taurus/internal/controller/gRPC/service" // 引入service，注册service包下的所有的服务
 
@@ -165,6 +165,7 @@ func InitializeWebsocket() {
 			}),
 			Middleware: []router.MiddlewareFunc{
 				middleware.ErrorHandlerMiddleware,
+				http_hooks.HostMiddleware,
 			},
 		})
 		log.Println("\033[1;32m🔗 -> Websocket initialized successfully\033[0m")

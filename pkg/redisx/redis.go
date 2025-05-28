@@ -94,16 +94,44 @@ func (r *RedisClient) Decr(ctx context.Context, key string) (int64, error) {
 	return r.client.Decr(ctx, key).Result()
 }
 
-// HSet 设置哈希字段
-func (r *RedisClient) HSet(ctx context.Context, key string, field string, value interface{}) error {
-	return r.client.HSet(ctx, key, field, value).Err()
+// HSet 设置哈希字段，支持两种方式：
+// 1. 传入字段值对：HSet(ctx, "user:1001", "name", "test", "age", "20")
+// 2. 传入map：HSet(ctx, "user:1001", map[string]interface{}{"name": "test", "age": 20})
+func (r *RedisClient) HSet(ctx context.Context, key string, values ...interface{}) error {
+	if len(values) == 0 {
+		return nil
+	}
+
+	// 如果第一个参数是map，则转换为字段值对
+	if len(values) == 1 {
+		if m, ok := values[0].(map[string]interface{}); ok {
+			var pairs []interface{}
+			for k, v := range m {
+				pairs = append(pairs, k, v)
+			}
+			return r.client.HSet(ctx, key, pairs...).Err()
+		}
+	}
+
+	return r.client.HSet(ctx, key, values...).Err()
 }
 
 // HGet 获取哈希字段的值
+// 示例：value, err := HGet(ctx, "user:1001", "name")
 func (r *RedisClient) HGet(ctx context.Context, key string, field string) (string, error) {
 	result, err := r.client.HGet(ctx, key, field).Result()
 	if err == redis.Nil {
 		return "", nil
+	}
+	return result, err
+}
+
+// HGetList 获取哈希表的所有字段和值
+// 示例：values, err := HGetList(ctx, "user:1001")
+func (r *RedisClient) HGetList(ctx context.Context, key string) (map[string]string, error) {
+	result, err := r.client.HGetAll(ctx, key).Result()
+	if err == redis.Nil {
+		return make(map[string]string), nil
 	}
 	return result, err
 }
