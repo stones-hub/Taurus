@@ -1,6 +1,7 @@
 package tcpx
 
 import (
+	"Taurus/pkg/tcpx/errors"
 	"Taurus/pkg/tcpx/protocol"
 	"context"
 	"fmt"
@@ -141,7 +142,7 @@ func (s *Server) acceptLoop() {
 				// 原始链接直接关闭（无需考虑Connection对象，因为还咩有初始化）
 				conn.Close()
 				s.metrics.AddConnectionRefused()
-				s.handler.OnError(nil, ErrTooManyConnections)
+				s.handler.OnError(nil, errors.ErrTooManyConnections)
 			}
 			time.Sleep(time.Millisecond * 100)
 			continue
@@ -156,7 +157,7 @@ func (s *Server) acceptLoop() {
 				return
 			default:
 				// 判断错误是否为临时性的, 如果是则重试, 否则直接关闭server
-				if isTemporaryError(err) {
+				if errors.IsTemporaryError(err) {
 					if retries < maxRetries {
 						time.Sleep(delay)
 						delay *= 2
@@ -165,18 +166,18 @@ func (s *Server) acceptLoop() {
 						}
 						retries++
 						s.metrics.AddError()
-						s.handler.OnError(nil, ErrSystemOverload)
+						s.handler.OnError(nil, errors.ErrSystemOverload)
 						continue
 					}
 					// 重试次数达到最大值, server可能出了问题无法恢复, 直接关闭server
 					s.metrics.AddError()
-					s.handler.OnError(nil, ErrSystemFatal)
+					s.handler.OnError(nil, errors.ErrSystemFatal)
 					s.Stop()
 					return
 				} else {
 					// 非临时性错误, server可能出了问题无法恢复, 直接关闭server
 					s.metrics.AddError()
-					s.handler.OnError(nil, ErrSystemFatal)
+					s.handler.OnError(nil, errors.ErrSystemFatal)
 					s.Stop()
 					return
 				}
@@ -254,17 +255,6 @@ func (s *Server) Broadcast(message interface{}) {
 // ConnectionCount 获取当前连接数
 func (s *Server) ConnectionCount() int32 {
 	return s.maxConns - int32(len(s.connChan))
-}
-
-// isTemporaryError 检查错误是否为临时性的，可以通过重试解决。
-func isTemporaryError(err error) bool {
-	switch err.(type) {
-	case *net.OpError:
-		// 常见的系统资源相关错误，可能是临时的
-		return true
-	default:
-		return false
-	}
 }
 
 // GetMetrics 返回当前服务器指标。
