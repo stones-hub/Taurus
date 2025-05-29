@@ -1,6 +1,7 @@
 package tcpx
 
 import (
+	"Taurus/pkg/tcpx/errors"
 	"Taurus/pkg/tcpx/protocol"
 	"context"
 	"fmt"
@@ -39,17 +40,17 @@ func WithRateLimit(messagesPerSecond float64) ConnectionOption {
 	}
 }
 
-// WithMaxMessageSize 设置最大消息大小
-func WithMaxMessageSize(bytes int) ConnectionOption {
-	return func(c *Connection) {
-		c.maxMessageSize = bytes
-	}
-}
-
 // WithBandwidthLimit 设置带宽限制
 func WithBandwidthLimit(bytesPerSecond float64) ConnectionOption {
 	return func(c *Connection) {
 		c.bandwidth = rate.NewLimiter(rate.Limit(bytesPerSecond), 1)
+	}
+}
+
+// WithMaxMessageSize 设置连接允许传输的最大消息大小
+func WithMaxMessageSize(bytes int) ConnectionOption {
+	return func(c *Connection) {
+		c.maxMessageSize = bytes
 	}
 }
 
@@ -66,12 +67,12 @@ type Connection struct {
 	metrics  *Metrics           // 连接统计指标
 
 	// 空闲超时管理
-	idleTimeout time.Duration // 最大空闲时间
+	idleTimeout    time.Duration // 最大空闲时间
+	maxMessageSize int           // 连接允许传输的最大消息大小
 
 	// 流量控制
-	maxMessageSize int           // 最大允许消息大小
-	rateLimiter    *rate.Limiter // 消息频率限制器
-	bandwidth      *rate.Limiter // 带宽使用限制器
+	rateLimiter *rate.Limiter // 消息频率限制器
+	bandwidth   *rate.Limiter // 带宽使用限制器
 
 	lastActiveTime atomic.Value // 连接最后活动时间戳
 
@@ -83,48 +84,31 @@ type Connection struct {
 
 var globalConnectionID uint64 // 生成唯一连接 ID 的全局计数器
 
+const (
+	maxRetryCount  = 3                // 最大重试次数
+	baseRetryDelay = 1 * time.Second  // 基础重试延迟
+	maxRetryDelay  = 10 * time.Second // 最大重试延迟
+)
+
 // NewConnection 创建一个新的连接实例。
 // 它接受可选的配置选项，使用函数式选项模式进行配置。
 func NewConnection(conn net.Conn, protocol protocol.Protocol, handler Handler, opts ...ConnectionOption) *Connection {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Connection{
-		id:       atomic.AddUint64(&globalConnectionID, 1), // 协程安全的，每次给globalConnectionID累加1（全局变量）, 并返回累加值, 作为连接id (唯一)
-		conn:     conn,                                     // 底层tcp连接
-		protocol: protocol,                                 // 消息编码解码协议
-		handler:  handler,                                  // 连接处理器
-		sendChan: make(chan []byte, 1024),                  // 异步消息发送通道
-		ctx:      ctx,                                      // 生命周期管理上下文
-		cancel:   cancel,                                   // 取消上下文的函数
-		metrics:  NewMetrics(),                             // 连接层面的统计指标
+		id:       atomic.AddUint64(&globalConnectionID, 1),
+		conn:     conn,
+		protocol: protocol,
+		handler:  handler,
+		sendChan: make(chan []byte, 1024),
+		ctx:      ctx,
+		cancel:   cancel,
+		metrics:  NewMetrics(),
 
 		// 默认配置
-		idleTimeout:    time.Minute * 5, // 默认 5 分钟超时, 具体指当连接消息的收发超过5分钟没有动静, 则认为连接已经死亡, 需要主动关闭
-		maxMessageSize: 1024 * 1024,     // 默认最大消息大小 1MB, 如果消息大小超过这个值, 则认为消息太大, 需要丢弃
-
-		// 这里用到了rate.NewLimiter(r Limit, b int) 来创建限流器, 限流器是golang.org/x/time/rate包中的一个限流器, 用于限制消息的速率, 限流器有三个主要方法, Allow, Reserve, Wait
-		// 1. Allow: 判断是否能拿到令牌, 拿到了返回true，拿不到返回false
-		// 2. Wait(ctx context.Context): 等待一个令牌(阻塞方法), 如果等待成功, 则返回nil, 否则返回一个error, 如果 context 被取消，返回 context 的错误
-		// 3. Reserve: 希望能预约一个令牌，如果预约成功，则返回一个Reservation对象，否则返回一个error, Reservation中存储了令牌的可用时间, 适用于需要预判等待时间获取令牌的场景
-		/*
-			// 使用 Reserve
-			r := limiter.Reserve() // 预约令牌
-			if !r.OK() { // 如果预约失败，则返回一个error
-			    return errors.New("rate limit exceeded")
-			}
-			// r.Delay() 返回的是令牌可用需要等待的时间
-			if r.Delay() > 5*time.Second { // 判断等待时间是否太长，如果太长，则取消预约
-			    r.Cancel() // 等待时间太长，取消预约
-			    return errors.New("wait too long")
-			}
-			time.Sleep(r.Delay())
-		*/
-		// 对于参数解释：
-		// r(rate.Limit(100)) 表示每秒允许通过100个令牌
-		// b(1) 表示令牌桶的容量为1, 如果令牌桶满了, 则新的令牌会丢弃
-		// 这样就意味着，即使每秒生成100个令牌，但是令牌桶的容量为1，所以每秒最多只能处理1个令牌, 因为能不能处理取决于令牌桶中能不能拿到令牌
-
-		rateLimiter: rate.NewLimiter(rate.Limit(100), 100),             // 默认 每秒最多只能处理 100 条消息
-		bandwidth:   rate.NewLimiter(rate.Limit(1024*1024), 1024*1024), // 默认 每秒最多只能处理 1MB 的数据
+		idleTimeout:    time.Minute * 5,                                   // 默认5分钟空闲超时
+		maxMessageSize: 10 * 1024 * 1024,                                  // 默认最大消息大小10MB
+		rateLimiter:    rate.NewLimiter(rate.Limit(100), 100),             // 默认每秒100条消息
+		bandwidth:      rate.NewLimiter(rate.Limit(1024*1024), 1024*1024), // 默认每秒1MB带宽
 	}
 
 	// 应用所有配置选项
@@ -132,7 +116,7 @@ func NewConnection(conn net.Conn, protocol protocol.Protocol, handler Handler, o
 		opt(c)
 	}
 
-	c.lastActiveTime.Store(time.Now()) // 初始化设置连接的最后活动时间
+	c.lastActiveTime.Store(time.Now())
 	return c
 }
 
@@ -155,59 +139,148 @@ func (c *Connection) readLoop() {
 		c.Close()
 	}()
 
+	// 预分配读取缓冲区
+	readBuf := make([]byte, 16*1024)
+	// 消息缓冲区
+	msgBuf := make([]byte, 0, c.maxMessageSize)
+	// 重试相关变量
+	retryCount := 0
+	retryDelay := baseRetryDelay
+
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
 		default:
-			// 设置从连接中读取消息的最大等待时间（超过60s还未读取到数据，就返回读取超时）
-			_ = c.conn.SetReadDeadline(time.Now().Add(time.Second * 60))
-
-			// 读取消息前检查带宽限制
-			if err := c.bandwidth.Wait(c.ctx); err != nil {
-				c.handler.OnError(c, fmt.Errorf("bandwidth limit: %w", err))
-				continue
+			// 1. 设置读取超时
+			if err := c.conn.SetReadDeadline(time.Now().Add(c.idleTimeout)); err != nil {
+				c.handler.OnError(c, fmt.Errorf("set read deadline failed: %w", err))
+				return
 			}
 
-			// 记录实际消息处理的开始时间
-			start := time.Now()
-			// 读取连接中的数据，并解包(读取连接或解包都可能出错，错误返回)
-			message, err := c.protocol.Unpack(c.conn)
+			// 2. 检查连接状态
+			if atomic.LoadInt32(&c.closed) == 1 {
+				return
+			}
+
+			// 3. 从连接读取数据
+			n, err := c.conn.Read(readBuf)
 			if err != nil {
-				c.metrics.AddError()
-				// 错误如果是连接本身的错误，则需要关闭连接, 其他的错误我们可以等待下一次读取,  并将当前的错误返回给上层
-				if err == io.EOF || err == io.ErrUnexpectedEOF {
-					c.handler.OnError(c, ErrConnectionClosed)
-					// 关闭连接
+				if err == io.EOF {
+					c.handler.OnError(c, errors.ErrConnectionClosed)
 					return
 				}
-				continue
-			}
-
-			// 消息大小验证
-			if data, ok := message.([]byte); ok {
-				if len(data) > c.maxMessageSize { // 超出单条消息的大小限制
-					c.handler.OnError(c, ErrMessageTooLarge)
-					c.metrics.AddError()
+				if errors.IsTemporaryError(err) {
+					retryCount++
+					c.handler.OnError(c, fmt.Errorf("temporary read error (attempt %d/%d): %w", retryCount, maxRetryCount, err))
+					if retryCount > maxRetryCount {
+						// 重试次数超过最大值，关闭连接
+						c.handler.OnError(c, fmt.Errorf("max retry count exceeded: %w", err))
+						return
+					}
+					// 使用指数退避策略计算下一次重试延迟
+					retryDelay *= 2
+					if retryDelay > maxRetryDelay {
+						retryDelay = maxRetryDelay
+					}
+					time.Sleep(retryDelay)
 					continue
 				}
+				// 非临时错误，直接关闭连接
+				c.handler.OnError(c, fmt.Errorf("read error: %w", err))
+				return
+			}
 
-				// 更新接收字节数统计
-				c.metrics.AddMessageReceived(int64(len(data)))
+			// 读取成功，重置重试相关变量
+			retryCount = 0
+			retryDelay = baseRetryDelay
 
-				// 速率限制（基于消息大小）
-				if err := c.rateLimiter.WaitN(c.ctx, len(data)); err != nil {
-					c.handler.OnError(c, fmt.Errorf("rate limit: %w", err))
-					continue
+			// 4. 追加到消息缓冲区
+			msgBuf = append(msgBuf, readBuf[:n]...)
+			// 清空已读取的数据, 以防万一
+			readBuf = readBuf[:0]
+
+			// 5. 尝试解析一个完整的消息
+			start := time.Now()
+			message, consumed, err := c.protocol.Unpack(msgBuf)
+
+			// 6. 处理不同的错误情况
+			switch err {
+			case nil:
+				// 成功解析一个完整的消息
+				// 更新接收的消息数量
+				c.metrics.AddMessageReceived(int64(consumed))
+				// 设置消息最后处理时间
+				c.metrics.SetMessageLatency(time.Since(start))
+				// 更新连接最后活动时间
+				c.updateActiveTime()
+
+				// 处理消息
+				c.handler.OnMessage(c, message)
+
+				// 移除已处理的数据
+				msgBuf = msgBuf[consumed:]
+
+			case errors.ErrShortRead:
+				// 数据不足，保留所有数据等待更多数据
+				goto WAIT_MORE
+
+			case errors.ErrMessageTooLarge:
+				// 消息过大，丢弃指定长度
+				c.metrics.AddError()
+				c.handler.OnError(c, err)
+				// 如果返回的consumed大于当前数据，说明需要丢弃所有数据
+				if consumed > len(msgBuf) {
+					msgBuf = msgBuf[:0]
+				} else {
+					msgBuf = msgBuf[consumed:]
+				}
+
+			case errors.ErrInvalidFormat:
+				// 格式错误（比如魔数不在开头），丢弃指定长度的数据
+				c.metrics.AddError()
+				c.handler.OnError(c, err)
+				// consumed表示魔数之前的数据长度，直接丢弃
+				msgBuf = msgBuf[consumed:]
+
+			case errors.ErrChecksum:
+				// 校验错误，丢弃整个包
+				c.metrics.AddError()
+				c.handler.OnError(c, err)
+				msgBuf = msgBuf[consumed:]
+
+			default:
+				// 其他错误（比如JSON解析错误），丢弃整个包
+				c.metrics.AddError()
+				c.handler.OnError(c, err)
+				if consumed > 0 {
+					msgBuf = msgBuf[consumed:]
+				} else {
+					// 无法恢复的错误，且没有指定丢弃长度，丢弃所有数据
+					msgBuf = msgBuf[:0]
 				}
 			}
 
-			// 更新活跃时间和延迟指标
-			c.updateActiveTime()
-			c.metrics.SetMessageLatency(time.Since(start))
+			// 每次处理完一个消息后更新读取超时
+			if err := c.conn.SetReadDeadline(time.Now().Add(c.idleTimeout)); err != nil {
+				c.handler.OnError(c, fmt.Errorf("set read deadline failed: %w", err))
+				return
+			}
+		}
 
-			// 处理消息
-			c.handler.OnMessage(c, message)
+	WAIT_MORE:
+		// 如果缓冲区过大，可能是因为积累了太多无效数据
+		if len(msgBuf) > c.maxMessageSize {
+			// 缓冲区过大，说明可能有大量无效数据，直接清空
+			msgBuf = msgBuf[:0]
+			c.metrics.AddError()
+			c.handler.OnError(c, errors.ErrBufferOverflow)
+		}
+
+		// 更新读取超时
+		if err := c.conn.SetReadDeadline(time.Now().Add(c.idleTimeout)); err != nil {
+			c.handler.OnError(c, fmt.Errorf("set read deadline failed: %w", err))
+			return
 		}
 	}
 }
@@ -256,7 +329,7 @@ func (c *Connection) checkIdleLoop() {
 		case <-ticker.C:
 			lastActive := c.lastActiveTime.Load().(time.Time)
 			if time.Since(lastActive) > c.idleTimeout {
-				c.handler.OnError(c, ErrConnectionIdle)
+				c.handler.OnError(c, errors.ErrConnectionIdle)
 				c.Close()
 				return
 			}
@@ -265,10 +338,10 @@ func (c *Connection) checkIdleLoop() {
 }
 
 // Send 将消息排队等待发送。
-// 它在排队前应用流量控制和大小验证。
+// 它在排队前应用流量控制。
 func (c *Connection) Send(message interface{}) error {
 	if atomic.LoadInt32(&c.closed) == 1 {
-		return ErrConnectionClosed
+		return errors.ErrConnectionClosed
 	}
 
 	data, err := c.protocol.Pack(message)
@@ -276,9 +349,7 @@ func (c *Connection) Send(message interface{}) error {
 		return err
 	}
 
-	if len(data) > c.maxMessageSize {
-		return ErrMessageTooLarge
-	}
+	// 消息大小检查由协议层负责
 
 	if err := c.rateLimiter.Wait(c.ctx); err != nil {
 		return err
@@ -292,7 +363,7 @@ func (c *Connection) Send(message interface{}) error {
 	case c.sendChan <- data:
 		return nil
 	default:
-		return ErrSendChannelFull
+		return errors.ErrSendChannelFull
 	}
 }
 

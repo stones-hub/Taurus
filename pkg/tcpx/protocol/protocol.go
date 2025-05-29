@@ -3,7 +3,9 @@
 package protocol
 
 import (
-	"io"
+	"Taurus/pkg/tcpx/protocol/binary"
+	"Taurus/pkg/tcpx/protocol/json"
+	"fmt"
 )
 
 // ProtocolType 是协议类型的枚举。
@@ -31,20 +33,16 @@ const (
 // 每种协议实现都必须提供消息的序列化（Pack）和反序列化（Unpack）能力。
 // 不同的协议实现可以针对不同的场景优化，比如追求效率的二进制协议，或者追求可读性的JSON协议。
 type Protocol interface {
-	// Pack 将消息打包成字节流。
-	// 参数 message 可以是任意类型，具体协议实现应该处理类型转换和验证。
-	// 返回序列化后的字节切片，如果发生错误则返回 error。
+	// Unpack尝试从数据中解析一个完整的消息
+	// 返回：解析出的消息，已处理的字节数，错误
+	// - 如果数据不足，返回(nil, 0, errors.ErrShortRead)
+	// - 如果消息格式错误，返回(nil, n, errors.ErrInvalidFormat)，n为需要跳过的字节数
+	// - 如果消息过大，返回(nil, n, errors.ErrMessageTooLarge)，n为消息的完整长度
+	// - 如果校验失败，返回(nil, n, errors.ErrChecksum)，n为消息的完整长度
+	Unpack(data []byte) (message interface{}, n int, err error)
+
+	// Pack将消息打包成字节流
 	Pack(message interface{}) ([]byte, error)
-
-	// Unpack 从 reader 中读取并解析消息。
-	// 它应该处理消息边界，确保完整地读取一个消息。
-	// 返回解析后的消息对象，具体类型由协议实现决定。
-	// 如果读取或解析过程中发生错误，返回 error。
-	Unpack(reader io.Reader) (interface{}, error)
-
-	// GetMessageLength 从读取器中读取必要的字节，计算出完整消息的长度
-	// 注意：这个方法不应该消费掉读取的数据，应该能让后续的 Unpack 方法重新读取
-	GetMessageLength(reader io.Reader) (int, error)
 }
 
 // Message 定义了基础消息的接口。
@@ -60,4 +58,47 @@ type Message interface {
 	// 序列号用于消息的排序、去重和追踪。
 	// 返回值是一个 uint32 类型的序列号。
 	GetSequence() uint32
+}
+
+type Option func(*Options)
+
+type Options struct {
+	MaxMessageSize uint32       // 最大消息大小
+	Type           ProtocolType // 协议类型
+}
+
+func WithMaxMessageSize(size uint32) Option {
+	return func(o *Options) {
+		o.MaxMessageSize = size
+	}
+}
+
+func WithType(pt ProtocolType) Option {
+	return func(o *Options) {
+		o.Type = pt
+	}
+}
+
+// 初始化协议
+func NewProtocol(opts ...Option) (Protocol, error) {
+	// 默认选项
+	options := &Options{
+		MaxMessageSize: 10 * 1024 * 1024,
+		Type:           JSONProtocolType, // 默认使用 JSON 协议
+	}
+
+	// 应用自定义选项
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	// 根据协议类型创建相应的协议实例
+	switch options.Type {
+	case JSONProtocolType:
+		return json.New(options.MaxMessageSize), nil
+	case BinaryProtocolType:
+		return binary.New(options.MaxMessageSize), nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol type: %s", options.Type)
+	}
 }

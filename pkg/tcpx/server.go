@@ -138,6 +138,7 @@ func (s *Server) acceptLoop() {
 		default: // 没有可用槽位, 已经达到server能处理的最大连接数, 接收到的链接需要丢弃
 			conn, err := s.listener.Accept()
 			if err == nil {
+				// 原始链接直接关闭（无需考虑Connection对象，因为还咩有初始化）
 				conn.Close()
 				s.metrics.AddConnectionRefused()
 				s.handler.OnError(nil, ErrTooManyConnections)
@@ -146,7 +147,7 @@ func (s *Server) acceptLoop() {
 			continue
 		}
 
-		// 2. 从listener的队列中获取新连接
+		// 2. 从listener的队列中获取新连接, 当前没有新链接阻塞
 		conn, err := s.listener.Accept()
 		if err != nil {
 			<-s.connChan // 获取到链接，但是报错了， 释放槽位, 当前连接认为处理掉了
@@ -167,13 +168,13 @@ func (s *Server) acceptLoop() {
 						s.handler.OnError(nil, ErrSystemOverload)
 						continue
 					}
-					// 重试次数达到最大值, server都很繁忙, 证明server可能出了问题无法恢复, 直接关闭server
+					// 重试次数达到最大值, server可能出了问题无法恢复, 直接关闭server
 					s.metrics.AddError()
-					s.handler.OnError(nil, ErrSystemResource)
+					s.handler.OnError(nil, ErrSystemFatal)
 					s.Stop()
 					return
 				} else {
-					// 非临时性错误, 直接关闭server, 证明server已经无法恢复
+					// 非临时性错误, server可能出了问题无法恢复, 直接关闭server
 					s.metrics.AddError()
 					s.handler.OnError(nil, ErrSystemFatal)
 					s.Stop()
