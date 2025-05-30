@@ -273,17 +273,19 @@ func (c *Client) readLoop() {
 				}
 				if tcperr.IsTemporaryError(err) {
 					retryCount++
-					c.handler.OnError(c.ctx, c.conn, fmt.Errorf("temporary read error (attempt %d/%d): %v",
-						retryCount, c.maxRetryTime, err))
+					c.handler.OnError(c.ctx, c.conn, fmt.Errorf("temporary read error (attempt %d/%d): %v", retryCount, c.maxRetryTime, err))
 					if retryCount > c.maxRetryTime {
+						// 重试次数超过最大值，关闭连接
+						c.handler.OnError(c.ctx, c.conn, fmt.Errorf("max retry count exceeded"))
 						return
 					}
-					// 使用指数退避策略
-					time.Sleep(retryDelay)
+
 					retryDelay *= 2
 					if retryDelay > c.maxRetryDelay {
 						retryDelay = c.maxRetryDelay
 					}
+					// 使用指数退避策略
+					time.Sleep(retryDelay)
 					continue
 				} else {
 					c.handler.OnError(c.ctx, c.conn, fmt.Errorf("read error: %v", err))
@@ -301,55 +303,52 @@ func (c *Client) readLoop() {
 			// readBuf = readBuf[:0]
 
 			// 尝试解析消息
-			for len(msgBuf) > 0 {
-				message, consumed, err := c.protocol.Unpack(msgBuf)
-				switch err {
-				case nil:
-					// 成功解析一个完整的消息
-					c.stats.AddMessageReceived(1)
-					c.stats.AddBytesRead(int64(consumed))
-					c.handler.OnMessage(c.ctx, c.conn, message)
-					// 移除已处理的数据
+			message, consumed, err := c.protocol.Unpack(msgBuf)
+			switch err {
+			case nil:
+				// 成功解析一个完整的消息
+				c.stats.AddMessageReceived(1)
+				c.stats.AddBytesRead(int64(consumed))
+				c.handler.OnMessage(c.ctx, c.conn, message)
+				// 移除已处理的数据
+				msgBuf = msgBuf[consumed:]
+
+			case tcperr.ErrShortRead:
+				// 数据不足，等待更多数据
+				continue
+
+			case tcperr.ErrMessageTooLarge:
+				// 消息过大，丢弃指定长度
+				c.stats.AddError(1)
+				c.handler.OnError(c.ctx, c.conn, err)
+				if consumed > len(msgBuf) {
+					msgBuf = msgBuf[:0]
+				} else {
 					msgBuf = msgBuf[consumed:]
+				}
 
-				case tcperr.ErrShortRead:
-					// 数据不足，等待更多数据
-					goto CONTINUE_READ
+			case tcperr.ErrInvalidFormat:
+				// 格式错误，丢弃指定长度的数据
+				c.stats.AddError(1)
+				c.handler.OnError(c.ctx, c.conn, err)
+				msgBuf = msgBuf[consumed:]
 
-				case tcperr.ErrMessageTooLarge:
-					// 消息过大，丢弃指定长度
-					c.stats.AddError(1)
-					c.handler.OnError(c.ctx, c.conn, err)
-					if consumed > len(msgBuf) {
-						msgBuf = msgBuf[:0]
-					} else {
-						msgBuf = msgBuf[consumed:]
-					}
+			case tcperr.ErrChecksum:
+				// 校验错误，丢弃整个包
+				c.stats.AddError(1)
+				c.handler.OnError(c.ctx, c.conn, err)
+				msgBuf = msgBuf[consumed:]
 
-				case tcperr.ErrInvalidFormat:
-					// 格式错误，丢弃指定长度的数据
-					c.stats.AddError(1)
-					c.handler.OnError(c.ctx, c.conn, err)
+			default:
+				// 其他错误，丢弃整个包或指定长度
+				c.stats.AddError(1)
+				c.handler.OnError(c.ctx, c.conn, err)
+				if consumed > 0 {
 					msgBuf = msgBuf[consumed:]
-
-				case tcperr.ErrChecksum:
-					// 校验错误，丢弃整个包
-					c.stats.AddError(1)
-					c.handler.OnError(c.ctx, c.conn, err)
-					msgBuf = msgBuf[consumed:]
-
-				default:
-					// 其他错误，丢弃整个包或指定长度
-					c.stats.AddError(1)
-					c.handler.OnError(c.ctx, c.conn, err)
-					if consumed > 0 {
-						msgBuf = msgBuf[consumed:]
-					} else {
-						msgBuf = msgBuf[:0]
-					}
+				} else {
+					msgBuf = msgBuf[:0]
 				}
 			}
-		CONTINUE_READ:
 		}
 	}
 }
@@ -361,10 +360,6 @@ func (c *Client) writeLoop() {
 		c.wg.Done()
 		c.Close() // 直接调用 Close 进行清理
 	}()
-
-	// 重试相关变量
-	retryCount := 0
-	retryDelay := c.baseRetryDelay
 
 	for {
 		select {
@@ -387,6 +382,10 @@ func (c *Client) writeLoop() {
 				return
 			}
 
+			// 重试相关变量
+			retryCount := 0
+			retryDelay := c.baseRetryDelay
+
 			// 写入重试逻辑
 			for {
 				n, err := c.conn.Write(data.([]byte))
@@ -400,11 +399,11 @@ func (c *Client) writeLoop() {
 							return
 						}
 						// 使用指数退避策略
-						time.Sleep(retryDelay)
 						retryDelay *= 2
 						if retryDelay > c.maxRetryDelay {
 							retryDelay = c.maxRetryDelay
 						}
+						time.Sleep(retryDelay)
 						continue
 					} else {
 						c.handler.OnError(c.ctx, c.conn, fmt.Errorf("write error: %v", err))
@@ -412,10 +411,6 @@ func (c *Client) writeLoop() {
 						return
 					}
 				}
-
-				// 写入成功，重置重试相关变量
-				retryCount = 0
-				retryDelay = c.baseRetryDelay
 
 				// 更新统计信息
 				c.stats.AddMessageSent(1)

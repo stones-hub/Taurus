@@ -229,7 +229,6 @@ func (c *Connection) readLoop() {
 			// 5. 尝试解析一个完整的消息
 			start := time.Now()
 			message, consumed, err := c.protocol.Unpack(msgBuf)
-			log.Printf("解包结果: err=%v, consumed=%d", err, consumed)
 
 			// 6. 处理不同的错误情况
 			switch err {
@@ -247,11 +246,9 @@ func (c *Connection) readLoop() {
 
 				// 移除已处理的数据
 				msgBuf = msgBuf[consumed:]
-				log.Printf("处理完成后msgBuf长度: %d", len(msgBuf))
 
 			case errors.ErrShortRead:
 				// 数据不足，保留所有数据等待更多数据
-				log.Printf("数据不足，当前msgBuf长度: %d", len(msgBuf))
 				continue
 
 			case errors.ErrMessageTooLarge:
@@ -318,15 +315,15 @@ func (c *Connection) writeLoop() {
 				return
 			}
 
+			// 检查连接状态，如果已关闭，直接返回
+			if atomic.LoadInt32(&c.closed) == 1 {
+				return
+			}
+
 			start := time.Now()
 			err := c.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
 			if err != nil {
 				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "set write deadline failed"))
-				return
-			}
-
-			// 检查连接状态，如果已关闭，直接返回
-			if atomic.LoadInt32(&c.closed) == 1 {
 				return
 			}
 
