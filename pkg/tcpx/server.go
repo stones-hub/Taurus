@@ -11,32 +11,26 @@ import (
 	"time"
 )
 
-const (
-	baseDelay  = 100 * time.Millisecond // 初始重试延迟时间
-	maxDelay   = 1 * time.Second        // 最大重试延迟时间
-	maxRetries = 3                      // 最大重试次数
-)
-
 // Server 表示一个处理多个客户端连接的 TCP 服务器。
 // 它管理连接生命周期、执行资源限制并提供监控功能。
 type Server struct {
-	started  int32              // 防止多次启动的原子标志
-	addr     string             // 网络监听地址
-	ctx      context.Context    // 生命周期管理的上下文
-	cancel   context.CancelFunc // 取消上下文的函数
-	protocol protocol.Protocol  // 消息处理的协议实现
-	handler  Handler            // 业务逻辑处理器
+	started    int32              // 防止多次启动的原子标志
+	addr       string             // 网络监听地址
+	ctx        context.Context    // 生命周期管理的上下文
+	cancel     context.CancelFunc // 取消上下文的函数
+	baseDelay  time.Duration      // 初始重试延迟时间
+	maxDelay   time.Duration      // 最大重试延迟时间
+	maxRetries int                // 最大重试次数
+	conns      sync.Map           // 线程安全的连接存储
+	wg         *sync.WaitGroup    // 优雅关闭的等待组
+	metrics    *Metrics           // 服务器指标收集器
+	listener   net.Listener       // TCP 监听器
 
-	// 连接池配置
-	maxConns int32         // 最大并发连接数
-	connChan chan struct{} // 连接限制信号量
-
-	listener net.Listener   // TCP 监听器
-	conns    sync.Map       // 线程安全的连接存储
-	wg       sync.WaitGroup // 优雅关闭的等待组
-
-	// 监控
-	metrics *Metrics // 服务器指标收集器
+	// 默认配置, 可以被配置选项覆盖
+	protocol protocol.Protocol // 消息处理的协议实现
+	handler  Handler           // 业务逻辑处理器
+	maxConns int32             // 最大并发连接数
+	connChan chan struct{}     // 连接限制信号量
 }
 
 // ServerOption 定义了配置服务器的函数类型。
@@ -73,11 +67,17 @@ func WithMaxConnections(maxConns int32) ServerOption {
 func NewServer(addr string, opts ...ServerOption) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
-		addr:     addr,
-		ctx:      ctx,
-		cancel:   cancel,
-		maxConns: 1000,         // 默认最大连接数
-		metrics:  NewMetrics(), // 服务器层面的统计指标
+		addr:       addr,
+		ctx:        ctx,
+		cancel:     cancel,
+		baseDelay:  1 * time.Second,   // 初始重试延迟时间
+		maxDelay:   10 * time.Second,  // 最大重试延迟时间
+		maxRetries: 3,                 // 最大重试次数
+		conns:      sync.Map{},        // 线程安全的连接存储
+		wg:         &sync.WaitGroup{}, // 优雅关闭的等待组
+		metrics:    NewMetrics(),      // 服务器层面的统计指标
+
+		maxConns: 1000, // 默认最大连接数
 	}
 
 	// 应用所有配置选项
@@ -127,8 +127,8 @@ func (s *Server) Start() error {
 func (s *Server) acceptLoop() {
 	defer s.listener.Close()
 
-	retries := 0       // 当前重试次数
-	delay := baseDelay // 当前重试延迟时间
+	retries := 0         // 当前重试次数
+	delay := s.baseDelay // 当前重试延迟时间
 
 	for {
 		// 1. 尝试获取连接槽
@@ -158,11 +158,11 @@ func (s *Server) acceptLoop() {
 			default:
 				// 判断错误是否为临时性的, 如果是则重试, 否则直接关闭server
 				if errors.IsTemporaryError(err) {
-					if retries < maxRetries {
+					if retries < s.maxRetries {
 						time.Sleep(delay)
 						delay *= 2
-						if delay > maxDelay {
-							delay = maxDelay
+						if delay > s.maxDelay {
+							delay = s.maxDelay
 						}
 						retries++
 						s.metrics.AddError()
@@ -186,7 +186,7 @@ func (s *Server) acceptLoop() {
 
 		// 3. 连接成功接受, 服务恢复到正常状态，重置重试次数和延迟时间
 		retries = 0
-		delay = baseDelay
+		delay = s.baseDelay
 
 		// 4. 创建并存储新连接
 		c := NewConnection(conn, s.protocol, s.handler)

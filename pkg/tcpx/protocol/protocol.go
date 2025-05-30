@@ -13,11 +13,6 @@ import (
 type ProtocolType string
 
 const (
-	// LengthFieldProtocolType 表示基于长度字段的协议。
-	// 这种协议在消息头部包含长度信息，用于处理粘包和拆包问题。
-	// 适用于对性能要求较高的场景。
-	LengthFieldProtocolType ProtocolType = "length_field"
-
 	// JSONProtocolType 表示 JSON 协议。
 	// 使用 JSON 格式编解码消息，具有良好的可读性和跨语言特性。
 	// 适用于调试环境或对性能要求不高的场景。
@@ -33,7 +28,7 @@ const (
 // 每种协议实现都必须提供消息的序列化（Pack）和反序列化（Unpack）能力。
 // 不同的协议实现可以针对不同的场景优化，比如追求效率的二进制协议，或者追求可读性的JSON协议。
 type Protocol interface {
-	// Unpack尝试从数据中解析一个完整的消息
+	// Unpack 尝试从数据中解析一个完整的消息
 	// 返回：解析出的消息，已处理的字节数，错误
 	// - 如果数据不足，返回(nil, 0, errors.ErrShortRead)
 	// - 如果消息格式错误，返回(nil, n, errors.ErrInvalidFormat)，n为需要跳过的字节数
@@ -41,7 +36,10 @@ type Protocol interface {
 	// - 如果校验失败，返回(nil, n, errors.ErrChecksum)，n为消息的完整长度
 	Unpack(data []byte) (message interface{}, n int, err error)
 
-	// Pack将消息打包成字节流
+	// Pack 将消息打包成字节流
+	// 返回：打包后的字节流，错误
+	// - 如果消息格式错误，返回(nil, errors.ErrInvalidFormat)
+	// - 如果消息过大，返回(nil, errors.ErrMessageTooLarge)
 	Pack(message interface{}) ([]byte, error)
 }
 
@@ -60,27 +58,27 @@ type Message interface {
 	GetSequence() uint32
 }
 
-type Option func(*Options)
+type ProtocolOption func(*Options)
 
 type Options struct {
 	MaxMessageSize uint32       // 最大消息大小
 	Type           ProtocolType // 协议类型
 }
 
-func WithMaxMessageSize(size uint32) Option {
+func WithMaxMessageSize(size uint32) ProtocolOption {
 	return func(o *Options) {
 		o.MaxMessageSize = size
 	}
 }
 
-func WithType(pt ProtocolType) Option {
+func WithType(pt ProtocolType) ProtocolOption {
 	return func(o *Options) {
 		o.Type = pt
 	}
 }
 
 // 初始化协议
-func NewProtocol(opts ...Option) (Protocol, error) {
+func NewProtocol(opts ...ProtocolOption) (Protocol, error) {
 	// 默认选项
 	options := &Options{
 		MaxMessageSize: 10 * 1024 * 1024,
