@@ -128,8 +128,8 @@ func (c *Connection) Start() {
 	go c.readLoop()
 	go c.writeLoop()
 	go c.checkIdleLoop()
-
 	c.handler.OnConnect(c)
+	c.waitGroup.Wait()
 }
 
 // readLoop 持续读取和处理传入消息。
@@ -137,7 +137,6 @@ func (c *Connection) Start() {
 func (c *Connection) readLoop() {
 	defer func() {
 		c.waitGroup.Done()
-		c.Close()
 	}()
 
 	// 预分配读取缓冲区, 16kB
@@ -285,7 +284,6 @@ func (c *Connection) readLoop() {
 func (c *Connection) writeLoop() {
 	defer func() {
 		c.waitGroup.Done()
-		c.Close()
 	}()
 
 	for {
@@ -329,7 +327,9 @@ func (c *Connection) writeLoop() {
 
 // checkIdleLoop 监控连接活动并关闭空闲连接。
 func (c *Connection) checkIdleLoop() {
-	defer c.waitGroup.Done()
+	defer func() {
+		c.waitGroup.Done()
+	}()
 
 	ticker := time.NewTicker(time.Second * 30)
 	defer ticker.Stop()
@@ -342,7 +342,6 @@ func (c *Connection) checkIdleLoop() {
 			lastActive := c.lastActiveTime.Load().(time.Time)
 			if time.Since(lastActive) > c.idleTimeout {
 				c.handler.OnError(c, errors.ErrConnectionIdle)
-				c.Close()
 				return
 			}
 		}
