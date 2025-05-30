@@ -306,7 +306,11 @@ func (c *Connection) writeLoop() {
 		select {
 		case <-c.ctx.Done():
 			return
-		case data := <-c.sendChan:
+		case data, ok := <-c.sendChan:
+			if !ok {
+				log.Println("sendChan closed")
+				return
+			}
 
 			start := time.Now()
 			err := c.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
@@ -383,6 +387,14 @@ func (c *Connection) checkIdleLoop() {
 
 // Send 将消息写入发送队列，等待发送。
 func (c *Connection) Send(message interface{}) error {
+	// 使用 defer-recover 来处理 channel 关闭导致的 panic
+	defer func() {
+		if r := recover(); r != nil {
+			// channel 已关闭，转换为错误返回
+			c.handler.OnError(nil, errors.WrapError(errors.ErrorTypeSystem, errors.ErrConnectionClosed, fmt.Sprintf("%v", r)))
+		}
+	}()
+
 	// 1. 检查连接是否关闭
 	if atomic.LoadInt32(&c.closed) == 1 {
 		return errors.ErrConnectionClosed
@@ -417,6 +429,7 @@ func (c *Connection) Close() {
 			return
 		}
 		c.cancel()
+		close(c.sendChan)
 		_ = c.conn.Close()
 		c.handler.OnClose(c)
 	})
