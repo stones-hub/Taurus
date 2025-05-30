@@ -241,7 +241,6 @@ func (c *Client) readLoop() {
 	retryDelay := c.baseRetryDelay
 
 	for {
-		log.Println("1-----> readLoop running")
 		select {
 		case <-c.ctx.Done():
 			return
@@ -299,7 +298,7 @@ func (c *Client) readLoop() {
 			// 追加到消息缓冲区
 			msgBuf = append(msgBuf, readBuf[:n]...)
 			// 清空已读取的数据
-			readBuf = readBuf[:0]
+			// readBuf = readBuf[:0]
 
 			// 尝试解析消息
 			for len(msgBuf) > 0 {
