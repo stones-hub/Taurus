@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -14,7 +15,9 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// Handler 定义了连接事件处理的接口。
+// ---------------------------------------------------------------------------------------------------------------------
+// Handler 定义了连接事件处理的接口, 注意如果handler中实现了子协程的逻辑切记需要监听ctx.Done()，否则子协程不会退出，造成协程泄漏
+// ---------------------------------------------------------------------------------------------------------------------
 // 实现者需要处理各种连接生命周期事件。
 type Handler interface {
 	OnConnect(conn *Connection)                      // 当新连接建立时调用
@@ -123,6 +126,7 @@ func NewConnection(conn net.Conn, protocol protocol.Protocol, handler Handler, o
 
 // Start 启动连接的读写循环。
 // 它启动独立的 goroutine 用于读取、写入和空闲检查。
+// 必须阻塞，直到链接关闭才能返回, 否则会退出上游协程
 func (c *Connection) Start() {
 	c.waitGroup.Add(3)
 	go c.readLoop()
@@ -133,10 +137,12 @@ func (c *Connection) Start() {
 }
 
 // readLoop 持续读取和处理传入消息。
-// 它处理流量控制、消息验证和错误处理。
 func (c *Connection) readLoop() {
+	// 任意一个协程退出，都要将所有的协程退出
 	defer func() {
+		c.Close()
 		c.waitGroup.Done()
+		log.Println("readLoop exited")
 	}()
 
 	// 预分配读取缓冲区, 16kB
@@ -283,7 +289,9 @@ func (c *Connection) readLoop() {
 // writeLoop 处理发送消息。
 func (c *Connection) writeLoop() {
 	defer func() {
+		c.Close()
 		c.waitGroup.Done()
+		log.Println("writeLoop exited")
 	}()
 
 	for {
@@ -328,7 +336,9 @@ func (c *Connection) writeLoop() {
 // checkIdleLoop 监控连接活动并关闭空闲连接。
 func (c *Connection) checkIdleLoop() {
 	defer func() {
+		c.Close()
 		c.waitGroup.Done()
+		log.Println("checkIdleLoop exited")
 	}()
 
 	ticker := time.NewTicker(time.Second * 30)
@@ -350,34 +360,42 @@ func (c *Connection) checkIdleLoop() {
 
 // Send 将消息写入发送队列，等待发送。
 func (c *Connection) Send(message interface{}) error {
+	// 1. 检查连接是否关闭
 	if atomic.LoadInt32(&c.closed) == 1 {
 		return errors.ErrConnectionClosed
 	}
 
+	// 2. 打包消息
 	data, err := c.protocol.Pack(message)
 	if err != nil {
 		return err
 	}
 
+	// 3. 发送消息
 	select {
 	case c.sendChan <- data:
 		return nil
+	case <-c.ctx.Done(): // 使用context来判断连接是否关闭, 避免在发送的时候出现连接被关闭的情况
+		return errors.ErrConnectionClosed
 	default:
 		return errors.ErrSendChannelFull
 	}
 }
 
-// Close 优雅地关闭连接。
-// 它确保清理只发生一次并等待所有 goroutine 完成。
+// Close 只调用一次，如果已经关闭，则直接返回
+// 1. 将连接的标记设置为closed,
+// 2. 通知所有的写协程退出,
+// 3. 关闭原始连接
+// 4. 调用OnClose回调
 func (c *Connection) Close() {
 	c.once.Do(func() {
 		if !atomic.CompareAndSwapInt32(&c.closed, 0, 1) {
+			log.Println("connection already closed")
 			return
 		}
 		c.cancel()
 		_ = c.conn.Close()
 		c.handler.OnClose(c)
-		c.waitGroup.Wait()
 	})
 }
 

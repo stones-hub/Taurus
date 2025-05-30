@@ -5,6 +5,7 @@ import (
 	"Taurus/pkg/tcpx/protocol"
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -116,123 +117,131 @@ func (s *Server) Start() error {
 	}
 	s.listener = listener
 
-	// 在后台开始接受连接
+	s.wg.Add(1)
+	// 开协程在后台开始接受连接, 协程的退出，不会清理服务器资源，只是退出协程
 	go s.acceptLoop()
 
+	// 阻塞等待所有协程退出
+	s.wg.Wait()
+	log.Println("server stopped")
 	return nil
 }
 
 // acceptLoop 在独立的 goroutine 中运行并处理传入连接。
 // 它实现了连接限制、错误处理和重试机制。
 func (s *Server) acceptLoop() {
-	defer s.listener.Close()
+	defer func() {
+		// 如果acceptLoop退出，说明服务器已经关闭，需要清理服务器资源
+		s.Stop()
+		s.wg.Done()
+		log.Println("acceptLoop exited")
+	}()
 
 	retries := 0         // 当前重试次数
 	delay := s.baseDelay // 当前重试延迟时间
 
 	for {
-		// 1. 尝试获取连接槽
-		select {
-		case s.connChan <- struct{}{}: // 获取到槽位
-		case <-s.ctx.Done(): // 服务器正在关闭
+		// 先检查服务器状态
+		if atomic.LoadInt32(&s.started) == 0 {
 			return
-		default: // 没有可用槽位, 已经达到server能处理的最大连接数, 接收到的链接需要丢弃
-			conn, err := s.listener.Accept()
-			if err == nil {
-				// 原始链接直接关闭（无需考虑Connection对象，因为还咩有初始化）
-				conn.Close()
-				s.metrics.AddConnectionRefused()
-				s.handler.OnError(nil, errors.ErrTooManyConnections)
-			}
-			time.Sleep(time.Millisecond * 100)
-			continue
 		}
 
-		// 2. 从listener的队列中获取新连接, 当前没有新链接阻塞
-		conn, err := s.listener.Accept()
-		if err != nil {
-			<-s.connChan // 获取到链接，但是报错了， 释放槽位, 当前连接认为处理掉了
-			select {
-			case <-s.ctx.Done():
-				return
-			default:
-				// 判断错误是否为临时性的, 如果是则重试, 否则直接关闭server
+		// 先检查是否有可用槽位和服务状态
+		select {
+		case s.connChan <- struct{}{}: // 获取到槽位
+			// 获取到槽位后接受连接, 有可能阻塞，不过没事，因为你已经获取到槽位了
+			conn, err := s.listener.Accept()
+			if err != nil {
+				<-s.connChan // 释放槽位
+				// 如果服务器已关闭，直接返回
+				if atomic.LoadInt32(&s.started) == 0 {
+					return
+				}
+
+				// 判断错误是否为临时性的
 				if errors.IsTemporaryError(err) {
 					if retries < s.maxRetries {
+						retries++
+						s.metrics.AddError()
+						s.handler.OnError(nil, errors.ErrSystemOverload)
 						time.Sleep(delay)
 						delay *= 2
 						if delay > s.maxDelay {
 							delay = s.maxDelay
 						}
-						retries++
-						s.metrics.AddError()
-						s.handler.OnError(nil, errors.ErrSystemOverload)
 						continue
 					}
-					// 重试次数达到最大值, server可能出了问题无法恢复, 直接关闭server
+					// 重试次数达到最大值，退出协程
 					s.metrics.AddError()
 					s.handler.OnError(nil, errors.ErrSystemFatal)
-					s.Stop()
-					return
-				} else {
-					// 非临时性错误, server可能出了问题无法恢复, 直接关闭server
-					s.metrics.AddError()
-					s.handler.OnError(nil, errors.ErrSystemFatal)
-					s.Stop()
 					return
 				}
+				// 非临时性错误，退出协程
+				s.metrics.AddError()
+				s.handler.OnError(nil, errors.ErrSystemFatal)
+				return
 			}
-		}
 
-		// 3. 连接成功接受, 服务恢复到正常状态，重置重试次数和延迟时间
-		retries = 0
-		delay = s.baseDelay
+			// 重置重试相关计数
+			retries = 0
+			delay = s.baseDelay
 
-		// 4. 创建并存储新连接
-		c := NewConnection(conn, s.protocol, s.handler)
-		// 存储新连接, 到sync.Map中, 使用连接id作为key, 连接本身作为value
-		s.conns.Store(c.ID(), c)
-		s.metrics.AddConnection()
+			// 创建并存储新连接
+			c := NewConnection(conn, s.protocol, s.handler)
+			s.conns.Store(c.ID(), c)
+			s.metrics.AddConnection()
 
-		// 5. 开协程处理连接, 协程退出时, 需要释放连接槽, 并减少wg的计数
-		s.wg.Add(1)
-		go func() {
-			defer func() {
-				s.conns.Delete(c.ID())
-				s.metrics.RemoveConnection()
-				<-s.connChan // 释放连接槽, 当前连接处理完了, 释放一个槽位
-				s.wg.Done()
+			s.wg.Add(1)
+			// 启动协程处理单个连接
+			go func() {
+				// 当处理连接的协程退出，只需要清理当前连接的资源
+				defer func() {
+					s.conns.Delete(c.ID())
+					s.metrics.RemoveConnection()
+					<-s.connChan // 释放连接槽
+					s.wg.Done()
+				}()
+				// Connection.Start()内部会处理连接的关闭
+				c.Start()
 			}()
-			c.Start()
-		}()
+
+		case <-s.ctx.Done(): // 服务器正在关闭
+			return
+
+		default: // 没有可用槽位，等待一会再试
+			s.metrics.AddConnectionRefused()
+			time.Sleep(time.Millisecond * 100) // 避免空转
+		}
 	}
 }
 
 // Stop 优雅地关闭服务器。
 // 停止接受新连接并关闭现有连接。
 func (s *Server) Stop() {
+	// 1. 先将服务器标记为已关闭
 	if !atomic.CompareAndSwapInt32(&s.started, 1, 0) {
+		log.Println("server is already stopping")
 		return
 	}
 
-	// 关闭监听器以停止接受新连接
+	// 2. 关闭监听器，停止接受新连接
 	if s.listener != nil {
 		s.listener.Close()
 	}
 
-	// 取消上下文以发出关闭信号
-	s.cancel()
-
-	// 关闭所有现有连接
+	// 3. 关闭所有现有连接, 确保所有连接资源能关闭
 	s.conns.Range(func(key, value interface{}) bool {
 		if conn, ok := value.(*Connection); ok {
-			conn.Close() // 这会触发连接自己的上下文取消
+			// 关闭连接会同时关闭socket和触发清理流程
+			conn.Close()
 		}
 		return true
 	})
 
-	// 等待所有连接完成
-	s.wg.Wait()
+	// 4. 取消上下文，确保所有协程都收到退出信号
+	s.cancel()
+
+	log.Println("server stopped completely")
 }
 
 // GetConnection 根据 ID 获取连接
