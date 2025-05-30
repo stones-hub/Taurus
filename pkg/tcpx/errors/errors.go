@@ -68,30 +68,23 @@ var (
 	ErrConnectionIdle     = NewError(ErrorTypeConnection, "connection idle timeout", nil) // 连接空闲超时
 	ErrTooManyConnections = NewError(ErrorTypeConnection, "too many connections", nil)    // 连接数超过限制
 	ErrSendChannelFull    = NewError(ErrorTypeConnection, "send channel full", nil)       // 发送通道已满
-	ErrWriteTimeout       = NewError(ErrorTypeConnection, "write timeout", nil)           // 写入超时
-	ErrReadTimeout        = NewError(ErrorTypeConnection, "read timeout", nil)            // 读取超时
 
 	// 协议相关错误 (2xx)
-	ErrMessageTooLarge  = NewError(ErrorTypeProtocol, "message too large", nil)    // 消息太大
-	ErrInvalidMessage   = NewError(ErrorTypeProtocol, "invalid message", nil)      // 消息无效
-	ErrMessageCorrupted = NewError(ErrorTypeProtocol, "message corrupted", nil)    // 消息损坏
-	ErrShortRead        = NewError(ErrorTypeProtocol, "short read", nil)           // 数据不足
-	ErrInvalidFormat    = NewError(ErrorTypeProtocol, "invalid format", nil)       // 格式错误
-	ErrChecksum         = NewError(ErrorTypeProtocol, "checksum error", nil)       // 校验错误
-	ErrInvalidVersion   = NewError(ErrorTypeProtocol, "invalid version", nil)      // 版本号错误
-	ErrInvalidMagic     = NewError(ErrorTypeProtocol, "invalid magic number", nil) // 魔数错误
+	ErrProtocolTypeNotSupported = NewError(ErrorTypeProtocol, "protocol type not supported", nil) // 协议类型不支持
+	ErrMessageTooLarge          = NewError(ErrorTypeProtocol, "message too large", nil)           // 消息太大
+	ErrShortRead                = NewError(ErrorTypeProtocol, "short read", nil)                  // 数据不足
+	ErrInvalidFormat            = NewError(ErrorTypeProtocol, "invalid format", nil)              // 格式错误
+	ErrChecksum                 = NewError(ErrorTypeProtocol, "checksum error", nil)              // 校验错误
 
 	// 系统相关错误 (3xx)
-	ErrSystemOverload = NewError(ErrorTypeSystem, "system overload", nil)    // 系统过载
-	ErrSystemFatal    = NewError(ErrorTypeSystem, "system fatal error", nil) // 系统致命错误
-	ErrOutOfMemory    = NewError(ErrorTypeSystem, "out of memory", nil)      // 内存不足
-	ErrIOError        = NewError(ErrorTypeSystem, "io error", nil)           // IO错误
+	ErrServerAlreadyStarted = NewError(ErrorTypeSystem, "server already started", nil) // 服务器已经启动
+	ErrHandlerNotSet        = NewError(ErrorTypeSystem, "handler not set", nil)        // 处理器未设置
+	ErrProtocolNotSet       = NewError(ErrorTypeSystem, "protocol not set", nil)       // 协议未设置
+	ErrSystemOverload       = NewError(ErrorTypeSystem, "system overload", nil)        // 系统过载
+	ErrSystemFatal          = NewError(ErrorTypeSystem, "system fatal error", nil)     // 系统致命错误
 
 	// 缓冲区相关错误 (4xx)
-	ErrBufferOverflow  = NewError(ErrorTypeBuffer, "buffer overflow", nil)  // 缓冲区溢出
-	ErrBufferUnderflow = NewError(ErrorTypeBuffer, "buffer underflow", nil) // 缓冲区下溢
-	ErrBufferFull      = NewError(ErrorTypeBuffer, "buffer full", nil)      // 缓冲区已满
-	ErrBufferEmpty     = NewError(ErrorTypeBuffer, "buffer empty", nil)     // 缓冲区为空
+	ErrBufferOverflow = NewError(ErrorTypeBuffer, "buffer overflow", nil) // 缓冲区溢出
 )
 
 // IsConnectionError 判断是否为连接错误

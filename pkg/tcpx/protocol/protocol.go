@@ -3,9 +3,9 @@
 package protocol
 
 import (
+	"Taurus/pkg/tcpx/errors"
 	"Taurus/pkg/tcpx/protocol/binary"
 	"Taurus/pkg/tcpx/protocol/json"
-	"fmt"
 )
 
 // ProtocolType 是协议类型的枚举。
@@ -97,6 +97,6 @@ func NewProtocol(opts ...ProtocolOption) (Protocol, error) {
 	case BinaryProtocolType:
 		return binary.New(options.MaxMessageSize), nil
 	default:
-		return nil, fmt.Errorf("unsupported protocol type: %s", options.Type)
+		return nil, errors.ErrProtocolTypeNotSupported
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"Taurus/pkg/tcpx/errors"
 	"Taurus/pkg/tcpx/protocol"
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -99,21 +98,21 @@ func NewServer(addr string, opts ...ServerOption) *Server {
 func (s *Server) Start() error {
 	// 使用原子操作确保单次启动
 	if !atomic.CompareAndSwapInt32(&s.started, 0, 1) {
-		return fmt.Errorf("server already started")
+		return errors.ErrServerAlreadyStarted
 	}
 
 	// 验证必需组件
 	if s.protocol == nil {
-		return fmt.Errorf("protocol not set")
+		return errors.ErrProtocolNotSet
 	}
 	if s.handler == nil {
-		return fmt.Errorf("handler not set")
+		return errors.ErrHandlerNotSet
 	}
 
 	// 创建 TCP 监听器
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
-		return err
+		return errors.WrapError(errors.ErrorTypeSystem, err, "listen failed")
 	}
 	s.listener = listener
 
@@ -210,6 +209,7 @@ func (s *Server) acceptLoop() {
 
 		default: // 没有可用槽位，等待一会再试
 			s.metrics.AddConnectionRefused()
+			s.handler.OnError(nil, errors.ErrTooManyConnections)
 			time.Sleep(time.Millisecond * 100) // 避免空转
 		}
 	}

@@ -167,7 +167,7 @@ func (c *Connection) readLoop() {
 
 			// 1. 设置读取超时
 			if err := c.conn.SetReadDeadline(time.Now().Add(c.idleTimeout)); err != nil {
-				c.handler.OnError(c, fmt.Errorf("set read deadline failed: %w", err))
+				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "set read deadline failed"))
 				return
 			}
 
@@ -194,10 +194,10 @@ func (c *Connection) readLoop() {
 				}
 				if errors.IsTemporaryError(err) {
 					retryCount++
-					c.handler.OnError(c, fmt.Errorf("temporary read error (attempt %d/%d): %w", retryCount, c.maxRetryCount, err))
+					c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, fmt.Sprintf("temporary read error (attempt %d/%d)", retryCount, c.maxRetryCount)))
 					if retryCount > c.maxRetryCount {
 						// 重试次数超过最大值，关闭连接
-						c.handler.OnError(c, fmt.Errorf("max retry count exceeded: %w", err))
+						c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "max retry count exceeded"))
 						return
 					}
 					// 使用指数退避策略计算下一次重试延迟
@@ -207,10 +207,11 @@ func (c *Connection) readLoop() {
 					}
 					time.Sleep(retryDelay)
 					continue
+				} else {
+					// 非临时错误，直接关闭连接
+					c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "read error"))
+					return
 				}
-				// 非临时错误，直接关闭连接
-				c.handler.OnError(c, fmt.Errorf("read error: %w", err))
-				return
 			}
 
 			// 读取成功，重置重试相关变量
@@ -310,7 +311,7 @@ func (c *Connection) writeLoop() {
 			start := time.Now()
 			err := c.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
 			if err != nil {
-				c.handler.OnError(c, fmt.Errorf("set write deadline failed: %w", err))
+				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "set write deadline failed"))
 				return
 			}
 
@@ -319,16 +320,38 @@ func (c *Connection) writeLoop() {
 				return
 			}
 
-			n, err := c.conn.Write(data)
-			if err != nil {
-				c.handler.OnError(c, err)
-				c.metrics.AddError()
-				return
+			// 写入重试逻辑
+			retryCount := 0
+			retryDelay := c.baseRetryDelay
+			for {
+				n, err := c.conn.Write(data)
+				if err != nil {
+					if errors.IsTemporaryError(err) {
+						c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "write error"))
+						retryCount++
+						if retryCount > c.maxRetryCount {
+							c.metrics.AddError()
+							return
+						}
+						// 使用指数退避策略
+						retryDelay *= 2
+						if retryDelay > c.maxRetryDelay {
+							retryDelay = c.maxRetryDelay
+						}
+						time.Sleep(retryDelay)
+						continue
+					} else {
+						c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "write error"))
+						c.metrics.AddError()
+						return
+					}
+				}
+				// 写入成功
+				c.updateActiveTime()
+				c.metrics.AddMessageSent(int64(n))
+				c.metrics.SetMessageLatency(time.Since(start))
+				break
 			}
-
-			c.updateActiveTime()
-			c.metrics.AddMessageSent(int64(n))
-			c.metrics.SetMessageLatency(time.Since(start))
 		}
 	}
 }
