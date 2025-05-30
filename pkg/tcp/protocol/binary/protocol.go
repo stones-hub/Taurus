@@ -1,7 +1,7 @@
 package binary
 
 import (
-	"Taurus/pkg/tcpx/errors"
+	"Taurus/pkg/tcp/errors"
 	"encoding/binary"
 	"hash/crc32"
 )

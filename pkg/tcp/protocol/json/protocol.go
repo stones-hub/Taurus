@@ -27,7 +27,7 @@
 package json
 
 import (
-	"Taurus/pkg/tcpx/errors"
+	"Taurus/pkg/tcp/errors"
 	"encoding/binary"
 	"encoding/json"
 	"time"

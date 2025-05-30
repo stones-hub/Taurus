@@ -1,4 +1,4 @@
-package tcpx
+package tcp
 
 import (
 	"sync/atomic"

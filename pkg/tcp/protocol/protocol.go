@@ -3,9 +3,9 @@
 package protocol
 
 import (
-	"Taurus/pkg/tcpx/errors"
-	"Taurus/pkg/tcpx/protocol/binary"
-	"Taurus/pkg/tcpx/protocol/json"
+	"Taurus/pkg/tcp/errors"
+	"Taurus/pkg/tcp/protocol/binary"
+	"Taurus/pkg/tcp/protocol/json"
 )
 
 // ProtocolType 是协议类型的枚举。

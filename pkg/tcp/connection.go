@@ -1,8 +1,8 @@
-package tcpx
+package tcp
 
 import (
-	"Taurus/pkg/tcpx/errors"
-	"Taurus/pkg/tcpx/protocol"
+	"Taurus/pkg/tcp/errors"
+	"Taurus/pkg/tcp/protocol"
 	"context"
 	"fmt"
 	"io"
