@@ -13,15 +13,15 @@ import (
 type ProtocolType string
 
 const (
-	// JSONProtocolType 表示 JSON 协议。
+	// JSON 表示 JSON 协议。
 	// 使用 JSON 格式编解码消息，具有良好的可读性和跨语言特性。
 	// 适用于调试环境或对性能要求不高的场景。
-	JSONProtocolType ProtocolType = "json"
+	JSON ProtocolType = "json"
 
-	// BinaryProtocolType 表示二进制协议。
+	// BINARY 表示二进制协议。
 	// 使用自定义的二进制格式编解码消息，具有最高的性能和最小的数据大小。
 	// 适用于对性能和带宽要求极高的场景。
-	BinaryProtocolType ProtocolType = "binary"
+	BINARY ProtocolType = "binary"
 )
 
 // Protocol 定义了消息编解码的核心接口。
@@ -82,7 +82,7 @@ func NewProtocol(opts ...ProtocolOption) (Protocol, error) {
 	// 默认选项
 	options := &Options{
 		MaxMessageSize: 10 * 1024 * 1024,
-		Type:           JSONProtocolType, // 默认使用 JSON 协议
+		Type:           JSON, // 默认使用 JSON 协议
 	}
 
 	// 应用自定义选项
@@ -92,9 +92,9 @@ func NewProtocol(opts ...ProtocolOption) (Protocol, error) {
 
 	// 根据协议类型创建相应的协议实例
 	switch options.Type {
-	case JSONProtocolType:
+	case JSON:
 		return json.New(options.MaxMessageSize), nil
-	case BinaryProtocolType:
+	case BINARY:
 		return binary.New(options.MaxMessageSize), nil
 	default:
 		return nil, errors.ErrProtocolTypeNotSupported
