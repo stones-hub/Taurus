@@ -158,6 +158,7 @@ func (c *Connection) readLoop() {
 		case <-c.ctx.Done():
 			return
 		default:
+			log.Println("1-----> readLoop running")
 			// 判断是否达到发送速率限制
 			if !c.rateLimiter.Allow() {
 				// 如果达到发送速率限制，等待100ms
@@ -170,6 +171,7 @@ func (c *Connection) readLoop() {
 				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "set read deadline failed"))
 				return
 			}
+			log.Println("2-----> readLoop running")
 
 			// 检查缓冲区大小，如果过大，说明可能有大量无效数据，直接清空
 			if len(msgBuf) > c.maxMessageSize {
@@ -180,6 +182,8 @@ func (c *Connection) readLoop() {
 				continue
 			}
 
+			log.Println("3-----> readLoop running")
+
 			// 2. 检查连接状态
 			if atomic.LoadInt32(&c.closed) == 1 {
 				return
@@ -187,7 +191,9 @@ func (c *Connection) readLoop() {
 
 			// 3. 从连接读取数据
 			n, err := c.conn.Read(readBuf)
+			log.Println("4-----> readLoop running")
 			if err != nil {
+				log.Println("5-----> readLoop running")
 				if err == io.EOF {
 					c.handler.OnError(c, errors.ErrConnectionClosed)
 					return
@@ -208,6 +214,7 @@ func (c *Connection) readLoop() {
 					time.Sleep(retryDelay)
 					continue
 				} else {
+					log.Println("6-----> readLoop running")
 					// 非临时错误，直接关闭连接
 					c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "read error"))
 					return
@@ -218,6 +225,7 @@ func (c *Connection) readLoop() {
 			retryCount = 0
 			retryDelay = c.baseRetryDelay
 
+			log.Println("7-----> readLoop running")
 			// 4. 追加到消息缓冲区
 			msgBuf = append(msgBuf, readBuf[:n]...)
 			// 清空已读取的数据, 以防万一
@@ -230,6 +238,7 @@ func (c *Connection) readLoop() {
 			// 6. 处理不同的错误情况
 			switch err {
 			case nil:
+				log.Println("8-----> readLoop running")
 				// 成功解析一个完整的消息
 				// 更新接收的消息数量
 				c.metrics.AddMessageReceived(int64(consumed))
@@ -245,6 +254,7 @@ func (c *Connection) readLoop() {
 				msgBuf = msgBuf[consumed:]
 
 			case errors.ErrShortRead:
+				log.Println("9-----> readLoop running")
 				// 数据不足，保留所有数据等待更多数据
 				continue
 
@@ -258,6 +268,7 @@ func (c *Connection) readLoop() {
 				} else {
 					msgBuf = msgBuf[consumed:]
 				}
+				log.Println("10-----> readLoop running")
 
 			case errors.ErrInvalidFormat:
 				// 格式错误（比如魔数不在开头），丢弃指定长度的数据
@@ -265,12 +276,14 @@ func (c *Connection) readLoop() {
 				c.handler.OnError(c, err)
 				// consumed表示魔数之前的数据长度，直接丢弃
 				msgBuf = msgBuf[consumed:]
+				log.Println("11-----> readLoop running")
 
 			case errors.ErrChecksum:
 				// 校验错误，丢弃整个包
 				c.metrics.AddError()
 				c.handler.OnError(c, err)
 				msgBuf = msgBuf[consumed:]
+				log.Println("12-----> readLoop running")
 
 			default:
 				// 其他错误（比如JSON解析错误），丢弃整个包
@@ -282,6 +295,7 @@ func (c *Connection) readLoop() {
 					// 无法恢复的错误，且没有指定丢弃长度，丢弃所有数据
 					msgBuf = msgBuf[:0]
 				}
+				log.Println("13-----> readLoop running")
 			}
 		}
 	}
