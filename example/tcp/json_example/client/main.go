@@ -64,6 +64,8 @@ func main() {
 			},
 		}
 
+		log.Println(c.RemoteAddr(), c.LocalAddr())
+
 		if err := c.Send(msg); err != nil {
 			log.Printf("发送消息失败: %v", err)
 			break

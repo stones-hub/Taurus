@@ -5,6 +5,7 @@ import (
 	"Taurus/pkg/tcp/protocol"
 	"Taurus/pkg/tcp/protocol/json"
 	"log"
+	"time"
 )
 
 // EchoHandler 实现了 tcp.Handler 接口
@@ -54,15 +55,36 @@ func main() {
 	}
 
 	// 创建服务器实例
-	server := tcp.NewServer(":8080",
-		tcp.WithProtocol(p),
-		tcp.WithHandler(&EchoHandler{}),
-		tcp.WithMaxConnections(1000),
-	)
+	server := tcp.NewServer(":8080", p, &EchoHandler{}, tcp.WithMaxConnections(1000))
+
+	go func() {
+		for {
+			log.Println("ConnectionCount:", server.ConnectionCount())
+
+			if server.ConnectionCount() > 3 {
+				server.Broadcast(&json.Message{
+					Type:      1,
+					Sequence:  100001,
+					Data:      map[string]interface{}{"hello": "world"},
+					Timestamp: time.Now().Unix(),
+				})
+
+				log.Println("Broadcast success !")
+				break
+			}
+
+			time.Sleep(time.Second * 1)
+		}
+
+		log.Println("close go routine for broadcast.")
+
+	}()
 
 	// 启动服务器
 	log.Println("Echo 服务器启动在 :8080...")
 	if err := server.Start(); err != nil {
 		log.Fatalf("服务器启动失败: %v", err)
 	}
+
+	log.Println("Stop server success !")
 }

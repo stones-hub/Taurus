@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"log"
 	"net"
 )
 
@@ -17,10 +18,18 @@ type Handler interface {
 	OnError(ctx context.Context, conn net.Conn, err error)
 }
 
-// DefaultHandler 提供默认的处理器实现
+// TODO: 需要实现一个默认的处理器实现
 type DefaultHandler struct{}
 
-func (h *DefaultHandler) OnConnect(ctx context.Context, conn net.Conn)                  {}
-func (h *DefaultHandler) OnMessage(ctx context.Context, conn net.Conn, msg interface{}) {}
-func (h *DefaultHandler) OnClose(ctx context.Context, conn net.Conn)                    {}
-func (h *DefaultHandler) OnError(ctx context.Context, conn net.Conn, err error)         {}
+func (h *DefaultHandler) OnConnect(ctx context.Context, conn net.Conn) {
+	log.Println("连接建立")
+}
+func (h *DefaultHandler) OnMessage(ctx context.Context, conn net.Conn, msg interface{}) {
+	log.Println("收到消息", msg)
+}
+func (h *DefaultHandler) OnClose(ctx context.Context, conn net.Conn) {
+	log.Println("连接关闭")
+}
+func (h *DefaultHandler) OnError(ctx context.Context, conn net.Conn, err error) {
+	log.Println("发生错误", err)
+}

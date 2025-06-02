@@ -48,23 +48,23 @@ func WithIdleTimeout(timeout time.Duration) TCPClientOption {
 }
 
 // WithMaxRetries 设置最大重试次数
-func WithMaxRetries(times int) TCPClientOption {
+func WithMaxRetries(maxRetries int) TCPClientOption {
 	return func(c *Client) {
-		c.maxRetryTime = times
+		c.maxRetries = maxRetries
 	}
 }
 
 // WithBaseRetryDelay 设置初始重试等待时间
-func WithBaseRetryDelay(delay time.Duration) TCPClientOption {
+func WithBaseRetryDelay(baseDelay time.Duration) TCPClientOption {
 	return func(c *Client) {
-		c.baseRetryDelay = delay
+		c.baseDelay = baseDelay
 	}
 }
 
 // WithMaxRetryDelay 设置最大重试等待时间
-func WithMaxRetryDelay(delay time.Duration) TCPClientOption {
+func WithMaxRetryDelay(maxDelay time.Duration) TCPClientOption {
 	return func(c *Client) {
-		c.maxRetryDelay = delay
+		c.maxDelay = maxDelay
 	}
 }
 
@@ -116,9 +116,9 @@ type Client struct {
 	bufferSize        int
 	connectionTimeout time.Duration // 连接超时时间
 	idleTimeout       time.Duration // 空闲超时时间
-	maxRetryTime      int           // 最大重试次数
-	baseRetryDelay    time.Duration // 初始重试等待时间
-	maxRetryDelay     time.Duration // 最大重试等待时间
+	maxRetries        int           // 最大重试次数
+	baseDelay         time.Duration // 初始重试等待时间
+	maxDelay          time.Duration // 最大重试等待时间
 
 	// 上下文控制
 	ctx    context.Context
@@ -156,9 +156,9 @@ func New(address string, protocolType protocol.ProtocolType, handler Handler, op
 		bufferSize:        1024,             // 默认1KB
 		connectionTimeout: 5 * time.Second,  // 默认连接超时5秒
 		idleTimeout:       5 * time.Minute,  // 默认空闲超时5分钟
-		maxRetryTime:      3,                // 默认最多重试3次
-		baseRetryDelay:    time.Second,      // 默认初始等待1秒
-		maxRetryDelay:     10 * time.Second, // 默认最大等待10秒
+		maxRetries:        3,                // 默认最多重试3次
+		baseDelay:         time.Second,      // 默认初始等待1秒
+		maxDelay:          10 * time.Second, // 默认最大等待10秒
 
 		// 上下文控制
 		ctx:    ctx,
@@ -238,7 +238,7 @@ func (c *Client) readLoop() {
 	msgBuf := make([]byte, 0, c.maxMsgSize)
 	// 重试相关变量
 	retryCount := 0
-	retryDelay := c.baseRetryDelay
+	retryDelay := c.baseDelay
 
 	for {
 		select {
@@ -273,16 +273,16 @@ func (c *Client) readLoop() {
 				}
 				if tcperr.IsTemporaryError(err) {
 					retryCount++
-					c.handler.OnError(c.ctx, c.conn, fmt.Errorf("temporary read error (attempt %d/%d): %v", retryCount, c.maxRetryTime, err))
-					if retryCount > c.maxRetryTime {
+					c.handler.OnError(c.ctx, c.conn, fmt.Errorf("temporary read error (attempt %d/%d): %v", retryCount, c.maxRetries, err))
+					if retryCount > c.maxRetries {
 						// 重试次数超过最大值，关闭连接
 						c.handler.OnError(c.ctx, c.conn, fmt.Errorf("max retry count exceeded"))
 						return
 					}
 
 					retryDelay *= 2
-					if retryDelay > c.maxRetryDelay {
-						retryDelay = c.maxRetryDelay
+					if retryDelay > c.maxDelay {
+						retryDelay = c.maxDelay
 					}
 					// 使用指数退避策略
 					time.Sleep(retryDelay)
@@ -295,7 +295,7 @@ func (c *Client) readLoop() {
 
 			// 读取成功，重置重试相关变量
 			retryCount = 0
-			retryDelay = c.baseRetryDelay
+			retryDelay = c.baseDelay
 
 			// 追加到消息缓冲区
 			msgBuf = append(msgBuf, readBuf[:n]...)
@@ -384,7 +384,7 @@ func (c *Client) writeLoop() {
 
 			// 重试相关变量
 			retryCount := 0
-			retryDelay := c.baseRetryDelay
+			retryDelay := c.baseDelay
 
 			// 写入重试逻辑
 			for {
@@ -393,15 +393,15 @@ func (c *Client) writeLoop() {
 					if tcperr.IsTemporaryError(err) {
 						retryCount++
 						c.handler.OnError(c.ctx, c.conn, fmt.Errorf("temporary write error (attempt %d/%d): %v",
-							retryCount, c.maxRetryTime, err))
-						if retryCount > c.maxRetryTime {
+							retryCount, c.maxRetries, err))
+						if retryCount > c.maxRetries {
 							c.stats.AddError(1)
 							return
 						}
 						// 使用指数退避策略
 						retryDelay *= 2
-						if retryDelay > c.maxRetryDelay {
-							retryDelay = c.maxRetryDelay
+						if retryDelay > c.maxDelay {
+							retryDelay = c.maxDelay
 						}
 						time.Sleep(retryDelay)
 						continue

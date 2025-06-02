@@ -64,7 +64,7 @@ func WithMaxConnections(maxConns int32) ServerOption {
 
 // NewServer 创建一个新的 TCP 服务器实例。
 // 使用默认值初始化服务器并应用提供的选项。
-func NewServer(addr string, opts ...ServerOption) *Server {
+func NewServer(addr string, protocol protocol.Protocol, handler Handler, opts ...ServerOption) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
 		addr:       addr,
@@ -77,7 +77,9 @@ func NewServer(addr string, opts ...ServerOption) *Server {
 		wg:         &sync.WaitGroup{}, // 优雅关闭的等待组
 		metrics:    NewMetrics(),      // 服务器层面的统计指标
 
-		maxConns: 1000, // 默认最大连接数
+		protocol: protocol, // 消息处理的协议实现
+		handler:  handler,  // 业务逻辑处理器
+		maxConns: 1000,     // 默认最大连接数
 	}
 
 	// 应用所有配置选项
@@ -263,7 +265,7 @@ func (s *Server) Broadcast(message interface{}) {
 
 // ConnectionCount 获取当前连接数
 func (s *Server) ConnectionCount() int32 {
-	return s.maxConns - int32(len(s.connChan))
+	return int32(len(s.connChan))
 }
 
 // GetMetrics 返回当前服务器指标。
