@@ -122,16 +122,17 @@ func (c *Client) Connect() error {
 
 	c.conn = conn
 	c.connected.Store(true)
+	// 通知连接建立
+	c.handler.OnConnect(c.ctx, c.conn)
+	return nil
+}
 
+func (c *Client) Start() {
 	// 启动收发协程
 	c.wg.Add(2)
 	go c.readLoop()
 	go c.writeLoop()
-
-	// 通知连接建立
-	c.handler.OnConnect(c.ctx, c.conn)
-
-	return nil
+	c.wg.Wait()
 }
 
 // 优雅的关闭
@@ -451,4 +452,74 @@ func (c *Client) LocalAddr() net.Addr {
 		return c.conn.LocalAddr()
 	}
 	return nil
+}
+
+// 发送消息给服务器
+func (c *Client) SimpleSend(msg interface{}) error {
+	// 使用 defer-recover 来处理 channel 关闭导致的 panic
+	defer func() {
+		if r := recover(); r != nil {
+			c.handler.OnError(c.ctx, c.conn, fmt.Errorf("send message failed: %v", r))
+			c.stats.AddError()
+		}
+	}()
+
+	if !c.connected.Load() {
+		c.stats.AddError()
+		c.handler.OnError(c.ctx, c.conn, fmt.Errorf("client not connected"))
+		return fmt.Errorf("client not connected")
+	}
+
+	// 2. 打包消息
+	data, err := c.protocol.Pack(msg)
+	if err != nil {
+		c.stats.AddError()
+		c.handler.OnError(c.ctx, c.conn, fmt.Errorf("pack message failed: %v", err))
+		return err
+	}
+
+	// 3. 判断消息大小是否超过最大消息大小
+	if len(data) > c.maxMsgSize {
+		c.stats.AddError()
+		c.handler.OnError(c.ctx, c.conn, fmt.Errorf("message too large"))
+		return fmt.Errorf("message too large")
+	}
+
+	n, err := c.conn.Write(data)
+	if err != nil {
+		c.stats.AddError()
+		c.handler.OnError(c.ctx, c.conn, fmt.Errorf("write message failed: %v", err))
+		return err
+	}
+
+	c.stats.AddMessageSent()
+	c.stats.AddBytesWritten(int64(n))
+	return nil
+}
+
+// 接收消息
+func (c *Client) SimpleReceive() (interface{}, error) {
+
+	readBuf := make([]byte, 16*1024)
+	n, err := c.conn.Read(readBuf)
+	if err != nil {
+		c.handler.OnError(c.ctx, c.conn, fmt.Errorf("connection closed"))
+		if err == io.EOF {
+			return nil, fmt.Errorf("connection closed")
+		} else {
+			c.handler.OnError(c.ctx, c.conn, fmt.Errorf("read error: %v", err))
+			return nil, fmt.Errorf("read error: %v", err)
+		}
+	}
+
+	// 将读取的数据解包
+	message, consumed, err := c.protocol.Unpack(readBuf[:n])
+	if err != nil {
+		c.handler.OnError(c.ctx, c.conn, fmt.Errorf("unpack message failed: %v", err))
+		return nil, fmt.Errorf("unpack message failed: %v", err)
+	}
+
+	c.stats.AddMessageReceived()
+	c.stats.AddBytesRead(int64(consumed))
+	return message, nil
 }

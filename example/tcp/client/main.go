@@ -13,7 +13,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -35,15 +34,10 @@ type UserMessage struct {
 
 // ClientHandler 实现了客户端的消息处理
 type ClientHandler struct {
-	stopCh   chan struct{}
-	stopOnce sync.Once
 }
 
 func (h *ClientHandler) OnClose(ctx context.Context, conn net.Conn) {
 	log.Printf("连接关闭: %s", conn.RemoteAddr())
-	h.stopOnce.Do(func() {
-		close(h.stopCh)
-	})
 }
 
 func (h *ClientHandler) OnError(ctx context.Context, conn net.Conn, err error) {
@@ -72,9 +66,7 @@ func main() {
 	)
 
 	// 创建handler
-	handler := &ClientHandler{
-		stopCh: make(chan struct{}),
-	}
+	handler := &ClientHandler{}
 
 	// 创建客户端
 	c, err = client.New(":8080",
@@ -103,19 +95,10 @@ func main() {
 	// 初始化sequence
 	var sequence uint32 = 1
 
-	// 创建一个channel用于通知标准输入处理goroutine退出
-	inputDone := make(chan struct{})
-
 	// 启动goroutine处理标准输入
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			select {
-			case <-inputDone:
-				return
-			default:
-			}
-
 			text := scanner.Text()
 			if text == "" {
 				showPrompt()
@@ -177,15 +160,10 @@ func main() {
 					showPrompt()
 					continue
 				}
-				handler.stopOnce.Do(func() {
-					close(handler.stopCh)
-				})
 				return
 
 			case "quit":
-				handler.stopOnce.Do(func() {
-					close(handler.stopCh)
-				})
+				c.Close()
 				return
 
 			case "help":
@@ -200,11 +178,7 @@ func main() {
 		}
 	}()
 
-	// 等待服务端断开连接或用户主动退出
-	<-handler.stopCh
-	// 通知输入处理goroutine退出
-	close(inputDone)
-	c.GracefulClose()
+	c.Start()
 	log.Println("客户端已关闭")
 }
 
