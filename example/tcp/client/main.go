@@ -49,8 +49,17 @@ func (h *ClientHandler) OnConnect(ctx context.Context, conn net.Conn) {
 }
 
 func (h *ClientHandler) OnMessage(ctx context.Context, conn net.Conn, message interface{}) {
-	// 处理服务器的响应消息
-	log.Printf("收到服务端消息: %+v", message)
+	// 解析message
+	// 解析message
+	msg, ok := message.(*json.Message)
+	if !ok {
+		log.Printf("解析消息失败: %+v", message)
+	} else {
+		// 将纳秒时间戳转换为time.Time
+		t := time.Unix(0, msg.Timestamp)
+		timeStr := t.Format("15:04:05")
+		fmt.Printf("\n[%s] 👤用户-%v: %v\n", timeStr, msg.Data["user_id"], msg.Data["message"])
+	}
 	// 重新显示提示符
 	showPrompt()
 }
