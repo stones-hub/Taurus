@@ -80,8 +80,8 @@ type Connection struct {
 	// 默认配置
 	sendChan       chan []byte   // 异步消息发送通道
 	idleTimeout    time.Duration // 连接最大空闲超时时间
-	maxMessageSize int           // 连接允许传输的最大消息大小
 	rateLimiter    *rate.Limiter // 消息频率限制器
+	maxMessageSize int           // 连接允许传输的最大消息大小
 }
 
 var globalConnectionID uint64 // 生成唯一连接 ID 的全局计数器

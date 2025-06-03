@@ -78,6 +78,7 @@ var (
 
 	// 系统相关错误 (3xx)
 	ErrServerAlreadyStarted = NewError(ErrorTypeSystem, "server already started", nil) // 服务器已经启动
+	ErrServerListenerFailed = NewError(ErrorTypeSystem, "server listener failed", nil) // 服务器监听失败
 	ErrHandlerNotSet        = NewError(ErrorTypeSystem, "handler not set", nil)        // 处理器未设置
 	ErrProtocolNotSet       = NewError(ErrorTypeSystem, "protocol not set", nil)       // 协议未设置
 	ErrSystemOverload       = NewError(ErrorTypeSystem, "system overload", nil)        // 系统过载

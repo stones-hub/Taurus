@@ -15,6 +15,7 @@ import (
 // 它管理连接生命周期、执行资源限制并提供监控功能。
 type Server struct {
 	started    int32              // 防止多次启动的原子标志
+	silentTime time.Duration      // 静默时间, 避免服务器空转
 	addr       string             // 网络监听地址
 	ctx        context.Context    // 生命周期管理的上下文
 	cancel     context.CancelFunc // 取消上下文的函数
@@ -29,7 +30,7 @@ type Server struct {
 	// 默认配置, 可以被配置选项覆盖
 	protocol protocol.Protocol // 消息处理的协议实现
 	handler  Handler           // 业务逻辑处理器
-	maxConns int32             // 最大并发连接数
+	maxConns int32             // 最大并发连接数, 默认1000, 用于创建connChan
 	connChan chan struct{}     // 连接限制信号量
 }
 
@@ -70,6 +71,7 @@ func NewServer(addr string, protocol protocol.Protocol, handler Handler, opts ..
 		addr:       addr,
 		ctx:        ctx,
 		cancel:     cancel,
+		silentTime: 1 * time.Second,   // 静默时间, 避免服务器空转
 		baseDelay:  1 * time.Second,   // 初始重试延迟时间
 		maxDelay:   10 * time.Second,  // 最大重试延迟时间
 		maxRetries: 3,                 // 最大重试次数
@@ -114,17 +116,17 @@ func (s *Server) Start() error {
 	// 创建 TCP 监听器
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
-		return errors.WrapError(errors.ErrorTypeSystem, err, "listen failed")
+		return errors.ErrServerListenerFailed
 	}
 	s.listener = listener
 
 	s.wg.Add(1)
-	// 开协程在后台开始接受连接, 协程的退出，不会清理服务器资源，只是退出协程
+	// 开协程后台处理连接
 	go s.acceptLoop()
 
 	// 阻塞等待所有协程退出
 	s.wg.Wait()
-	log.Println("server stopped")
+	log.Printf("server stopped on %s", s.addr)
 	return nil
 }
 
@@ -132,10 +134,9 @@ func (s *Server) Start() error {
 // 它实现了连接限制、错误处理和重试机制。
 func (s *Server) acceptLoop() {
 	defer func() {
-		// 如果acceptLoop退出，说明服务器已经关闭，需要清理服务器资源
+		// 协程退出，需要清理服务器资源
 		s.Stop()
 		s.wg.Done()
-		log.Println("acceptLoop exited")
 	}()
 
 	retries := 0         // 当前重试次数
@@ -212,7 +213,7 @@ func (s *Server) acceptLoop() {
 		default: // 没有可用槽位，等待一会再试
 			s.metrics.AddConnectionRefused()
 			s.handler.OnError(nil, errors.ErrTooManyConnections)
-			time.Sleep(time.Millisecond * 100) // 避免空转
+			time.Sleep(s.silentTime) // 避免空转
 		}
 	}
 }
@@ -243,7 +244,7 @@ func (s *Server) Stop() {
 	// 4. 取消上下文，确保所有协程都收到退出信号
 	s.cancel()
 
-	log.Println("server stopped completely")
+	log.Println("server stopped completely !")
 }
 
 // GetConnection 根据 ID 获取连接
