@@ -210,7 +210,7 @@ func (c *Connection) readLoop() {
 					c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, fmt.Sprintf("temporary read error (attempt %d/%d)", retryCount, c.maxRetryCount)))
 					if retryCount > c.maxRetryCount {
 						// 重试次数超过最大值，关闭连接
-						c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "max retry count exceeded"))
+						c.metrics.AddError()
 						return
 					}
 					// 使用指数退避策略计算下一次重试延迟
@@ -324,15 +324,19 @@ func (c *Connection) writeLoop() {
 
 		select {
 		case <-c.ctx.Done():
+			c.metrics.AddError()
+			c.handler.OnError(c, errors.ErrConnectionClosed)
 			return
 		case data, ok := <-c.sendChan:
 			if !ok {
+				c.metrics.AddError()
 				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, errors.ErrConnectionClosed, "sendChan closed"))
 				return
 			}
 
 			// 检查连接状态，如果已关闭，直接返回
 			if atomic.LoadInt32(&c.closed) == 1 {
+				c.metrics.AddError()
 				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, errors.ErrConnectionClosed, "connection closed"))
 				return
 			}
@@ -340,6 +344,7 @@ func (c *Connection) writeLoop() {
 			start := time.Now()
 			err := c.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
 			if err != nil {
+				c.metrics.AddError()
 				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "set write deadline failed"))
 				return
 			}
@@ -395,6 +400,8 @@ func (c *Connection) checkIdleLoop() {
 	for {
 		select {
 		case <-c.ctx.Done():
+			c.metrics.AddError()
+			c.handler.OnError(c, errors.ErrConnectionClosed)
 			return
 		case <-ticker.C:
 			lastActive := c.lastActiveTime.Load().(time.Time)
@@ -413,22 +420,29 @@ func (c *Connection) Send(message interface{}) error {
 		if r := recover(); r != nil {
 			// channel 已关闭，转换为错误返回
 			c.handler.OnError(nil, errors.WrapError(errors.ErrorTypeSystem, errors.ErrConnectionClosed, fmt.Sprintf("%v", r)))
+			c.metrics.AddError()
 		}
 	}()
 
 	// 1. 检查连接是否关闭
 	if atomic.LoadInt32(&c.closed) == 1 {
+		c.metrics.AddError()
+		c.handler.OnError(c, errors.ErrConnectionClosed)
 		return errors.ErrConnectionClosed
 	}
 
 	// 2. 打包消息
 	data, err := c.protocol.Pack(message)
 	if err != nil {
+		c.metrics.AddError()
+		c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "pack message failed"))
 		return err
 	}
 
 	// 3. 检查单条消息大小
 	if len(data) > c.maxMessageSize {
+		c.metrics.AddError()
+		c.handler.OnError(c, errors.ErrMessageTooLarge)
 		return errors.ErrMessageTooLarge
 	}
 
@@ -437,9 +451,12 @@ func (c *Connection) Send(message interface{}) error {
 	case c.sendChan <- data:
 		return nil
 	case <-c.ctx.Done(): // 使用context来判断连接是否关闭, 避免在发送的时候出现连接被关闭的情况
+		c.metrics.AddError()
+		c.handler.OnError(c, errors.ErrConnectionClosed)
 		return errors.ErrConnectionClosed
 	default: // 缓冲区已满
 		c.metrics.AddError()
+		c.handler.OnError(c, errors.ErrSendChannelFull)
 		return errors.ErrSendChannelFull
 	}
 }

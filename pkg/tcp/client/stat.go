@@ -5,11 +5,11 @@ import "sync/atomic"
 // Stats 统计信息, 用于统计客户端的连接状态
 type Stats struct {
 	// 消息统计
-	MessagesSent     atomic.Int64
-	MessagesReceived atomic.Int64
-	BytesRead        atomic.Int64
-	BytesWritten     atomic.Int64
-	Errors           atomic.Int64
+	MessagesSent     int64
+	MessagesReceived int64
+	BytesRead        int64
+	BytesWritten     int64
+	Errors           int64
 }
 
 // NewStats 创建并初始化统计信息
@@ -18,26 +18,26 @@ func NewStats() Stats {
 }
 
 // AddMessageSent 增加发送消息计数
-func (s *Stats) AddMessageSent(n int64) {
-	s.MessagesSent.Add(n)
+func (s *Stats) AddMessageSent() {
+	atomic.AddInt64(&s.MessagesSent, 1)
 }
 
 // AddMessageReceived 增加接收消息计数
-func (s *Stats) AddMessageReceived(n int64) {
-	s.MessagesReceived.Add(n)
+func (s *Stats) AddMessageReceived() {
+	atomic.AddInt64(&s.MessagesReceived, 1)
 }
 
 // AddBytesRead 增加读取字节计数
 func (s *Stats) AddBytesRead(n int64) {
-	s.BytesRead.Add(n)
+	atomic.AddInt64(&s.BytesRead, n)
 }
 
 // AddBytesWritten 增加写入字节计数
 func (s *Stats) AddBytesWritten(n int64) {
-	s.BytesWritten.Add(n)
+	atomic.AddInt64(&s.BytesWritten, n)
 }
 
 // AddError 增加错误计数
-func (s *Stats) AddError(n int64) {
-	s.Errors.Add(n)
+func (s *Stats) AddError() {
+	atomic.AddInt64(&s.Errors, 1)
 }
