@@ -29,9 +29,9 @@ type Handler interface {
 // ConnectionOption 定义了配置连接的函数类型
 type ConnectionOption func(*Connection)
 
-// WithSendChanSize 设置消息发送通道的大小
 func WithSendChanSize(size int) ConnectionOption {
 	return func(c *Connection) {
+		c.bufferSize = size
 		c.sendChan = make(chan []byte, size)
 	}
 }
@@ -61,6 +61,7 @@ func WithMaxMessageSize(bytes int) ConnectionOption {
 // 它处理消息读写、流量控制和资源管理。
 type Connection struct {
 	id             uint64             // 唯一连接标识符
+	silentTime     time.Duration      // 静默时间, 避免服务器空转
 	conn           net.Conn           // 底层 TCP 连接
 	protocol       protocol.Protocol  // 消息编码解码协议
 	handler        Handler            // 连接事件处理器
@@ -72,16 +73,19 @@ type Connection struct {
 	attrs          sync.Map           // 线程安全的属性存储, 用于存储连接的属性
 	once           sync.Once          // 确保清理只执行一次
 	waitGroup      *sync.WaitGroup    // goroutine 同步等待组
+
 	// 重试相关配置，用于解决从连接获取数据时，可能出现的临时错误
 	maxRetryCount  int           // 最大重试次数, 默认3次
 	baseRetryDelay time.Duration // 基础重试延迟, 默认1秒
 	maxRetryDelay  time.Duration // 最大重试延迟, 默认10秒
 
-	// 默认配置
-	sendChan       chan []byte   // 异步消息发送通道
-	idleTimeout    time.Duration // 连接最大空闲超时时间
-	rateLimiter    *rate.Limiter // 消息频率限制器
-	maxMessageSize int           // 连接允许传输的最大消息大小
+	// 缓冲区设置
+	bufferSize     int         // 缓冲区数量, 默认1024
+	sendChan       chan []byte // 异步消息发送通道, 默认1024
+	maxMessageSize int         // 连接允许单条传输的消息大小, 默认1MB
+
+	idleTimeout time.Duration // 连接最大空闲超时时间
+	rateLimiter *rate.Limiter // 消息频率限制器
 }
 
 var globalConnectionID uint64 // 生成唯一连接 ID 的全局计数器
@@ -91,33 +95,36 @@ var globalConnectionID uint64 // 生成唯一连接 ID 的全局计数器
 func NewConnection(conn net.Conn, protocol protocol.Protocol, handler Handler, opts ...ConnectionOption) *Connection {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Connection{
-		id:        atomic.AddUint64(&globalConnectionID, 1),
-		conn:      conn,
-		protocol:  protocol,
-		handler:   handler,
-		ctx:       ctx,
-		cancel:    cancel,
-		metrics:   NewMetrics(),
-		closed:    0,
-		attrs:     sync.Map{},
-		once:      sync.Once{},
-		waitGroup: &sync.WaitGroup{},
-
-		// 重试相关配置, 默认3次, 1秒, 10秒
+		id:             atomic.AddUint64(&globalConnectionID, 1),
+		silentTime:     time.Second * 1, // 默认1秒静默时间
+		conn:           conn,
+		protocol:       protocol,
+		handler:        handler,
+		ctx:            ctx,
+		cancel:         cancel,
+		metrics:        NewMetrics(),
+		closed:         0,
+		attrs:          sync.Map{},
+		once:           sync.Once{},
+		waitGroup:      &sync.WaitGroup{},
 		maxRetryCount:  3,
 		baseRetryDelay: 1 * time.Second,
 		maxRetryDelay:  10 * time.Second,
 
 		// 默认配置, 可以被配置选项覆盖
-		sendChan:       make(chan []byte, 1024),               // 消息发送通道
+		bufferSize:     1024,
+		maxMessageSize: 1 * 1024 * 1024,                       // 默认单条最大消息大小1MB
 		idleTimeout:    time.Minute * 5,                       // 默认5分钟空闲超时
 		rateLimiter:    rate.NewLimiter(rate.Limit(100), 100), // 默认每秒100条消息
-		maxMessageSize: 10 * 1024 * 1024,                      // 默认最大消息大小10MB
 	}
 
 	// 应用所有配置选项
 	for _, opt := range opts {
 		opt(c)
+	}
+
+	if c.sendChan == nil {
+		c.sendChan = make(chan []byte, c.bufferSize)
 	}
 
 	c.lastActiveTime.Store(time.Now())
@@ -142,7 +149,6 @@ func (c *Connection) readLoop() {
 	defer func() {
 		c.Close()
 		c.waitGroup.Done()
-		log.Println("readLoop exited")
 	}()
 
 	// 预分配读取缓冲区, 16kB
@@ -161,12 +167,15 @@ func (c *Connection) readLoop() {
 			// 判断是否达到发送速率限制
 			if !c.rateLimiter.Allow() {
 				// 如果达到发送速率限制，等待100ms
-				time.Sleep(100 * time.Millisecond)
+				c.metrics.AddError()
+				c.handler.OnError(c, errors.ErrRateLimitExceeded)
+				time.Sleep(c.silentTime)
 				continue
 			}
 
 			// 1. 设置读取超时
 			if err := c.conn.SetReadDeadline(time.Now().Add(c.idleTimeout)); err != nil {
+				c.metrics.AddError()
 				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "set read deadline failed"))
 				return
 			}
@@ -182,6 +191,8 @@ func (c *Connection) readLoop() {
 
 			// 2. 检查连接状态
 			if atomic.LoadInt32(&c.closed) == 1 {
+				c.metrics.AddError()
+				c.handler.OnError(c, errors.ErrConnectionClosed)
 				return
 			}
 
@@ -207,9 +218,11 @@ func (c *Connection) readLoop() {
 					if retryDelay > c.maxRetryDelay {
 						retryDelay = c.maxRetryDelay
 					}
+					c.metrics.AddError()
 					time.Sleep(retryDelay)
 					continue
 				} else {
+					c.metrics.AddError()
 					// 非临时错误，直接关闭连接
 					c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "read error"))
 					return
@@ -249,6 +262,8 @@ func (c *Connection) readLoop() {
 
 			case errors.ErrShortRead:
 				// 数据不足，保留所有数据等待更多数据
+				c.metrics.AddError()
+				c.handler.OnError(c, err)
 				continue
 
 			case errors.ErrMessageTooLarge:
@@ -295,12 +310,13 @@ func (c *Connection) writeLoop() {
 	defer func() {
 		c.Close()
 		c.waitGroup.Done()
-		log.Println("writeLoop exited")
 	}()
 
 	for {
 		// 判断是否达到发送速率限制
 		if !c.rateLimiter.Allow() {
+			c.metrics.AddError()
+			c.handler.OnError(c, errors.ErrRateLimitExceeded)
 			// 如果达到发送速率限制，等待100ms
 			time.Sleep(100 * time.Millisecond)
 			continue
@@ -311,12 +327,13 @@ func (c *Connection) writeLoop() {
 			return
 		case data, ok := <-c.sendChan:
 			if !ok {
-				log.Println("sendChan closed")
+				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, errors.ErrConnectionClosed, "sendChan closed"))
 				return
 			}
 
 			// 检查连接状态，如果已关闭，直接返回
 			if atomic.LoadInt32(&c.closed) == 1 {
+				c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, errors.ErrConnectionClosed, "connection closed"))
 				return
 			}
 
@@ -336,6 +353,7 @@ func (c *Connection) writeLoop() {
 					if errors.IsTemporaryError(err) {
 						c.handler.OnError(c, errors.WrapError(errors.ErrorTypeSystem, err, "write error"))
 						retryCount++
+						// 重试次数超过最大值，关闭连接
 						if retryCount > c.maxRetryCount {
 							c.metrics.AddError()
 							return
@@ -345,6 +363,7 @@ func (c *Connection) writeLoop() {
 						if retryDelay > c.maxRetryDelay {
 							retryDelay = c.maxRetryDelay
 						}
+						c.metrics.AddError()
 						time.Sleep(retryDelay)
 						continue
 					} else {
@@ -368,7 +387,6 @@ func (c *Connection) checkIdleLoop() {
 	defer func() {
 		c.Close()
 		c.waitGroup.Done()
-		log.Println("checkIdleLoop exited")
 	}()
 
 	ticker := time.NewTicker(time.Second * 30)
@@ -409,13 +427,19 @@ func (c *Connection) Send(message interface{}) error {
 		return err
 	}
 
-	// 3. 发送消息
+	// 3. 检查单条消息大小
+	if len(data) > c.maxMessageSize {
+		return errors.ErrMessageTooLarge
+	}
+
+	// 4. 发送消息
 	select {
 	case c.sendChan <- data:
 		return nil
 	case <-c.ctx.Done(): // 使用context来判断连接是否关闭, 避免在发送的时候出现连接被关闭的情况
 		return errors.ErrConnectionClosed
-	default:
+	default: // 缓冲区已满
+		c.metrics.AddError()
 		return errors.ErrSendChannelFull
 	}
 }
@@ -428,7 +452,7 @@ func (c *Connection) Send(message interface{}) error {
 func (c *Connection) Close() {
 	c.once.Do(func() {
 		if !atomic.CompareAndSwapInt32(&c.closed, 0, 1) {
-			log.Println("connection already closed")
+			log.Printf("connection %d already closed", c.id)
 			return
 		}
 		c.cancel()

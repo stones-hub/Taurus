@@ -83,6 +83,7 @@ var (
 	ErrProtocolNotSet       = NewError(ErrorTypeSystem, "protocol not set", nil)       // 协议未设置
 	ErrSystemOverload       = NewError(ErrorTypeSystem, "system overload", nil)        // 系统过载
 	ErrSystemFatal          = NewError(ErrorTypeSystem, "system fatal error", nil)     // 系统致命错误
+	ErrRateLimitExceeded    = NewError(ErrorTypeSystem, "rate limit exceeded", nil)    // 速率限制超出
 
 	// 缓冲区相关错误 (4xx)
 	ErrBufferOverflow = NewError(ErrorTypeBuffer, "buffer overflow", nil) // 缓冲区溢出
