@@ -131,10 +131,13 @@ func (c *Client) Connect() error {
 	// 通知连接建立
 	c.handler.OnConnect(c.ctx, c.conn)
 
-	// 等待协程退出， 阻塞
-	c.wg.Wait()
-
 	return nil
+}
+
+// 优雅的关闭
+func (c *Client) GracefulClose() {
+	c.Close()
+	c.wg.Wait()
 }
 
 // readLoop 读取循环
@@ -393,6 +396,7 @@ func (c *Client) Send(msg interface{}) error {
 // Close 关闭客户端连接, 回收资源
 func (c *Client) Close() error {
 	c.closeOnce.Do(func() {
+		c.handler.OnClose(c.ctx, c.conn)
 		// 发出关闭信号
 		c.cancel()
 
@@ -405,7 +409,6 @@ func (c *Client) Close() error {
 		// 清理连接资源
 		if c.conn != nil {
 			_ = c.conn.Close()
-			c.handler.OnClose(c.ctx, c.conn)
 			c.conn = nil
 		}
 	})

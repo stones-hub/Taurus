@@ -182,6 +182,7 @@ func (c *Connection) readLoop() {
 
 			// 检查缓冲区大小，如果过大，说明可能有大量无效数据，直接清空
 			if len(msgBuf) > c.maxMessageSize {
+				log.Printf("1. server connection %d buffer overflow, buffer size: %d, max message size: %d", c.id, len(msgBuf), c.maxMessageSize)
 				// 缓冲区过大，说明可能有大量无效数据，直接清空
 				msgBuf = msgBuf[:0]
 				c.metrics.AddError()
@@ -246,6 +247,7 @@ func (c *Connection) readLoop() {
 			// 6. 处理不同的错误情况
 			switch err {
 			case nil:
+				log.Printf("2. server connection %d unpack message success, message: %+v", c.id, message)
 				// 成功解析一个完整的消息
 				// 更新接收的消息数量
 				c.metrics.AddMessageReceived(int64(consumed))
@@ -261,12 +263,14 @@ func (c *Connection) readLoop() {
 				msgBuf = msgBuf[consumed:]
 
 			case errors.ErrShortRead:
+				log.Printf("3. server connection %d unpack message short read, message: %+v", c.id, message)
 				// 数据不足，保留所有数据等待更多数据
 				c.metrics.AddError()
 				c.handler.OnError(c, err)
 				continue
 
 			case errors.ErrMessageTooLarge:
+				log.Printf("4. server connection %d unpack message too large, message: %+v", c.id, message)
 				// 消息过大，丢弃指定长度
 				c.metrics.AddError()
 				c.handler.OnError(c, err)
@@ -278,6 +282,7 @@ func (c *Connection) readLoop() {
 				}
 
 			case errors.ErrInvalidFormat:
+				log.Printf("5. server connection %d unpack message invalid format, message: %+v", c.id, message)
 				// 格式错误（比如魔数不在开头），丢弃指定长度的数据
 				c.metrics.AddError()
 				c.handler.OnError(c, err)
@@ -285,12 +290,14 @@ func (c *Connection) readLoop() {
 				msgBuf = msgBuf[consumed:]
 
 			case errors.ErrChecksum:
+				log.Printf("6. server connection %d unpack message checksum error, message: %+v", c.id, message)
 				// 校验错误，丢弃整个包
 				c.metrics.AddError()
 				c.handler.OnError(c, err)
 				msgBuf = msgBuf[consumed:]
 
 			default:
+				log.Printf("7. server connection %d unpack message other error, message: %+v", c.id, message)
 				// 其他错误（比如JSON解析错误），丢弃整个包
 				c.metrics.AddError()
 				c.handler.OnError(c, err)
@@ -469,13 +476,17 @@ func (c *Connection) Send(message interface{}) error {
 func (c *Connection) Close() {
 	c.once.Do(func() {
 		if !atomic.CompareAndSwapInt32(&c.closed, 0, 1) {
-			log.Printf("connection %d already closed", c.id)
+			log.Printf("server connection %d already closed", c.id)
 			return
 		}
+		c.handler.OnClose(c)
 		c.cancel()
 		close(c.sendChan)
-		_ = c.conn.Close()
-		c.handler.OnClose(c)
+		if err := c.conn.Close(); err != nil {
+			log.Printf("server connection %d close failed: %v", c.id, err)
+		} else {
+			log.Printf("server connection %d closed", c.id)
+		}
 	})
 }
 
