@@ -14,106 +14,12 @@ import (
 	"Taurus/pkg/tcp/protocol"
 )
 
-// TCPClientOption 定义客户端选项函数类型
-type TCPClientOption func(*Client)
-
-// WithMaxMsgSize 设置最大消息大小
-func WithMaxMsgSize(size int) TCPClientOption {
-	return func(c *Client) {
-		c.maxMsgSize = size
-	}
-}
-
-// WithBufferSize 设置缓冲区大小
-func WithBufferSize(size int) TCPClientOption {
-	return func(c *Client) {
-		c.bufferSize = size
-		c.sendChan = make(chan interface{}, size)
-		c.recvBuf = make([]byte, size)
-	}
-}
-
-// WithConnectionTimeout 设置连接超时时间
-func WithConnectionTimeout(timeout time.Duration) TCPClientOption {
-	return func(c *Client) {
-		c.connectionTimeout = timeout
-	}
-}
-
-// WithIdleTimeout 设置空闲超时时间
-func WithIdleTimeout(timeout time.Duration) TCPClientOption {
-	return func(c *Client) {
-		c.idleTimeout = timeout
-	}
-}
-
-// WithMaxRetries 设置最大重试次数
-func WithMaxRetries(maxRetries int) TCPClientOption {
-	return func(c *Client) {
-		c.maxRetries = maxRetries
-	}
-}
-
-// WithBaseRetryDelay 设置初始重试等待时间
-func WithBaseRetryDelay(baseDelay time.Duration) TCPClientOption {
-	return func(c *Client) {
-		c.baseDelay = baseDelay
-	}
-}
-
-// WithMaxRetryDelay 设置最大重试等待时间
-func WithMaxRetryDelay(maxDelay time.Duration) TCPClientOption {
-	return func(c *Client) {
-		c.maxDelay = maxDelay
-	}
-}
-
-// Stats 统计信息
-type Stats struct {
-	// 消息统计
-	MessagesSent     atomic.Int64
-	MessagesReceived atomic.Int64
-	BytesRead        atomic.Int64
-	BytesWritten     atomic.Int64
-	Errors           atomic.Int64
-}
-
-// NewStats 创建并初始化统计信息
-func NewStats() Stats {
-	return Stats{}
-}
-
-// AddMessageSent 增加发送消息计数
-func (s *Stats) AddMessageSent(n int64) {
-	s.MessagesSent.Add(n)
-}
-
-// AddMessageReceived 增加接收消息计数
-func (s *Stats) AddMessageReceived(n int64) {
-	s.MessagesReceived.Add(n)
-}
-
-// AddBytesRead 增加读取字节计数
-func (s *Stats) AddBytesRead(n int64) {
-	s.BytesRead.Add(n)
-}
-
-// AddBytesWritten 增加写入字节计数
-func (s *Stats) AddBytesWritten(n int64) {
-	s.BytesWritten.Add(n)
-}
-
-// AddError 增加错误计数
-func (s *Stats) AddError(n int64) {
-	s.Errors.Add(n)
-}
-
 // Client TCP客户端
 type Client struct {
 	// 基础配置
-	address           string
-	maxMsgSize        int
-	bufferSize        int
+	address           string        // 连接的服务端地址
+	maxMsgSize        int           // 最大消息大小
+	bufferSize        int           // 缓冲区大小
 	connectionTimeout time.Duration // 连接超时时间
 	idleTimeout       time.Duration // 空闲超时时间
 	maxRetries        int           // 最大重试次数
@@ -132,7 +38,7 @@ type Client struct {
 
 	// 消息通道
 	sendChan chan interface{}
-	recvBuf  []byte
+	// recvBuf  []byte
 
 	// 状态控制
 	connected atomic.Bool
@@ -187,9 +93,10 @@ func New(address string, protocolType protocol.ProtocolType, handler Handler, op
 	}
 	client.protocol = p
 
-	// 消息通道
-	client.sendChan = make(chan interface{}, client.bufferSize)
-	client.recvBuf = make([]byte, client.bufferSize)
+	if client.sendChan == nil {
+		// 消息通道
+		client.sendChan = make(chan interface{}, client.bufferSize)
+	}
 
 	// 状态控制
 	client.connected.Store(false)

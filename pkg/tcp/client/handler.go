@@ -22,14 +22,14 @@ type Handler interface {
 type DefaultHandler struct{}
 
 func (h *DefaultHandler) OnConnect(ctx context.Context, conn net.Conn) {
-	log.Println("连接建立")
+	log.Printf("连接建立: %s", conn.RemoteAddr())
 }
 func (h *DefaultHandler) OnMessage(ctx context.Context, conn net.Conn, msg interface{}) {
-	log.Println("收到消息", msg)
+	log.Printf("收到消息: %v", msg)
 }
 func (h *DefaultHandler) OnClose(ctx context.Context, conn net.Conn) {
-	log.Println("连接关闭")
+	log.Printf("连接关闭: %s", conn.RemoteAddr())
 }
 func (h *DefaultHandler) OnError(ctx context.Context, conn net.Conn, err error) {
-	log.Println("发生错误", err)
+	log.Printf("发生错误: %s, %v", conn.RemoteAddr(), err)
 }
