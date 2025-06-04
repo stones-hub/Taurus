@@ -3,6 +3,8 @@ package app
 import (
 	"Taurus/config"
 	"Taurus/internal"
+	"Taurus/internal/app/core/consuls"
+	http_hooks "Taurus/internal/hooks"
 	"Taurus/pkg/consul"
 	"Taurus/pkg/cron"
 	"Taurus/pkg/db"
@@ -12,6 +14,8 @@ import (
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/redisx"
 	"Taurus/pkg/router"
+	"Taurus/pkg/tcp"
+	"Taurus/pkg/tcp/protocol"
 	"Taurus/pkg/telemetry"
 	"Taurus/pkg/templates"
 	"Taurus/pkg/wsocket"
@@ -21,25 +25,31 @@ import (
 	"net/http"
 	"time"
 
-	"Taurus/internal/app/core/consuls"
-	_ "Taurus/internal/app/core/crons"         // 引入crons，注册crons包下的所有的定时任务
-	_ "Taurus/internal/app/core/log_formatter" // 引入log_formatter，注册log_formatter包下的所有的日志格式化器
-	_ "Taurus/internal/app/core/ws_handler"    // 引入ws_handler，注册ws_handler包下的所有的websocket处理器
-	http_hooks "Taurus/internal/hooks"
-
-	// 引入mcps包下的所有的提示词、资源、工具
-	_ "Taurus/internal/app/core/mcps/prompts"   // 引入prompts，注册prompts包下的所有的提示词
-	_ "Taurus/internal/app/core/mcps/resources" // 引入resources，注册resources包下的所有的资源
-	_ "Taurus/internal/app/core/mcps/tools"     // 引入tools，注册tools包下的所有的工具
-
-	// 引入 gRPC 包下的所有的中间件、服务
-	"Taurus/internal/controller/gRPC/hooks"
-	_ "Taurus/internal/controller/gRPC/service" // 引入service，注册service包下的所有的服务
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
 	"google.golang.org/grpc/keepalive"
 	"gorm.io/gorm/logger"
+
+	// 引入crons包下的所有的定时任务, 需要用到init初始化
+	_ "Taurus/internal/app/core/crons"
+
+	// 引入log_formatter，注册log_formatter包下的所有的日志格式化器, 需要用到init初始化
+	_ "Taurus/internal/app/core/log_formatter"
+
+	// 引入mcps包下的所有的提示词、资源、工具, 需要用到init初始化
+	_ "Taurus/internal/app/core/mcps/prompts"
+	_ "Taurus/internal/app/core/mcps/resources"
+	_ "Taurus/internal/app/core/mcps/tools"
+
+	// 引入 gRPC 包下的所有的中间件、服务, 需要用到init初始化
+	"Taurus/internal/controller/gRPC/hooks"
+	_ "Taurus/internal/controller/gRPC/service"
+
+	// 引入tcp包下的所有的handler, 需要用到init初始化
+	_ "Taurus/internal/app/core/tcp_handler"
+
+	// 引入ws包下的所有的handler, 需要用到init初始化
+	_ "Taurus/internal/app/core/ws_handler"
 )
 
 var (
@@ -355,6 +365,42 @@ func InitializeTelemetry() {
 		})
 
 		log.Printf("%s🔗 -> Tracing initialized successfully. %s\n", Green, Reset)
+	}
+}
+
+// InitializeTCP initialize tcp
+func InitializeTCP() {
+	if config.Core.TCPEnable {
+		// 创建协议实例
+		p, err := protocol.NewProtocol(
+			protocol.WithType(protocol.ProtocolType(config.Core.Tcp.Protocol)),
+			protocol.WithMaxMessageSize(config.Core.Tcp.MaxMessageSize),
+		)
+		if err != nil {
+			log.Fatalf("创建协议失败: %v", err)
+		}
+
+		server, cleanup, err := tcp.NewServer(config.Core.Tcp.Address, p, tcp.GetHandler(config.Core.Tcp.Handler),
+			tcp.WithMaxConnections(int32(config.Core.Tcp.MaxConnections)),
+		)
+
+		if err != nil {
+			log.Fatalf("Failed to initialize tcp server: %v", err)
+		}
+
+		Cleanup = append(Cleanup, func() {
+			cleanup()
+			log.Printf("%s🔗 -> Clean up tcp components successfully. %s\n", Green, Reset)
+		})
+
+		go func() {
+			err := server.Start()
+			if err != nil {
+				log.Fatalf("Failed to start tcp server: %v", err)
+			}
+		}()
+
+		log.Println("\033[1;32m🔗 -> TCP initialized successfully\033[0m")
 	}
 }
 

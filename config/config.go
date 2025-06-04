@@ -18,6 +18,15 @@ type Config struct {
 	ConsulEnable    bool `json:"consul_enable" yaml:"consul_enable" toml:"consul_enable"`          // 是否启用consul
 	GRPCEnable      bool `json:"grpc_enable" yaml:"grpc_enable" toml:"grpc_enable"`                // 是否启用grpc
 	TracingEnable   bool `json:"tracing_enable" yaml:"tracing_enable" toml:"tracing_enable"`       // 是否启用tracing
+	TCPEnable       bool `json:"tcp_enable" yaml:"tcp_enable" toml:"tcp_enable"`                   // 是否启用tcp
+
+	Tcp struct {
+		Address        string `json:"address" yaml:"address" toml:"address"`                            // tcp地址
+		MaxConnections int    `json:"max_connections" yaml:"max_connections" toml:"max_connections"`    // 最大连接数
+		MaxMessageSize uint32 `json:"max_message_size" yaml:"max_message_size" toml:"max_message_size"` // 最大消息大小
+		Protocol       string `json:"protocol" yaml:"protocol" toml:"protocol"`                         // 协议类型  json/binary
+		Handler        string `json:"handler" yaml:"handler" toml:"handler"`                            // 默认handler为 default
+	} `json:"tcp" yaml:"tcp" toml:"tcp"`
 
 	MCP struct {
 		Transport string `json:"transport" yaml:"transport" toml:"transport"` // 传输方式，可选值：sse, streamable_http, stdio

@@ -15,17 +15,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// ---------------------------------------------------------------------------------------------------------------------
-// Handler 定义了连接事件处理的接口, 注意如果handler中实现了子协程的逻辑切记需要监听ctx.Done()，否则子协程不会退出，造成协程泄漏
-// ---------------------------------------------------------------------------------------------------------------------
-// 实现者需要处理各种连接生命周期事件。
-type Handler interface {
-	OnConnect(conn *Connection)                      // 当新连接建立时调用
-	OnMessage(conn *Connection, message interface{}) // 当收到消息时调用
-	OnClose(conn *Connection)                        // 当连接关闭时调用
-	OnError(conn *Connection, err error)             // 当发生错误时调用
-}
-
 // ConnectionOption 定义了配置连接的函数类型
 type ConnectionOption func(*Connection)
 

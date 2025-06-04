@@ -65,7 +65,7 @@ func WithMaxConnections(maxConns int32) ServerOption {
 
 // NewServer 创建一个新的 TCP 服务器实例。
 // 使用默认值初始化服务器并应用提供的选项。
-func NewServer(addr string, protocol protocol.Protocol, handler Handler, opts ...ServerOption) *Server {
+func NewServer(addr string, protocol protocol.Protocol, handler Handler, opts ...ServerOption) (*Server, func(), error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
 		addr:       addr,
@@ -94,7 +94,7 @@ func NewServer(addr string, protocol protocol.Protocol, handler Handler, opts ..
 		s.connChan = make(chan struct{}, s.maxConns)
 	}
 
-	return s
+	return s, s.Stop, nil
 }
 
 // Start 开始接受客户端连接。

@@ -1,18 +1,24 @@
-package main
+package tcp_handler
 
 import (
 	"Taurus/pkg/tcp"
-	"Taurus/pkg/tcp/protocol"
 	"Taurus/pkg/tcp/protocol/json"
 	"fmt"
 	"log"
 	"sync"
 )
 
+func init() {
+	tcp.RegisterHandler("demo", &DemoHandler{
+		rooms:  make(map[string]*Room),
+		roomMu: &sync.RWMutex{},
+	})
+}
+
 // MessageHandler 实现了一个简单的消息处理器
-type MessageHandler struct {
+type DemoHandler struct {
 	rooms  map[string]*Room // 房间ID->房间信息
-	roomMu sync.RWMutex
+	roomMu *sync.RWMutex
 }
 
 // Room 房间信息
@@ -28,11 +34,13 @@ const (
 	LeaveRoom = 3
 )
 
-func (h *MessageHandler) OnConnect(conn *tcp.Connection) {
-	log.Printf("新连接建立: %d", conn.ID())
+func (h *DemoHandler) OnConnect(conn *tcp.Connection) {
+	conn.SetAttr("handler", "demo")
+	conn.SetAttr("ip", conn.RemoteAddr())
+	log.Printf("demo handler 新连接建立: %d", conn.ID())
 }
 
-func (h *MessageHandler) OnClose(conn *tcp.Connection) {
+func (h *DemoHandler) OnClose(conn *tcp.Connection) {
 
 	// 在所有房间中查找并清理这个连接
 	for _, room := range h.rooms {
@@ -50,7 +58,7 @@ func (h *MessageHandler) OnClose(conn *tcp.Connection) {
 	log.Printf("连接关闭: %d", conn.ID())
 }
 
-func (h *MessageHandler) OnError(conn *tcp.Connection, err error) {
+func (h *DemoHandler) OnError(conn *tcp.Connection, err error) {
 	if conn != nil {
 		log.Printf("连接错误 [%d]: %v", conn.ID(), err)
 	} else {
@@ -58,7 +66,7 @@ func (h *MessageHandler) OnError(conn *tcp.Connection, err error) {
 	}
 }
 
-func (h *MessageHandler) OnMessage(conn *tcp.Connection, message interface{}) {
+func (h *DemoHandler) OnMessage(conn *tcp.Connection, message interface{}) {
 	msg, ok := message.(*json.Message)
 	if !ok {
 		log.Printf("消息格式错误")
@@ -96,7 +104,7 @@ func removeConn(slice []*tcp.Connection, conn *tcp.Connection) []*tcp.Connection
 	return slice
 }
 
-func (h *MessageHandler) handleJoinRoom(conn *tcp.Connection, msg *json.Message) {
+func (h *DemoHandler) handleJoinRoom(conn *tcp.Connection, msg *json.Message) {
 	// JSON解析数字默认为float64，需要转换
 	room_id := fmt.Sprintf("%.0f", msg.Data["room_id"].(float64))
 	user_id := uint64(msg.Data["user_id"].(float64))
@@ -131,13 +139,13 @@ func (h *MessageHandler) handleJoinRoom(conn *tcp.Connection, msg *json.Message)
 }
 
 // 聊天信息
-func (h *MessageHandler) handleChatMessage(conn *tcp.Connection, msg *json.Message) {
+func (h *DemoHandler) handleChatMessage(conn *tcp.Connection, msg *json.Message) {
 	room_id := fmt.Sprintf("%.0f", msg.Data["room_id"].(float64))
 	log.Printf("服务端收到聊天消息, 房间(%s), 开始广播: %s\n", room_id, msg.Data)
 	h.broadcastToRoom(room_id, msg)
 }
 
-func (h *MessageHandler) handleLeaveRoom(conn *tcp.Connection, msg *json.Message) {
+func (h *DemoHandler) handleLeaveRoom(conn *tcp.Connection, msg *json.Message) {
 	room_id := fmt.Sprintf("%.0f", msg.Data["room_id"].(float64))
 	user_id := uint64(msg.Data["user_id"].(float64))
 
@@ -166,7 +174,7 @@ func (h *MessageHandler) handleLeaveRoom(conn *tcp.Connection, msg *json.Message
 }
 
 // broadcastToRoom 向房间内的所有用户的所有连接广播消息
-func (h *MessageHandler) broadcastToRoom(room_id string, msg *json.Message) {
+func (h *DemoHandler) broadcastToRoom(room_id string, msg *json.Message) {
 	if !h.isRoomExist(room_id) {
 		return
 	}
@@ -182,40 +190,7 @@ func (h *MessageHandler) broadcastToRoom(room_id string, msg *json.Message) {
 }
 
 // 判断房间在不在
-func (h *MessageHandler) isRoomExist(room_id string) bool {
+func (h *DemoHandler) isRoomExist(room_id string) bool {
 	_, ok := h.rooms[room_id]
 	return ok
-}
-
-func main() {
-	// 创建协议实例
-	p, err := protocol.NewProtocol(
-		protocol.WithType(protocol.JSON),
-		protocol.WithMaxMessageSize(1024*1024), // 1MB
-	)
-	if err != nil {
-		log.Fatalf("创建协议失败: %v", err)
-	}
-
-	// 创建handler
-	handler := &MessageHandler{
-		rooms: make(map[string]*Room),
-	}
-
-	// 创建服务器
-	server, stop, err := tcp.NewServer(":8080", p, handler,
-		tcp.WithMaxConnections(1000), // 最大1000个连接
-	)
-
-	if err != nil {
-		log.Fatalf("创建服务器失败: %v", err)
-	}
-
-	// 启动服务器
-	log.Println("服务器启动在 :8080")
-	if err := server.Start(); err != nil {
-		log.Fatalf("服务器启动失败: %v", err)
-	}
-
-	stop()
 }

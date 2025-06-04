@@ -1,0 +1,6 @@
+tcp:
+  address: ":8080" # 地址，默认是:8080
+  max_connections: 1000 # 最大连接数
+  max_message_size: 1048576 # 最大消息大小 1MB
+  protocol: json # 协议类型  json/binary
+  handler: "demo" # 默认handler为 default

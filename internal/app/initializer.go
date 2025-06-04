@@ -41,6 +41,7 @@ func initialize(configPath string, env string) {
 	InitializeWebsocket()
 	InitializeMCP()
 	InitializegRPC()
+	InitializeTCP()
 	InitializeConsul()
 }
 
