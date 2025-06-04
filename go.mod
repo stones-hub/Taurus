@@ -53,6 +53,7 @@ require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.16.0 // indirect

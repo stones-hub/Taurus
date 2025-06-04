@@ -6,7 +6,7 @@ import "time"
 type TCPClientOption func(*Client)
 
 // WithMaxMsgSize 设置最大消息大小
-func WithMaxMsgSize(size int) TCPClientOption {
+func WithMaxMsgSize(size uint32) TCPClientOption {
 	return func(c *Client) {
 		c.maxMsgSize = size
 	}

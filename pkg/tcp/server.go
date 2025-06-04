@@ -32,11 +32,45 @@ type Server struct {
 	handler  Handler           // 业务逻辑处理器
 	maxConns int32             // 最大并发连接数, 默认1000, 用于创建connChan
 	connChan chan struct{}     // 连接限制信号量
+
+	// 每个连接相关配置, 可以被配置选项覆盖, 对server其实没用，为了兼容链接的配置
+	bufferSize     int           // 缓冲区数量, 默认1024
+	maxMessageSize uint32        // 连接允许单条传输的消息大小, 默认1MB
+	idleTimeout    time.Duration // 连接最大空闲超时时间
+	rateLimiter    int           // 消息频率限制器, 每秒100条消息
 }
 
 // ServerOption 定义了配置服务器的函数类型。
 // 这遵循函数式选项模式以实现灵活配置。
 type ServerOption func(*Server)
+
+// WithConnectionBufferSize 设置连接的缓冲区大小
+func WithConnectionBufferSize(size int) ServerOption {
+	return func(s *Server) {
+		s.bufferSize = size
+	}
+}
+
+// WithConnectionMaxMessageSize 设置连接允许单条传输的消息大小
+func WithConnectionMaxMessageSize(size uint32) ServerOption {
+	return func(s *Server) {
+		s.maxMessageSize = size
+	}
+}
+
+// WithConnectionIdleTimeout 设置连接最大空闲超时时间
+func WithConnectionIdleTimeout(timeout time.Duration) ServerOption {
+	return func(s *Server) {
+		s.idleTimeout = timeout
+	}
+}
+
+// WithConnectionRateLimiter 设置连接的消息频率限制器
+func WithConnectionRateLimiter(messagesPerSecond int) ServerOption {
+	return func(s *Server) {
+		s.rateLimiter = messagesPerSecond
+	}
+}
 
 // WithProtocol 设置服务器的协议实现。
 // 协议定义了消息如何编码和解码。
@@ -79,9 +113,15 @@ func NewServer(addr string, protocol protocol.Protocol, handler Handler, opts ..
 		wg:         &sync.WaitGroup{}, // 优雅关闭的等待组
 		metrics:    NewMetrics(),      // 服务器层面的统计指标
 
+		// 默认配置, 可以被配置选项覆盖
 		protocol: protocol, // 消息处理的协议实现
 		handler:  handler,  // 业务逻辑处理器
 		maxConns: 1000,     // 默认最大连接数
+		// 每个连接相关配置, 可以被配置选项覆盖
+		bufferSize:     1024,             // 缓冲区数量, 默认1024
+		maxMessageSize: 1 * 1024 * 1024,  // 连接允许单条传输的消息大小, 默认1MB
+		idleTimeout:    30 * time.Minute, // 连接最大空闲超时时间
+		rateLimiter:    100,              // 消息频率限制器, 每秒100条消息
 	}
 
 	// 应用所有配置选项
@@ -189,7 +229,11 @@ func (s *Server) acceptLoop() {
 			delay = s.baseDelay
 
 			// 创建并存储新连接
-			c := NewConnection(conn, s.protocol, s.handler)
+			c := NewConnection(conn, s.protocol, s.handler,
+				WithSendChanSize(s.bufferSize),
+				WithMaxMessageSize(s.maxMessageSize),
+				WithIdleTimeout(s.idleTimeout),
+				WithRateLimit(s.rateLimiter))
 			s.conns.Store(c.ID(), c)
 			s.metrics.AddConnection()
 

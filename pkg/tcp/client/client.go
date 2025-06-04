@@ -32,7 +32,7 @@ type Client struct {
 	stats Stats
 
 	// 可通过options配置
-	maxMsgSize        int              // 最大消息大小
+	maxMsgSize        uint32           // 最大消息大小
 	bufferSize        int              // 缓冲区大小
 	sendChan          chan interface{} // 消息通道
 	connectionTimeout time.Duration    // 连接超时时间
@@ -71,7 +71,7 @@ func New(address string, protocolType protocol.ProtocolType, handler Handler, op
 		maxMsgSize:        1 * 1024 * 1024,  // 默认1MB
 		bufferSize:        1024,             // 缓冲区大小
 		connectionTimeout: 5 * time.Second,  // 默认连接超时5秒
-		idleTimeout:       5 * time.Minute,  // 默认空闲超时5分钟
+		idleTimeout:       30 * time.Minute, // 默认空闲超时30分钟
 		maxRetries:        3,                // 默认最多重试3次
 		baseDelay:         time.Second,      // 默认初始等待1秒
 		maxDelay:          10 * time.Second, // 默认最大等待10秒
@@ -127,17 +127,12 @@ func (c *Client) Connect() error {
 	return nil
 }
 
+// Start 启动客户端, 阻塞等待所有协程退出
 func (c *Client) Start() {
 	// 启动收发协程
 	c.wg.Add(2)
 	go c.readLoop()
 	go c.writeLoop()
-	c.wg.Wait()
-}
-
-// 优雅的关闭
-func (c *Client) GracefulClose() {
-	c.Close()
 	c.wg.Wait()
 }
 
@@ -169,7 +164,7 @@ func (c *Client) readLoop() {
 			}
 
 			// 检查缓冲区大小，如果过大，说明可能有大量无效数据，直接清空
-			if len(msgBuf) > c.maxMsgSize {
+			if uint32(len(msgBuf)) > c.maxMsgSize {
 				msgBuf = msgBuf[:0]
 				c.stats.AddError()
 				c.handler.OnError(c.ctx, c.conn, fmt.Errorf("buffer overflow"))
@@ -374,7 +369,7 @@ func (c *Client) Send(msg interface{}) error {
 	}
 
 	// 3. 判断消息大小是否超过最大消息大小
-	if len(data) > c.maxMsgSize {
+	if uint32(len(data)) > c.maxMsgSize {
 		c.stats.AddError()
 		c.handler.OnError(c.ctx, c.conn, fmt.Errorf("message too large"))
 		return fmt.Errorf("message too large")
@@ -479,7 +474,7 @@ func (c *Client) SimpleSend(msg interface{}) error {
 	}
 
 	// 3. 判断消息大小是否超过最大消息大小
-	if len(data) > c.maxMsgSize {
+	if uint32(len(data)) > c.maxMsgSize {
 		c.stats.AddError()
 		c.handler.OnError(c.ctx, c.conn, fmt.Errorf("message too large"))
 		return fmt.Errorf("message too large")

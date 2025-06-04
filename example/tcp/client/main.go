@@ -4,16 +4,16 @@ import (
 	"Taurus/pkg/tcp/client"
 	"Taurus/pkg/tcp/protocol"
 	"Taurus/pkg/tcp/protocol/json"
-	"bufio"
 	"context"
 	"fmt"
 	"log"
 	"math/rand"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/chzyer/readline"
 )
 
 const (
@@ -84,7 +84,7 @@ func main() {
 		client.WithMaxMsgSize(1024*1024), // 1MB
 		client.WithBufferSize(1024),      // 缓冲区大小
 		client.WithConnectionTimeout(5*time.Second), // 连接超时
-		client.WithIdleTimeout(30*time.Second),      // 空闲超时
+		client.WithIdleTimeout(5*time.Minute),       // 空闲超时
 		client.WithMaxRetries(3),                    // 最大重试次数
 	)
 
@@ -99,22 +99,38 @@ func main() {
 
 	// 显示帮助信息
 	showHelp()
-	showPrompt()
+
+	// 初始化readline
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:          "> ",
+		HistoryFile:     "/tmp/readline.tmp",
+		InterruptPrompt: "^C",
+		EOFPrompt:       "quit",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rl.Close()
 
 	// 初始化sequence
 	var sequence uint32 = 1
 
-	// 启动goroutine处理标准输入
+	// 启动goroutine处理输入
 	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			text := scanner.Text()
-			if text == "" {
+		for {
+			line, err := rl.Readline()
+			if err != nil { // io.EOF, readline.ErrInterrupt
+				c.Close()
+				return
+			}
+
+			line = strings.TrimSpace(line)
+			if line == "" {
 				showPrompt()
 				continue
 			}
 
-			input := strings.Split(text, " ")
+			input := strings.Split(line, " ")
 			msgType := input[0]
 			msgData := strings.Join(input[1:], " ")
 
@@ -123,7 +139,6 @@ func main() {
 				roomID, err = strconv.Atoi(msgData)
 				if err != nil {
 					log.Printf("房间ID格式错误: %v", err)
-					showPrompt()
 					continue
 				}
 
@@ -135,26 +150,6 @@ func main() {
 
 				if err != nil {
 					log.Printf("发送消息失败: %v", err)
-					showPrompt()
-					continue
-				}
-
-			case "chat":
-				if msgData == "" {
-					log.Println("请输入聊天内容")
-					showPrompt()
-					continue
-				}
-
-				err = c.Send(&json.Message{
-					Type:     Chat,
-					Sequence: sequence,
-					Data:     map[string]interface{}{"room_id": roomID, "user_id": userID, "message": msgData},
-				})
-
-				if err != nil {
-					log.Printf("发送消息失败: %v", err)
-					showPrompt()
 					continue
 				}
 
@@ -166,7 +161,6 @@ func main() {
 				})
 				if err != nil {
 					log.Printf("发送消息失败: %v", err)
-					showPrompt()
 					continue
 				}
 				return
@@ -179,11 +173,18 @@ func main() {
 				showHelp()
 
 			default:
-				log.Printf("未知命令: %s", text)
-				showHelp()
+				err = c.Send(&json.Message{
+					Type:     Chat,
+					Sequence: sequence,
+					Data:     map[string]interface{}{"room_id": roomID, "user_id": userID, "message": line},
+				})
+
+				if err != nil {
+					log.Printf("发送消息失败: %v", err)
+					continue
+				}
 			}
 			sequence++
-			showPrompt()
 		}
 	}()
 
@@ -195,7 +196,7 @@ func showHelp() {
 	fmt.Println("\n=== 聊天室命令帮助 ===")
 	fmt.Println("join <room_id>  - 加入指定房间")
 	fmt.Println("leave           - 离开当前房间")
-	fmt.Println("chat <message>  - 发送聊天消息")
+	fmt.Println("<message>  	 - 发送聊天消息")
 	fmt.Println("help            - 显示此帮助信息")
 	fmt.Println("quit            - 退出程序")
 	fmt.Println("====================")

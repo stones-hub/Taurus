@@ -381,7 +381,11 @@ func InitializeTCP() {
 		}
 
 		server, cleanup, err := tcp.NewServer(config.Core.Tcp.Address, p, tcp.GetHandler(config.Core.Tcp.Handler),
-			tcp.WithMaxConnections(int32(config.Core.Tcp.MaxConnections)),
+			tcp.WithMaxConnections(int32(config.Core.Tcp.MaxConnections)),                         // 最大连接数
+			tcp.WithConnectionBufferSize(config.Core.Tcp.BufferSize),                              // 缓冲区大小
+			tcp.WithConnectionMaxMessageSize(config.Core.Tcp.MaxMessageSize),                      // 最大消息大小
+			tcp.WithConnectionIdleTimeout(time.Duration(config.Core.Tcp.IdleTimeout)*time.Minute), // 空闲超时时间
+			tcp.WithConnectionRateLimiter(config.Core.Tcp.RateLimiter),                            // 消息频率限制器
 		)
 
 		if err != nil {

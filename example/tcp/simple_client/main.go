@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,6 +25,7 @@ const (
 
 var userID int = rand.Intn(1000000)
 var roomID int
+var wg sync.WaitGroup
 
 // ClientHandler 实现了客户端的消息处理
 type ClientHandler struct {
@@ -54,7 +56,7 @@ func showHelp() {
 	fmt.Println("\n=== 聊天室命令帮助 ===")
 	fmt.Println("join <room_id>  - 加入指定房间")
 	fmt.Println("leave           - 离开当前房间")
-	fmt.Println("chat <message>  - 发送聊天消息")
+	fmt.Println("<message>  	 - 发送聊天消息")
 	fmt.Println("help            - 显示此帮助信息")
 	fmt.Println("quit            - 退出程序")
 	fmt.Println("====================")
@@ -95,8 +97,10 @@ func main() {
 	// 初始化sequence
 	var sequence uint32 = 1
 
+	wg.Add(1)
 	// 启动一个goroutine来接收服务器消息
 	go func() {
+		defer wg.Done()
 		for {
 			msg, err := c.SimpleReceive()
 			if err != nil {
@@ -142,25 +146,6 @@ func main() {
 				continue
 			}
 
-		case "chat":
-			if msgData == "" {
-				log.Println("请输入聊天内容")
-				showPrompt()
-				continue
-			}
-
-			err = c.SimpleSend(&json.Message{
-				Type:     Chat,
-				Sequence: sequence,
-				Data:     map[string]interface{}{"room_id": roomID, "user_id": userID, "message": msgData},
-			})
-
-			if err != nil {
-				log.Printf("发送消息失败: %v", err)
-				showPrompt()
-				continue
-			}
-
 		case "leave":
 			err = c.SimpleSend(&json.Message{
 				Type:     LeaveRoom,
@@ -183,8 +168,18 @@ func main() {
 			showHelp()
 
 		default:
-			log.Printf("未知命令: %s", text)
-			showHelp()
+			err = c.SimpleSend(&json.Message{
+				Type:     Chat,
+				Sequence: sequence,
+				Data:     map[string]interface{}{"room_id": roomID, "user_id": userID, "message": text},
+			})
+
+			if err != nil {
+				log.Printf("发送消息失败: %v", err)
+				showPrompt()
+				continue
+			}
+			log.Printf("发送消息成功: %s", text)
 		}
 		sequence++
 		showPrompt()
@@ -193,4 +188,7 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		log.Printf("读取输入错误: %v", err)
 	}
+
+	wg.Wait()
+
 }

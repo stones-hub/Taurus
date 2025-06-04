@@ -24,6 +24,9 @@ type Config struct {
 		Address        string `json:"address" yaml:"address" toml:"address"`                            // tcp地址
 		MaxConnections int    `json:"max_connections" yaml:"max_connections" toml:"max_connections"`    // 最大连接数
 		MaxMessageSize uint32 `json:"max_message_size" yaml:"max_message_size" toml:"max_message_size"` // 最大消息大小
+		BufferSize     int    `json:"buffer_size" yaml:"buffer_size" toml:"buffer_size"`                // 缓冲区大小
+		IdleTimeout    int    `json:"idle_timeout" yaml:"idle_timeout" toml:"idle_timeout"`             // 空闲超时时间
+		RateLimiter    int    `json:"rate_limiter" yaml:"rate_limiter" toml:"rate_limiter"`             // 每秒100条消息
 		Protocol       string `json:"protocol" yaml:"protocol" toml:"protocol"`                         // 协议类型  json/binary
 		Handler        string `json:"handler" yaml:"handler" toml:"handler"`                            // 默认handler为 default
 	} `json:"tcp" yaml:"tcp" toml:"tcp"`

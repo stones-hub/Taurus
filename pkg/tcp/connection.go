@@ -33,14 +33,14 @@ func WithIdleTimeout(timeout time.Duration) ConnectionOption {
 }
 
 // WithRateLimit 设置消息速率限制
-func WithRateLimit(messagesPerSecond float64) ConnectionOption {
+func WithRateLimit(messagesPerSecond int) ConnectionOption {
 	return func(c *Connection) {
-		c.rateLimiter = rate.NewLimiter(rate.Limit(messagesPerSecond), 1)
+		c.rateLimiter = rate.NewLimiter(rate.Limit(messagesPerSecond), messagesPerSecond)
 	}
 }
 
 // WithMaxMessageSize 设置连接允许传输的最大消息大小
-func WithMaxMessageSize(bytes int) ConnectionOption {
+func WithMaxMessageSize(bytes uint32) ConnectionOption {
 	return func(c *Connection) {
 		c.maxMessageSize = bytes
 	}
@@ -71,7 +71,7 @@ type Connection struct {
 	// 缓冲区设置
 	bufferSize     int         // 缓冲区数量, 默认1024
 	sendChan       chan []byte // 异步消息发送通道, 默认1024
-	maxMessageSize int         // 连接允许单条传输的消息大小, 默认1MB
+	maxMessageSize uint32      // 连接允许单条传输的消息大小, 默认1MB
 
 	idleTimeout time.Duration // 连接最大空闲超时时间
 	rateLimiter *rate.Limiter // 消息频率限制器
@@ -103,7 +103,7 @@ func NewConnection(conn net.Conn, protocol protocol.Protocol, handler Handler, o
 		// 默认配置, 可以被配置选项覆盖
 		bufferSize:     1024,
 		maxMessageSize: 1 * 1024 * 1024,                       // 默认单条最大消息大小1MB
-		idleTimeout:    time.Minute * 5,                       // 默认5分钟空闲超时
+		idleTimeout:    time.Minute * 30,                      // 默认30分钟空闲超时
 		rateLimiter:    rate.NewLimiter(rate.Limit(100), 100), // 默认每秒100条消息
 	}
 
@@ -170,7 +170,7 @@ func (c *Connection) readLoop() {
 			}
 
 			// 检查缓冲区大小，如果过大，说明可能有大量无效数据，直接清空
-			if len(msgBuf) > c.maxMessageSize {
+			if uint32(len(msgBuf)) > c.maxMessageSize {
 				log.Printf("1. server connection %d buffer overflow, buffer size: %d, max message size: %d", c.id, len(msgBuf), c.maxMessageSize)
 				// 缓冲区过大，说明可能有大量无效数据，直接清空
 				msgBuf = msgBuf[:0]
@@ -436,7 +436,7 @@ func (c *Connection) Send(message interface{}) error {
 	}
 
 	// 3. 检查单条消息大小
-	if len(data) > c.maxMessageSize {
+	if uint32(len(data)) > c.maxMessageSize {
 		c.metrics.AddError()
 		c.handler.OnError(c, errors.ErrMessageTooLarge)
 		return errors.ErrMessageTooLarge
