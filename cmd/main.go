@@ -15,7 +15,7 @@ import (
 
 func main() {
 
-	t := telemetry.Provider.Tracer("taurus-http-server")
+	t := telemetry.GetTracer("http-server")
 	rateLimiter := util.NewCompositeRateLimiter(100, 1000, 1*time.Second)
 
 	// 测试validate

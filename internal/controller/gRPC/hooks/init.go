@@ -21,7 +21,7 @@ func InitgRPCHooks() {
 
 	once.Do(func() {
 		log.Printf("-------------------------------- 初始化 gRPC 中间件 --------------------------------")
-		tracer := telemetry.Provider.Tracer("gRPC-server")
+		tracer := telemetry.GetTracer("gRPC-server")
 		server.RegisterMiddleware(HostMiddleware())
 		// System default middleware
 		// MetricsMiddleware

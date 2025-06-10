@@ -364,6 +364,13 @@ func InitializeTelemetry() {
 			log.Printf("%s🔗 -> Clean up tracing components successfully. %s\n", Green, Reset)
 		})
 
+		telemetry.RegisterTracer("default", telemetry.Provider.Tracer("default"))
+
+		// 初始化跟踪器
+		for _, tracerName := range config.Core.Telemetry.Tracers {
+			telemetry.RegisterTracer(tracerName, telemetry.Provider.Tracer(tracerName))
+		}
+
 		log.Printf("%s🔗 -> Tracing initialized successfully. %s\n", Green, Reset)
 	}
 }

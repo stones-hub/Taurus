@@ -141,6 +141,7 @@ type Config struct {
 			MaxQueueSize  int    `json:"max_queue_size" yaml:"max_queue_size" toml:"max_queue_size"`
 			ExportTimeout string `json:"export_timeout" yaml:"export_timeout" toml:"export_timeout"`
 		} `json:"batch" yaml:"batch" toml:"batch"`
+		Tracers []string `json:"tracers" yaml:"tracers" toml:"tracers"` // 跟踪器名称,是个数组
 	} `json:"telemetry" yaml:"telemetry" toml:"telemetry"`
 }
 

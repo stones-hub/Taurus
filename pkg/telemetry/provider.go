@@ -45,7 +45,6 @@ func NewOTelProvider(opts ...Option) (*OTelProvider, func(), error) {
 
 	var err error
 	p.once.Do(func() {
-		fmt.Println("-------------------------------- create tracer provider --------------------------------")
 		// 1. 创建 OTLP 导出器（决定数据导出/发送到哪里）
 		var exporter sdktrace.SpanExporter
 		exporter, err = p.createExporter()
