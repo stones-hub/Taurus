@@ -3,7 +3,6 @@ package middleware
 import (
 	"Taurus/config"
 	"Taurus/pkg/httpx"
-	"log"
 	"net/http"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -13,7 +12,6 @@ import (
 // ApiKeyAuthMiddleware validates the API key from the request headers
 func ApiKeyAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("-------------------------------- ApiKeyAuthMiddleware --------------------------------")
 		apiKey := r.Header.Get("Authorization")
 		setAuthorizationToTrace(r, apiKey)
 		if apiKey == "" {

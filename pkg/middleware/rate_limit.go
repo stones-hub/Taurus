@@ -4,7 +4,6 @@ import (
 	"Taurus/pkg/httpx"
 	"Taurus/pkg/util"
 	"fmt"
-	"log"
 	"net/http"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -15,7 +14,6 @@ import (
 func RateLimitMiddleware(limiter *util.CompositeRateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Println("-------------------------------- RateLimitMiddleware --------------------------------")
 			ip := r.RemoteAddr // 获取请求的IP地址
 			allowed, message := limiter.Allow(ip)
 			setRateLimitToTrace(r, allowed, message)

@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -28,7 +27,6 @@ func ValidationMiddleware(reqStruct interface{}) func(http.Handler) http.Handler
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Println("-------------------------------- ValidationMiddleware --------------------------------")
 			// 1. 收集所有请求数据到一个map
 			data := make(map[string]interface{})
 

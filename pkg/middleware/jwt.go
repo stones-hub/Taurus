@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,7 +15,6 @@ import (
 
 func JwtMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("-------------------------------- JwtMiddleware --------------------------------")
 		// 通过http header中的token解析来认证
 		token := r.Header.Get("token")
 		setJwtToTrace(r, token)

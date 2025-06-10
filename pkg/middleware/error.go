@@ -14,7 +14,6 @@ import (
 // ErrorHandlerMiddleware handles errors and recovers from panics in HTTP requests
 func ErrorHandlerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("-------------------------------- ErrorHandlerMiddleware --------------------------------")
 		defer func() {
 			if err := recover(); err != nil {
 				// Log the error and stack trace

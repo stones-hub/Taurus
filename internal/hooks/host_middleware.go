@@ -4,7 +4,6 @@ import (
 	"Taurus/pkg/httpx"
 	"Taurus/pkg/util"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -14,7 +13,6 @@ import (
 
 func HostMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("-------------------------------- HostMiddleware --------------------------------")
 		ips := util.GetRemoteIP(r)
 
 		// 检查主机是否在允许列表中

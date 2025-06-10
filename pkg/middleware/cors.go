@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -12,7 +11,6 @@ import (
 // CorsMiddleware adds CORS headers to the response
 func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("-------------------------------- CorsMiddleware --------------------------------")
 		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		//  w.Header().Set("Access-Control-Allow-Origin", "https://your-allowed-origin.com")
