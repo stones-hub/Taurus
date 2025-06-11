@@ -18,6 +18,18 @@ func main() {
 	t := telemetry.GetTracer("http-server")
 	rateLimiter := util.NewCompositeRateLimiter(100, 1000, 1*time.Second)
 
+	// 测试trace_simple中间件
+	router.AddRouter(router.Router{
+		Path: "/trace_simple",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ok"))
+		}),
+		Middleware: []router.MiddlewareFunc{
+			hooks.CreateTraceSimpleMiddleware(),
+		},
+	})
+
 	// 测试validate
 	router.AddRouterGroup(router.RouteGroup{
 		Prefix: "/v1/api",
