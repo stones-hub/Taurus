@@ -5,6 +5,7 @@ import (
 	"Taurus/internal/app"
 	"Taurus/internal/controller"
 	"Taurus/internal/hooks"
+	"Taurus/pkg/logx"
 	"Taurus/pkg/middleware"
 	"Taurus/pkg/router"
 	"Taurus/pkg/telemetry"
@@ -23,6 +24,7 @@ func main() {
 		Path: "/trace_simple",
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
+			logx.Core.Info("default", "ok-> %s", "test")
 			w.Write([]byte("ok"))
 		}),
 		Middleware: []router.MiddlewareFunc{

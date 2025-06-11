@@ -69,37 +69,46 @@ type LoggerMap map[string]*Logger
 // 为 LoggerMap 添加方法
 func (lm LoggerMap) Info(name string, format string, a ...any) {
 	if _, ok := lm[name]; !ok {
-		log.Fatalf("Logger %s not found", name)
+		log.Printf("[Warning] Logger %s not found, use default", name)
+		lm["default"].Info(format, a...)
+	} else {
+		lm[name].Info(format, a...)
 	}
-	lm[name].Info(format, a...)
 }
 
 func (lm LoggerMap) Debug(name string, format string, a ...any) {
 	if _, ok := lm[name]; !ok {
-		log.Fatalf("Logger %s not found", name)
+		log.Printf("[Warning] Logger %s not found, use default", name)
+		lm["default"].Debug(format, a...)
+	} else {
+		lm[name].Debug(format, a...)
 	}
-	lm[name].Debug(format, a...)
 }
 
 func (lm LoggerMap) Warn(name string, format string, a ...any) {
 	if _, ok := lm[name]; !ok {
-		log.Fatalf("Logger %s not found", name)
+		log.Printf("[Warning] Logger %s not found, use default", name)
+		lm["default"].Warn(format, a...)
+	} else {
+		lm[name].Warn(format, a...)
 	}
-	lm[name].Warn(format, a...)
 }
 
 func (lm LoggerMap) Error(name string, format string, a ...any) {
 	if _, ok := lm[name]; !ok {
-		log.Fatalf("Logger %s not found", name)
+		log.Printf("[Warning] Logger %s not found, use default", name)
+		lm["default"].Error(format, a...)
+	} else {
+		lm[name].Error(format, a...)
 	}
-	lm[name].Error(format, a...)
 }
 
 func (lm LoggerMap) Fatal(name string, format string, a ...any) {
 	if _, ok := lm[name]; !ok {
-		log.Fatalf("Logger %s not found", name)
+		lm["default"].Fatal(format, a...)
+	} else {
+		lm[name].Fatal(format, a...)
 	}
-	lm[name].Fatal(format, a...)
 }
 
 // 将 Core 定义为 LoggerMap 类型的实例

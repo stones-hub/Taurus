@@ -47,9 +47,11 @@ func CreateTraceSimpleMiddleware() func(next http.Handler) http.Handler {
 			next.ServeHTTP(wr, r.WithContext(ctx))
 			duration := time.Since(atTime)
 
+			file, line := logx.GetCallerInfo()
 			// 记录tarce日志
 			traceLog, _ := json.Marshal(traceLogMessage{
 				Level:      "",
+				File:       fmt.Sprintf("%s:%d", file, line),
 				TraceID:    requestid,
 				AtTime:     atTime.Format(time.DateTime),
 				URL:        r.URL.String(),
@@ -64,6 +66,7 @@ func CreateTraceSimpleMiddleware() func(next http.Handler) http.Handler {
 
 type traceLogMessage struct {
 	Level      string `json:"level"`
+	File       string `json:"file"`
 	TraceID    string `json:"trace_id"`
 	AtTime     string `json:"at_time"`
 	URL        string `json:"url"`
