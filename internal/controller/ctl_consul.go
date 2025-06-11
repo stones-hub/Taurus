@@ -62,5 +62,4 @@ func (c *ConsulCtrl) TestConsul(w http.ResponseWriter, r *http.Request) {
 	}
 	// 打印consul注册的服务
 	httpx.SendResponse(w, http.StatusOK, services, nil)
-	return
 }

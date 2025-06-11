@@ -2,6 +2,7 @@ package controller
 
 import (
 	"Taurus/pkg/httpx"
+	"Taurus/pkg/logx"
 	"net/http"
 
 	"github.com/google/wire"
@@ -19,6 +20,7 @@ type TraceCtrl struct {
 var TraceCtrlSet = wire.NewSet(wire.Struct(new(TraceCtrl), "*"))
 
 func (traceCtrl *TraceCtrl) TestTraceMiddleware(w http.ResponseWriter, r *http.Request) {
+	logx.Core.Info("default", "this is trace middleware test")
 
 	// 获取当前 span
 	span := trace.SpanFromContext(r.Context())

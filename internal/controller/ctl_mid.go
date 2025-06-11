@@ -2,7 +2,7 @@ package controller
 
 import (
 	"Taurus/pkg/httpx"
-	"log"
+	"Taurus/pkg/logx"
 	"net/http"
 
 	"github.com/google/wire"
@@ -16,11 +16,11 @@ type MidCtrl struct {
 var MidCtrlSet = wire.NewSet(wire.Struct(new(MidCtrl), "*"))
 
 func (midCtrl *MidCtrl) TestMid(w http.ResponseWriter, r *http.Request) {
-	log.Println("-------------------------------- TestMid --------------------------------")
 
 	span := trace.SpanFromContext(r.Context())
 	span.SetAttributes(attribute.String("user.id", "123"))
 	span.SetAttributes(attribute.String("user.name", "TestMid-Name"))
 
+	logx.Core.Info("default", "this is mid test")
 	httpx.SendResponse(w, http.StatusOK, "mid test", nil)
 }
