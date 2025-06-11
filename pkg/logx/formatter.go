@@ -3,14 +3,12 @@ package logx
 import (
 	"fmt"
 	"log"
-	"runtime"
-	"strings"
 	"time"
 )
 
 // Formatter 定义格式化函数接口
 type Formatter interface {
-	Format(level LogLevel, message string) string
+	Format(level LogLevel, file string, line int, message string) string
 }
 
 // 注册表，用于存储用户注册的格式化函数
@@ -35,11 +33,9 @@ func GetFormatter(name string) Formatter {
 // 默认格式化函数实现
 type defaultFormatter struct{}
 
-func (f defaultFormatter) Format(level LogLevel, message string) string {
+func (f defaultFormatter) Format(level LogLevel, file string, line int, message string) string {
 	// 获取当前时间
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	// 获取调用者信息
-	file, line := GetCallerInfo()
 	caller := fmt.Sprintf("%s:%d", file, line)
 	return fmt.Sprintf("[%s] [%s] [%s] : %s", timestamp, caller, GetLevelSTR(level), message)
 }
@@ -60,19 +56,4 @@ func GetLevelSTR(level LogLevel) string {
 	default:
 		return ""
 	}
-}
-
-// GetCallerInfo 获取真实调用者的文件路径和行号
-func GetCallerInfo() (string, int) {
-	for skip := 0; skip < 15; skip++ {
-		_, file, line, ok := runtime.Caller(skip)
-		if !ok {
-			break
-		}
-		// 如果文件路径不包含 pkg/logx，说明已经找到了真实调用者
-		if !strings.Contains(file, "pkg/logx") {
-			return file, line
-		}
-	}
-	return "", 0
 }

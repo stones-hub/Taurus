@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/natefinch/lumberjack"
 )
@@ -180,8 +181,14 @@ func (l *Logger) logWithLevel(level LogLevel, message string) {
 		return
 	}
 
+	_, file, line, ok := runtime.Caller(3)
+	if !ok {
+		file = "unknown"
+		line = 0
+	}
+
 	// 格式化日志内容
-	formattedMessage := GetFormatter(l.config.Formatter).Format(level, message)
+	formattedMessage := GetFormatter(l.config.Formatter).Format(level, file, line, message)
 
 	// 如果是控制台输出，添加颜色
 	if l.config.OutputType == "console" {

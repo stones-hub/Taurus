@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Taurus/config"
 	"Taurus/internal"
 	"Taurus/internal/app"
 	"Taurus/internal/controller"
@@ -25,6 +26,7 @@ func main() {
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			logx.Core.Info("default", "ok-> %s", "test")
+			logx.Core.Info("trace", "authorization-> %s", config.Core.Authorization)
 			w.Write([]byte("ok"))
 		}),
 		Middleware: []router.MiddlewareFunc{

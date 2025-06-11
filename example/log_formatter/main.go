@@ -11,7 +11,7 @@ import (
 type DemoFormatter struct {
 }
 
-func (d *DemoFormatter) Format(level logx.LogLevel, message string) string {
+func (d *DemoFormatter) Format(level logx.LogLevel, file string, line int, message string) string {
 	return fmt.Sprintf("[%s] [%s]: %s", time.Now().Format("2006-01-02 15:04:05"), logx.GetLevelSTR(level), message)
 }
 

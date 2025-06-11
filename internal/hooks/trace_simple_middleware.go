@@ -47,11 +47,9 @@ func CreateTraceSimpleMiddleware() func(next http.Handler) http.Handler {
 			next.ServeHTTP(wr, r.WithContext(ctx))
 			duration := time.Since(atTime)
 
-			file, line := logx.GetCallerInfo()
 			// 记录tarce日志
 			traceLog, _ := json.Marshal(traceLogMessage{
 				Level:      "",
-				File:       fmt.Sprintf("%s:%d", file, line),
 				TraceID:    requestid,
 				AtTime:     atTime.Format(time.DateTime),
 				URL:        r.URL.String(),
@@ -67,6 +65,7 @@ func CreateTraceSimpleMiddleware() func(next http.Handler) http.Handler {
 type traceLogMessage struct {
 	Level      string `json:"level"`
 	File       string `json:"file"`
+	Line       int    `json:"line"`
 	TraceID    string `json:"trace_id"`
 	AtTime     string `json:"at_time"`
 	URL        string `json:"url"`
@@ -78,22 +77,26 @@ type traceLogMessage struct {
 // 实现logformatter, 并注册
 type traceSimpleFormatter struct{}
 
-func (f *traceSimpleFormatter) Format(level logx.LogLevel, message string) string {
+func (f *traceSimpleFormatter) Format(level logx.LogLevel, file string, line int, message string) string {
 	var data traceLogMessage
 
 	// 如果message是一个json，还原，否则直接不变
 	if json.Valid([]byte(message)) {
 		if err := json.Unmarshal([]byte(message), &data); err == nil {
 			data.Level = logx.GetLevelSTR(level)
-			message = fmt.Sprintf("%+v", data)
+			data.File = file
+			data.Line = line
+			if json, err := json.Marshal(data); err == nil {
+				return string(json)
+			}
 		}
 	}
 
-	if json, err := json.Marshal(data); err == nil {
-		return string(json)
-	}
-
-	return message
+	// 获取当前时间
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	caller := fmt.Sprintf("%s:%d", file, line)
+	// 获取调用者信息
+	return fmt.Sprintf("[%s] [%s] [%s] : %s", timestamp, caller, logx.GetLevelSTR(level), message)
 }
 
 func init() {
