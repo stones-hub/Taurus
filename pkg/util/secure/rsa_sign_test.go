@@ -1,8 +1,9 @@
-package util
+package secure
 
 import (
 	"crypto"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -20,7 +21,7 @@ var (
 */
 
 func TestSignWithMD5(t *testing.T) {
-	priKEY, err := ParsePriKEY(fmt.Sprintf("-----BEGIN PRIVATE KEY-----\n%s-----END PRIVATE KEY-----", ChunkSplit(PRIVATE_KEY, 64, "\n")))
+	priKEY, err := ParsePriKEY(fmt.Sprintf("-----BEGIN PRIVATE KEY-----\n%s-----END PRIVATE KEY-----", chunkSplit(PRIVATE_KEY, 64, "\n")))
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -31,7 +32,7 @@ func TestSignWithMD5(t *testing.T) {
 	t.Logf("原字符:%s 签名(base64):%v", message, Byte2Base64(sign))
 
 	// --------------> 验签
-	pubKEY, err := ParsePubKEY(fmt.Sprintf("-----BEGIN PUBLIC KEY-----\n%s-----END PUBLIC KEY-----", ChunkSplit(PUBLIC_KEY, 64, "\n")))
+	pubKEY, err := ParsePubKEY(fmt.Sprintf("-----BEGIN PUBLIC KEY-----\n%s-----END PUBLIC KEY-----", chunkSplit(PUBLIC_KEY, 64, "\n")))
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -44,7 +45,7 @@ func TestSignWithMD5(t *testing.T) {
 }
 
 func TestVerifyWithRSA(t *testing.T) {
-	priKEY, err := ParsePriKEY(fmt.Sprintf("-----BEGIN PRIVATE KEY-----\n%s-----END PRIVATE KEY-----", ChunkSplit(PRIVATE_KEY, 64, "\n")))
+	priKEY, err := ParsePriKEY(fmt.Sprintf("-----BEGIN PRIVATE KEY-----\n%s-----END PRIVATE KEY-----", chunkSplit(PRIVATE_KEY, 64, "\n")))
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -55,7 +56,7 @@ func TestVerifyWithRSA(t *testing.T) {
 	t.Logf("原字符:%s 签名(base64):%v", message, Byte2Base64(sign))
 
 	// --------------> 验签
-	pubKEY, err := ParsePubKEY(fmt.Sprintf("-----BEGIN PUBLIC KEY-----\n%s-----END PUBLIC KEY-----", ChunkSplit(PUBLIC_KEY, 64, "\n")))
+	pubKEY, err := ParsePubKEY(fmt.Sprintf("-----BEGIN PUBLIC KEY-----\n%s-----END PUBLIC KEY-----", chunkSplit(PUBLIC_KEY, 64, "\n")))
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -66,4 +67,23 @@ func TestVerifyWithRSA(t *testing.T) {
 		t.Log("验签成功")
 	}
 
+}
+
+// ChunkSplit input字符串每隔chunkSize个字符添加delimiter,并返回最终的string
+func chunkSplit(input string, chunkSize int, delimiter string) string {
+	var chunks []string
+	for i := 0; i < len(input); i += chunkSize {
+		end := i + chunkSize
+		if end > len(input) {
+			end = len(input)
+		}
+		chunks = append(chunks, input[i:end])
+	}
+
+	// 如果最后一个块长度小于 chunkSize，则在其后面添加 delimiter
+	if len(chunks) > 0 && len(chunks[len(chunks)-1]) < chunkSize {
+		chunks[len(chunks)-1] += delimiter
+	}
+
+	return strings.Join(chunks, delimiter)
 }

@@ -11,6 +11,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 func HostMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ips := util.GetRemoteIP(r)

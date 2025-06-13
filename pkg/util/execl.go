@@ -1,3 +1,21 @@
+// Copyright (c) 2025 Taurus Team. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 package util
 
 import (
@@ -9,14 +27,24 @@ import (
 	"time"
 )
 
-// ExcelWriter 类
+// ExcelWriter provides functionality to write data to Excel files in CSV format.
+// It supports writing structured data with automatic type conversion.
 type ExcelWriter struct {
 	file    *os.File
 	writer  *csv.Writer
 	headers []string
 }
 
-// InitExcelWriter 创建一个新的 ExcelWriter 实例
+// InitExcelWriter creates a new ExcelWriter instance.
+// It initializes the CSV file with the provided headers.
+//
+// Parameters:
+//   - filename: The path to the output CSV file
+//   - headers: The column headers for the CSV file
+//
+// Returns:
+//   - *ExcelWriter: A new ExcelWriter instance
+//   - error: Any error that occurred during initialization
 func InitExcelWriter(filename string, headers []string) (*ExcelWriter, error) {
 	var (
 		err    error
@@ -44,7 +72,14 @@ func InitExcelWriter(filename string, headers []string) (*ExcelWriter, error) {
 	}, nil
 }
 
-// WriteBatch 写入一批数据, data 数据数组
+// WriteBatch writes a batch of data to the CSV file.
+// It automatically converts different data types to strings.
+//
+// Parameters:
+//   - datas: A slice of interface{} containing the data to write
+//
+// Returns:
+//   - error: Any error that occurred during writing
 func (excelWriter *ExcelWriter) WriteBatch(datas []interface{}) error {
 
 	for _, record := range datas {
@@ -102,7 +137,10 @@ func (excelWriter *ExcelWriter) WriteBatch(datas []interface{}) error {
 	return nil
 }
 
-// Close 关闭 CSV 文件
+// Close flushes any buffered data and closes the CSV file.
+//
+// Returns:
+//   - error: Any error that occurred during closing
 func (excelWriter *ExcelWriter) Close() error {
 	excelWriter.writer.Flush()
 	if err := excelWriter.writer.Error(); err != nil {

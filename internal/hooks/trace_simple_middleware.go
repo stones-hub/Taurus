@@ -11,6 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 // 重写http.ResponseWriter
 type traceResponseWriter struct {
 	http.ResponseWriter

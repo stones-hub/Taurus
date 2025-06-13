@@ -1,6 +1,25 @@
+// Copyright (c) 2025 Taurus Team. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 package util
 
 import (
+	"Taurus/pkg/util/secure"
 	"Taurus/pkg/util/upload"
 	"encoding/json"
 	"encoding/xml"
@@ -62,7 +81,7 @@ type EnterWechatResp struct {
 	InValidTag     string `json:"invalidtag"`     // 不合法的tagid，不区分大小写，统一转为小写
 	UnlicensedUser string `json:"unlicenseduser"` // 没有基础接口许可(包含已过期)的userid
 	MsgId          string `json:"msgid"`          // 消息id, 可用于撤回
-	ResponseCode   string `json:"response_code"`  // 仅消息类型为“按钮交互型”，“投票选择型”和“多项选择型”的模板卡片消息返回 , 没实现类似消息的发送，没啥用
+	ResponseCode   string `json:"response_code"`  // 仅消息类型为"按钮交互型"，"投票选择型"和"多项选择型"的模板卡片消息返回 , 没实现类似消息的发送，没啥用
 
 	Type      string `json:"type"`
 	MediaId   string `json:"media_id"`
@@ -79,7 +98,7 @@ func (r *EnterWechatResp) String() string {
 
 // GenEnWechatAccessTokenKey 每个企业的每个应用，都应该有独立的accesstoken存储KEY
 func GenEnWechatAccessTokenKey(e *EnterWechat) string {
-	return MD5([]byte(ACCESS_TOKEN_KEY + e.Corpid + e.Name + e.Secret))
+	return secure.MD5([]byte(ACCESS_TOKEN_KEY + e.Corpid + e.Name + e.Secret))
 }
 
 func (e *EnterWechat) AccessToken() (*EnterWechatResp, error) {
@@ -147,9 +166,9 @@ func (e *EnterWechat) ReadMessage(buf []byte) (*EnterWeChatReadMessage, error) {
 
 // EnterWeChatSendMessage  企业微信应用发送消息包, touser、toparty、totag不能同时为空，后面不再强调。, 其他消息类型暂不介入
 type EnterWeChatSendMessage struct {
-	ToUser  string `json:"touser"`  //指定接收消息的成员，成员ID列表（多个接收者用‘|’分隔，最多支持1000个）。 特殊情况：指定为"@all"，则向该企业应用的全部成员发送
-	ToParty string `json:"toparty"` // 指定接收消息的部门，部门ID列表，多个接收者用‘|’分隔，最多支持100个。
-	ToTag   string `json:"totag"`   // 指定接收消息的标签，标签ID列表，多个接收者用‘|’分隔，最多支持100个。
+	ToUser  string `json:"touser"`  //指定接收消息的成员，成员ID列表（多个接收者用'分隔，最多支持1000个）。 特殊情况：指定为"@all"，则向该企业应用的全部成员发送
+	ToParty string `json:"toparty"` // 指定接收消息的部门，部门ID列表，多个接收者用'分隔，最多支持100个。
+	ToTag   string `json:"totag"`   // 指定接收消息的标签，标签ID列表，多个接收者用'分隔，最多支持100个。
 	ToAll   int    `json:"toall"`
 	MsgType string `json:"msgtype"` // 消息类型 text, image, voice, video
 	AgentId int    `json:"agentid"` // 企业应用ID

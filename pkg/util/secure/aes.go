@@ -1,4 +1,22 @@
-package util
+// Copyright (c) 2025 Taurus Team. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
+package secure
 
 import (
 	"bytes"
@@ -8,6 +26,17 @@ import (
 	"errors"
 	"io"
 )
+
+// 反转string字符串
+func reverseString(s string) string {
+	l := len(s)
+	buf := make([]byte, l)
+	for i := 0; i < len(s); i++ {
+		buf[l-1] = s[i]
+		l--
+	}
+	return string(buf)
+}
 
 // 为了兼容PHP中的Aes加解密
 
@@ -19,7 +48,7 @@ func AesEncryptCBCPHP(originData []byte, key []byte) ([]byte, error) {
 	blockSize := block.BlockSize()
 	originData = pkcs5Padding(originData, blockSize)
 	// 兼容PHP ， 3K游戏 PHP框架中的IV向量是密钥KEY的反转
-	blockMode := cipher.NewCBCEncrypter(block, []byte(ReverseString(string(key))))
+	blockMode := cipher.NewCBCEncrypter(block, []byte(reverseString(string(key))))
 	encrypted := make([]byte, len(originData))
 	blockMode.CryptBlocks(encrypted, originData)
 	return encrypted, nil
@@ -33,7 +62,7 @@ func AesDecryptCBCPHP(encrypted []byte, key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	blockMode := cipher.NewCBCDecrypter(block, []byte(ReverseString(string(key))))
+	blockMode := cipher.NewCBCDecrypter(block, []byte(reverseString(string(key))))
 	decrypted := make([]byte, len(encrypted))
 	blockMode.CryptBlocks(decrypted, encrypted)
 	decrypted = pkcs5UnPadding(decrypted)

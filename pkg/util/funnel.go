@@ -1,3 +1,21 @@
+// Copyright (c) 2025 Taurus Team. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 package util
 
 import (
@@ -9,12 +27,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// 漏斗模型, 用于多协程处理数据
+// Funnel model for multi-goroutine data processing
 
 const (
-	SF_PROCESS_NUM = 30
+	SF_PROCESS_NUM = 30 // Default number of processing goroutines
 )
 
+// SpecialFunnel represents a funnel model structure
+// Used for concurrent data processing with multiple goroutines, supports graceful shutdown and heartbeat detection
 type SpecialFunnel struct {
 	id              string
 	closeChan       chan struct{}
@@ -27,17 +47,25 @@ type SpecialFunnel struct {
 	heartbeat       func(*SpecialFunnel) // 心跳函数
 }
 
+// FunnelConfig represents the funnel configuration structure
 type FunnelConfig struct {
-	Cap       int
-	Interval  int
-	Handler   func(data interface{})
-	Heartbeat func(*SpecialFunnel)
+	Cap       int                    // 数据通道容量
+	Interval  int                    // 心跳检测间隔（秒）
+	Handler   func(data interface{}) // 数据处理函数
+	Heartbeat func(*SpecialFunnel)   // 心跳处理函数
 }
 
-// 创建漏斗
+// NewSpecialFunnel creates a new funnel instance
+// Parameters:
+//   - config: Funnel configuration
+//
+// Returns:
+//   - *SpecialFunnel: Funnel instance
+//   - func(): Close function
+//   - error: Error information
 func NewSpecialFunnel(config *FunnelConfig) (*SpecialFunnel, func(), error) {
 	f := &SpecialFunnel{
-		// 生成唯一ID
+		// Generate unique ID
 		id:              uuid.NewString(),
 		closeChan:       make(chan struct{}),
 		dataChan:        make(chan interface{}, config.Cap),
@@ -52,7 +80,7 @@ func NewSpecialFunnel(config *FunnelConfig) (*SpecialFunnel, func(), error) {
 	return f, f.Close, nil
 }
 
-// 启动协程
+// run starts the processing goroutines
 func (f *SpecialFunnel) run() {
 	for i := 0; i < SF_PROCESS_NUM; i++ {
 		f.wg.Add(1)
@@ -60,14 +88,15 @@ func (f *SpecialFunnel) run() {
 	}
 }
 
-// 每个协程的worker
+// worker is the working goroutine
+// Responsible for retrieving and processing data from the data channel
 func (f *SpecialFunnel) worker() {
 	defer f.wg.Done()
 	for {
 		select {
 		case data, ok := <-f.dataChan:
 			if !ok {
-				log.Printf("SpecialFunnel[%s] worker 管道被关闭，协程将退出。\n", f.id)
+				log.Printf("SpecialFunnel[%s] worker channel closed, goroutine will exit.\n", f.id)
 				return
 			}
 			f.do(data)
@@ -87,23 +116,27 @@ func (f *SpecialFunnel) worker() {
 	}
 }
 
-// 处理数据
+// do processes a single piece of data
+// Parameters:
+//   - data: Data to be processed
 func (f *SpecialFunnel) do(data interface{}) {
 	if f.handler == nil {
-		log.Printf("SpeialFunnel[%s] handler 为空，数据未被处理: %v", f.id, data)
+		log.Printf("SpeialFunnel[%s] handler is empty, data not processed: %v", f.id, data)
 		return
 	}
-	//  sync/atomic 包提供了 AddInt64、LoadInt64 等函数。
-	// 原子计数, 协程安全
+	// The sync/atomic package provides functions like AddInt64, LoadInt64, etc.
+	// Atomic counting, goroutine-safe
 	atomic.AddInt64(&f.processedCount, 1)
 	// 有可能handler是阻塞的，但是不可以用协程，避免无休止的开协程
 	f.handler(data)
 }
 
-// 启动定时器, 定时器每隔interval秒检查一次已处理的数据条数， 按需启用即可
+// checkHeartbeat starts the heartbeat detection
+// Parameters:
+//   - interval: Check interval (seconds)
 func (f *SpecialFunnel) checkHeartbeat(interval int) {
 	go func() {
-		// 创建定时器，每10秒检查一次已处理的数据条数
+		// Create a timer to check the number of processed data items every interval seconds
 		ticker := time.NewTicker(time.Duration(interval) * time.Second)
 		defer ticker.Stop()
 		for {
@@ -111,21 +144,20 @@ func (f *SpecialFunnel) checkHeartbeat(interval int) {
 			case <-ticker.C:
 				if f.heartbeat != nil {
 					f.heartbeat(f)
-					// log.Printf("SpecialFunnel[%s] 已处理的数据条数: %d\n", f.id, atomic.LoadInt64(&f.processedCount))
 				}
 			case <-f.tickerCloseChan:
-				log.Printf("SpecialFunnel[%s] 定时器被关闭，协程退出。\n", f.id)
+				log.Printf("SpecialFunnel[%s] timer closed, goroutine exiting.\n", f.id)
 				return
 			}
 		}
 	}()
 }
 
-// 关闭漏斗
+// Close shuts down the funnel
+// Ensures all data is processed before closing
 func (f *SpecialFunnel) Close() {
-
 	if !f.closed.CompareAndSwap(false, true) {
-		log.Printf("SpecialFunnel[%s] 漏斗已关闭, 重复调用。\n", f.id)
+		log.Printf("SpecialFunnel[%s] funnel already closed, duplicate call.\n", f.id)
 		return
 	}
 
@@ -134,25 +166,29 @@ func (f *SpecialFunnel) Close() {
 	close(f.dataChan)           // 关闭数据通道阻止新数据
 	f.wg.Wait()                 // 等待所有协程完成, 阻塞
 	close(f.tickerCloseChan)    // 关闭定时器, 不阻塞
-	time.Sleep(time.Second * 1) // 等待2秒，确保所有协程都退出
+	time.Sleep(time.Second * 1) // 等待1秒，确保所有协程都退出
 	log.Printf("所有协程已退出。\n")
 }
 
-// 添加数据
+// AddData adds data to the funnel
+// Parameters:
+//   - data: Data to be processed
 func (f *SpecialFunnel) AddData(data interface{}) {
 	if f.closed.Load() {
-		log.Printf("SpecialFunnel[%s]  漏斗已关闭, 无法添加数据。\n", f.id)
+		log.Printf("SpecialFunnel[%s] funnel already closed, cannot add data.\n", f.id)
 		return
 	}
 
 	select {
 	case f.dataChan <- data:
-	case <-time.After(time.Second * 60): // 如果通道满了，等待5后重试
-		log.Printf("SpecialFunnel[%s]数据通道已满，丢弃数据 ： %v\n", f.id, data)
+	case <-time.After(time.Second * 60): // If channel is full, wait 60 seconds before retrying
+		log.Printf("SpecialFunnel[%s] data channel full, discarding data: %v\n", f.id, data)
 	}
 }
 
-// 获取已处理的数据条数
+// GetProcessedCount gets the number of processed data items
+// Returns:
+//   - int64: Number of processed data items
 func (f *SpecialFunnel) GetProcessedCount() int64 {
 	return atomic.LoadInt64(&f.processedCount)
 }

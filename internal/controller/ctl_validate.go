@@ -9,6 +9,10 @@ import (
 	"github.com/google/wire"
 )
 
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 /*
 TestURL : http://127.0.0.1:9080/v1/api/?age=20&email=yelei@3k.com&id=1&phone=13631375979&name=yelei
 Note: 测试validate中间件，验证请求来源的结构体是否符合ValidateRequest结构体

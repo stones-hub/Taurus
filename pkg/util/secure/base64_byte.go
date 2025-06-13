@@ -16,22 +16,14 @@
 // Email: 61647649@qq.com
 // Date: 2025-06-13
 
-package interceptor
+package secure
 
-import (
-	"context"
-	"log"
-	"time"
+import "encoding/base64"
 
-	"google.golang.org/grpc"
-)
+func Byte2Base64(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
+}
 
-// LoggingClientInterceptor 日志拦截器
-func LoggingClientInterceptor() grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		start := time.Now()
-		err := invoker(ctx, method, req, reply, cc, opts...)
-		log.Printf("Client - Method:%s\tDuration:%s\tError:%v\n", method, time.Since(start), err)
-		return err
-	}
+func Base642Byte(h string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(h)
 }

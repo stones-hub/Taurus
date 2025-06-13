@@ -1,3 +1,21 @@
+// Copyright (c) 2025 Taurus Team. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 package main
 
 import (
@@ -9,14 +27,24 @@ import (
 	pb "Taurus/example/grpc/proto/user"
 )
 
-// UserServer 实现用户服务
+// UserServer implements the user service defined in the proto file.
+// It provides methods for user management operations.
 type UserServer struct {
 	pb.UnimplementedUserServiceServer
 }
 
-// GetUser 获取用户信息
+// GetUser retrieves user information by ID.
+// This is a simple implementation that returns mock data.
+//
+// Parameters:
+//   - ctx: Context for the request
+//   - req: GetUserRequest containing the user ID
+//
+// Returns:
+//   - *pb.GetUserResponse: User information
+//   - error: Any error that occurred during the operation
 func (s *UserServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
-	// 模拟从数据库获取用户
+	// Mock user data retrieval from database
 	user := &pb.GetUserResponse{
 		Id:    req.Id,
 		Name:  "张三",
@@ -26,9 +54,18 @@ func (s *UserServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.G
 	return user, nil
 }
 
-// CreateUser 创建用户
+// CreateUser creates a new user with the provided information.
+// This is a simple implementation that returns mock data.
+//
+// Parameters:
+//   - ctx: Context for the request
+//   - req: CreateUserRequest containing the user information
+//
+// Returns:
+//   - *pb.CreateUserResponse: Created user information
+//   - error: Any error that occurred during the operation
 func (s *UserServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
-	// 模拟创建用户
+	// Mock user creation
 	user := &pb.CreateUserResponse{
 		Id:    1,
 		Name:  req.Name,
@@ -38,8 +75,10 @@ func (s *UserServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) 
 	return user, nil
 }
 
+// main is the entry point of the application.
+// It sets up and starts the gRPC server with the user service.
 func main() {
-	// 创建gRPC服务器
+	// Create a new gRPC server instance
 	srv, cleanup, err := server.NewServer(
 		server.WithAddress(":50051"),
 	)
@@ -48,10 +87,10 @@ func main() {
 	}
 	defer cleanup()
 
-	// 注册服务
+	// Register the user service with the server
 	pb.RegisterUserServiceServer(srv.Server(), &UserServer{})
 
-	// 启动服务器
+	// Start the server
 	fmt.Println("Starting gRPC server on :50051")
 	if err := srv.Start(); err != nil {
 		log.Fatalf("failed to serve: %v", err)

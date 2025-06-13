@@ -10,6 +10,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 /*
 Note: 测试trace中间件，记录请求的详细信息
 */

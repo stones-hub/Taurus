@@ -1,3 +1,21 @@
+// Copyright (c) 2025 Taurus Team. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 package util
 
 import (
@@ -11,10 +29,11 @@ import (
 	"time"
 )
 
-// 将数据写入CSV文件, data数据是没有header头的
-// filename csv文件地址
-// data 待写入的数据
-// csv头数据，针对需要固定头位置的场景
+// GenCSV writes data to a CSV file, data does not include headers
+// Parameters:
+//   - filename: CSV file path
+//   - data: Data to be written
+//   - headers: CSV header data, for scenarios requiring fixed header positions
 func GenCSV(filename string, data []map[string]string, headers []string) error {
 	var (
 		fd     *os.File
@@ -23,7 +42,7 @@ func GenCSV(filename string, data []map[string]string, headers []string) error {
 	)
 
 	if fd, err = os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModePerm); err != nil {
-		log.Printf("生成csv文件失败: %s \n", err.Error())
+		log.Printf("Failed to generate CSV file: %s \n", err.Error())
 		return err
 	}
 
@@ -34,33 +53,32 @@ func GenCSV(filename string, data []map[string]string, headers []string) error {
 	defer writer.Flush()
 
 	if len(data) == 0 {
-		return fmt.Errorf("数据为空")
+		return fmt.Errorf("data is empty")
 	}
 
 	if len(headers) == 0 {
-		// 创建一个表头大小的slice
+		// Create a slice with header size
 		headers = make([]string, 0, len(data[0]))
 		for header := range data[0] {
 			headers = append(headers, header)
 		}
 	}
 
-	// 写表头
+	// Write headers
 	if err = writer.Write(headers); err != nil {
-		log.Printf("写入表头失败: %s \n", err.Error())
+		log.Printf("Failed to write headers: %s \n", err.Error())
 		return err
 	}
 
-	// 写数据
+	// Write data
 	for _, row := range data {
-
 		record := make([]string, 0, len(headers))
 
 		for _, header := range headers {
 			record = append(record, row[header])
 		}
 
-		// log.Printf("写入csv文件数据： %v \n", record)
+		// log.Printf("Writing CSV data: %v \n", record)
 
 		writer.Write(record)
 	}
@@ -74,8 +92,10 @@ type Test struct {
 	Age  int    `csv:"age" json:"age"`
 }
 */
-// 将数据从csv中读取出来
-// 假如 result : &[]Test{},  result 是slice的指针， slice中存的是结构体，不可以是结构体指针
+// ReadCSV reads data from a CSV file
+// Parameters:
+//   - filename: CSV file path
+//   - result: Pointer to a slice of structs, e.g., &[]Test{}, cannot be a pointer to struct
 func ReadCSV(fileanme string, result interface{}) error {
 	var (
 		fd               *os.File
@@ -93,43 +113,43 @@ func ReadCSV(fileanme string, result interface{}) error {
 	defer fd.Close()
 	reader = csv.NewReader(fd)
 
-	// 读取csv文件第一行，默认为表头
+	// Read the first line of CSV file as headers
 	if invisibleHeaders, err = reader.Read(); err != nil {
 		return err
 	}
 
-	// 由于csv中读取的表头有可能有很多编码且隐藏字符的问题，所以做一次过滤
+	// Filter out invisible characters from headers due to potential encoding issues
 	for _, v := range invisibleHeaders {
 		resRunes := []rune{}
 		for _, r := range v {
-			// ascii码，通常小于等于32或者大于等于127的都属于不可见字符
+			// ASCII codes less than or equal to 32 or greater than or equal to 127 are invisible characters
 			if r > 32 && r < 127 {
 				resRunes = append(resRunes, r)
 			}
 		}
-		// 打印ascii编码
+		// Print ASCII encoding
 		// fmt.Println(v, resRunes)
 		headers = append(headers, string(resRunes))
 	}
 
-	// 获取result的反射类型
+	// Get the reflection type of result
 	resultValue = reflect.ValueOf(result)
 
-	// result的类型不是指针 或者 result的值不是slice的话，不可以
+	// Result must be a pointer to a slice
 	if resultValue.Kind() != reflect.Ptr || resultValue.Elem().Kind() != reflect.Slice {
-		return fmt.Errorf("Result必须是slice的指针")
+		return fmt.Errorf("result must be a pointer to a slice")
 	}
 
-	// 获取result指针指向的slice数组的类型: sliceType = []Test 类型
+	// Get the type of the slice that result points to: sliceType = []Test
 	sliceType := resultValue.Elem().Type()
 
-	// 获取result指针指向的slice数组的类型的类型值: elementType = Test
+	// Get the type of elements in the slice: elementType = Test
 	elementType := sliceType.Elem()
 
-	// 根据result指向的slice数组类型创建一个新的slice : []Test
+	// Create a new slice based on the type: []Test
 	slice := reflect.MakeSlice(sliceType, 0, 0)
 
-	// 读取数据行
+	// Read data rows
 	for {
 		record, err := reader.Read()
 
@@ -138,23 +158,22 @@ func ReadCSV(fileanme string, result interface{}) error {
 		}
 
 		if err != nil {
-			log.Printf("读取数据行失败: %v\n", err)
+			log.Printf("Failed to read data row: %v\n", err)
 			continue
 		}
 
-		// 创建新的结构体实例
+		// Create new struct instance
 		element := reflect.New(elementType).Elem()
 
-		// 遍历结构体的字段
+		// Iterate through struct fields
 		for i := 0; i < element.NumField(); i++ {
-
 			field := element.Type().Field(i)
 			tag := field.Tag.Get("csv")
 			if tag == "" {
 				continue
 			}
 
-			// 找到对应的CSV列索引
+			// Find corresponding CSV column index
 			colIndex := -1
 			for j, header := range headers {
 				if header == tag {
@@ -167,7 +186,7 @@ func ReadCSV(fileanme string, result interface{}) error {
 				continue
 			}
 
-			// 设置字段值
+			// Set field value
 			fieldValue := element.Field(i)
 			value := record[colIndex]
 
@@ -191,28 +210,28 @@ func ReadCSV(fileanme string, result interface{}) error {
 					fieldValue.SetBool(v)
 				}
 			case reflect.Slice:
-				// 处理 []byte 类型
+				// Handle []byte type
 				if fieldValue.Type().Elem().Kind() == reflect.Uint8 {
 					fieldValue.SetBytes([]byte(value))
 				}
 			default:
-				// 处理 time.Time 类型
+				// Handle time.Time type
 				if fieldValue.Type() == reflect.TypeOf(time.Time{}) {
 					if v, err := time.Parse("2006-01-02 15:04:05", value); err == nil {
 						fieldValue.Set(reflect.ValueOf(v))
 					}
 				} else if fieldValue.Type().Kind() == reflect.Interface {
-					// 处理 interface{} 类型
+					// Handle interface{} type
 					fieldValue.Set(reflect.ValueOf(value))
 				}
 			}
 		}
 
-		// 将结构体添加到切片中
+		// Add struct to slice
 		slice = reflect.Append(slice, element)
 	}
 
-	// 设置结果
+	// Set result
 	resultValue.Elem().Set(slice)
 	return nil
 }

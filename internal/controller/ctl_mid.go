@@ -10,6 +10,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 type MidCtrl struct {
 }
 

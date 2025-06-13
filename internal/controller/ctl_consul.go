@@ -9,6 +9,10 @@ import (
 	"github.com/google/wire"
 )
 
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 type ConsulCtrl struct {
 }
 

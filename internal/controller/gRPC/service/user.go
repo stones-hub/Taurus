@@ -15,6 +15,10 @@ import (
 	pb "Taurus/internal/controller/gRPC/proto/user"
 )
 
+// Author: yelei
+// Email: 61647649@qq.com
+// Date: 2025-06-13
+
 type UserService struct {
 	pb.UnimplementedUserServiceServer
 }
