@@ -47,13 +47,13 @@ func NewSpecialFunnel(config *FunnelConfig) (*SpecialFunnel, func(), error) {
 		processedCount:  0,
 		heartbeat:       config.Heartbeat,
 	}
-	f.startWorkers()
-	f.startTimer(config.Interval)
+	f.run()
+	f.checkHeartbeat(config.Interval)
 	return f, f.Close, nil
 }
 
 // 启动协程
-func (f *SpecialFunnel) startWorkers() {
+func (f *SpecialFunnel) run() {
 	for i := 0; i < SF_PROCESS_NUM; i++ {
 		f.wg.Add(1)
 		go f.worker()
@@ -101,7 +101,7 @@ func (f *SpecialFunnel) do(data interface{}) {
 }
 
 // 启动定时器, 定时器每隔interval秒检查一次已处理的数据条数， 按需启用即可
-func (f *SpecialFunnel) startTimer(interval int) {
+func (f *SpecialFunnel) checkHeartbeat(interval int) {
 	go func() {
 		// 创建定时器，每10秒检查一次已处理的数据条数
 		ticker := time.NewTicker(time.Duration(interval) * time.Second)
